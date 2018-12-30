@@ -1,0 +1,135 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f2158f5192a95b94b896a82048d3cfdd, type: 3}
+  m_Name: Emoji
+  m_EditorClassIdentifier: 
+  Name: Emoji
+  SpritesData:
+  - Name: "\u53E3\u6C34"
+    Sprites:
+    - {fileID: 21300000, guid: bf20c276272cb8e41a5b5a7854b4472e, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u5410\u820C"
+    Sprites:
+    - {fileID: 21300000, guid: 20a195fb77b6b0e4aad591f4c7d5fa5e, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u5634\u5507"
+    Sprites:
+    - {fileID: 21300000, guid: b08ed6ec352088844a0de1c2dd254a74, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u56F0\u4E86"
+    Sprites:
+    - {fileID: 21300000, guid: 11dd215c80cf4524e9747389d33825bc, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u574F\u7B11"
+    Sprites:
+    - {fileID: 21300000, guid: 3afd2d424e6f84f4e8ebab441cfe613c, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u5927\u54ED"
+    Sprites:
+    - {fileID: 21300000, guid: 7ee96c292b270ab4e9cc1c07493ce94d, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u5927\u7B11"
+    Sprites:
+    - {fileID: 21300000, guid: ef2db8667e16cd141a3baa2974cd95c0, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u597D\u8272"
+    Sprites:
+    - {fileID: 21300000, guid: ac6a09b97f59e854d9ce509c6aa5dff9, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u5FAE\u7B11"
+    Sprites:
+    - {fileID: 21300000, guid: d64ae7762c7f15d47a494cd180ba084e, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u60B2\u54C0"
+    Sprites:
+    - {fileID: 21300000, guid: 096bdb58a251c164e92b5961ff135977, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u6C14\u70B8"
+    Sprites:
+    - {fileID: 21300000, guid: b90271692c92a714b84c73abb2067093, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u7591\u60D1"
+    Sprites:
+    - {fileID: 21300000, guid: add971afc5aa3ee4aaa6152206afbabf, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u76B1\u7709"
+    Sprites:
+    - {fileID: 21300000, guid: 0ae4aa86b1e63394bb2ed70d4b847415, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u773C\u8272"
+    Sprites:
+    - {fileID: 21300000, guid: 8435bbd9ecd932d4399fa3914606beab, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u800D\u9177"
+    Sprites:
+    - {fileID: 21300000, guid: 643a80af238953848a49c8f9d00b5200, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u8511\u89C6"
+    Sprites:
+    - {fileID: 21300000, guid: d1e198dff05c7764a93c6d068b80fa92, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u8870\u8138"
+    Sprites:
+    - {fileID: 21300000, guid: 364a6b0e78eeff44c80e0cd35ae1bf7d, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u8BA8\u538C"
+    Sprites:
+    - {fileID: 21300000, guid: eca4fce3a202ce14bb7149f2014e723e, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u8D2A\u8D22"
+    Sprites:
+    - {fileID: 21300000, guid: bcc0ecf1080e86e45ae144b45ec1a60e, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u96BE\u5403"
+    Sprites:
+    - {fileID: 21300000, guid: f73b39a32eb090542b6de7d88491fe58, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u998B\u5634"
+    Sprites:
+    - {fileID: 21300000, guid: d201c480873d27a45bfeffa581ea50cd, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u9B3C\u8138"
+    Sprites:
+    - {fileID: 21300000, guid: 30558a93f29e7ff4ea60fb59421792c6, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u9F85\u7259"
+    Sprites:
+    - {fileID: 21300000, guid: 83853387eae7f0f4487d77340aad9808, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u5982\u82B1"
+    Sprites:
+    - {fileID: 21300000, guid: 73876c4a53bd1ec43a6eb6addb6504ae, type: 3}
+    AnimSpeed: 0.05
+  - Name: "\u6124\u6012"
+    Sprites:
+    - {fileID: 21300000, guid: 32898a0f96a6ee1479909d7e00675bdf, type: 3}
+    AnimSpeed: 0.05
+  - Name: "\u8272\u80DA"
+    Sprites:
+    - {fileID: 21300000, guid: e8476be2d3bb90e48bf20b4040f60639, type: 3}
+    - {fileID: 21300000, guid: 5d5fadc48de293d4199f05d4887533e5, type: 3}
+    AnimSpeed: 0.01
+  - Name: "\u8272\u72FC"
+    Sprites:
+    - {fileID: 21300000, guid: ee8fba1d1b9ae2149a4547e89fe48736, type: 3}
+    - {fileID: 21300000, guid: c3bf91f0d3be79f4eaca41888ec0331a, type: 3}
+    - {fileID: 21300000, guid: 0913cc6db5675384a8fd9f3896b86679, type: 3}
+    - {fileID: 21300000, guid: bb68e5de1cc079345b8738087786d0e0, type: 3}
+    - {fileID: 21300000, guid: f73c57aa74a0c804fb2aace1871114c3, type: 3}
+    - {fileID: 21300000, guid: 1050104d22f804a49abfca9ee00b0251, type: 3}
+    - {fileID: 21300000, guid: 3d7e57e7b9d3f7842963d61a35dcc40f, type: 3}
+    - {fileID: 21300000, guid: 6b851b18db6d0e2498adecc118ea11a9, type: 3}
+    AnimSpeed: 0.05
+  - Name: 
+    Sprites:
+    - {fileID: 21300000, guid: 5ca9c26096a3bec45a831da0ce0c2bfb, type: 3}
+    AnimSpeed: 0.05

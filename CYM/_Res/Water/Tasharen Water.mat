@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Tasharen Water
+  m_Shader: {fileID: 4800000, guid: 092014fe456c8ab4b92a059d8d5b21b4, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 5
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 2450
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _Cube:
+        m_Texture: {fileID: 8900000, guid: d67a8c26677f72b4abc692257ddee1a9, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ReflectionTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ReflectiveColorCube:
+        m_Texture: {fileID: 8900000, guid: 9cda328e4b6954d70841a8a66f42ec08, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WaterColor:
+        m_Texture: {fileID: 2800000, guid: 291b0ecfdea2f2240a4adf8f1a0dec3a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _WaterTex:
+        m_Texture: {fileID: 2800000, guid: 0c86fdd60e7cfa449bc1dfa85643bc42, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _Distortion: 0.2
+    - _Focus: -100
+    - _FresnelBias: 0
+    - _FresnelPower: 1
+    - _FresnelScale: 1
+    - _ReflDistort: 1.5
+    - _ReflectionTint: 0.25
+    - _RefrDistort: 0
+    - _Shininess: 1
+    - _Tiling: 0.15
+    - _WaveScale: 0.07281132
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color0: {r: 1, g: 1, b: 1, a: 1}
+    - _Color1: {r: 0, g: 0.15679072, b: 0.21323532, a: 1}
+    - _InvFadeParemeter: {r: 0.23, g: 0.13, b: 0.9, a: 1}
+    - _InvRanges: {r: 0.92, g: 0.32, b: 2.93, a: -0.18}
+    - _Ranges: {r: 1, g: 5, b: 0, a: 0}
+    - _Specular: {r: 1, g: 1, b: 1, a: 0}
+    - _WaveSpeed: {r: 9, g: 5, b: -8, a: -4}
+--- !u!1002 &2100001
+EditorExtensionImpl:
+  serializedVersion: 6

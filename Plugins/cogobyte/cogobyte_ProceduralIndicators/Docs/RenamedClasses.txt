@@ -1,0 +1,42 @@
+Following classes had their names changed from v1.0 to v1.1
+They are now using namespaces.
+
+namespace Cogobyte.ProceduralIndicators
+
+cogobyte_Pip_ArrowObjectEditor to ArrowObjectEditor 
+cogobyte_Pip_ArrowPathEditor to ArrowPathEditor
+cogobyte_Pip_ArrowTipEditor to ArrowTipEditor
+cogobyte_Pip_ArrowIndicator to ArrowIndicator
+cogobyte_Pip_ArrowObject to ArrowObject
+cogobyte_Pip_ArrowPath to ArrowPath
+cogobyte_Pip_ArrowTip to ArrowTip
+cogobyte_Pip_BrokenArrowDemo to BrokenArrowDemo 
+cogobyte_Pip_CurvePathDemo to CurvePathDemo
+cogobyte_Pip_MadeOfShapesDemo to MadeOfShapesDemo
+cogobyte_Pip_PointPathDemo to PointPathDemo
+cogobyte_Pip_ScaledArrowDemo to ScaledArrowDemo
+cogobyte_Pip_ShapeChangeDemo to ShapeChangeDemo
+cogobyte_Pip_ShuffleDemo to ShuffleDemo
+cogobyte_Pip_TrackObjectDemo to TrackObjectDemo
+cogobyte_Pip_TrackTwoObjectsDemo to TrackTwoObjectsDemo
+cogobyte_Pip_TwistedArrowDemo to TwistedArrowDemo
+
+namespace Cogobyte.ProceduralLibrary
+
+cogobyte_Pl_2DOutline to Outline
+cogobyte_Pl_2DPrimitiveCircle to CirclePrimitive
+cogobyte_Pl_2DPrimitiveObject to PrimitiveObject
+cogobyte_Pl_2DPrimitvePlane to PlanePrimitive
+cogobyte_Pl_2DPrimitivesList to PrimitivesList
+cogobyte_Pl_3DMesh to ProceduralMesh
+cogobyte_Pl_3DMeshesList to MeshesList
+cogobyte_Pl_3DSphere to SphereMesh
+cogobyte_Pl_CustomMesh to CustomMesh
+cogobyte_Pl_MeshObject to MeshObject
+cogobyte_Pl_WingedArrowMesh to WingedArrowMesh
+cogobyte_Pl_ComplexExtrude to ComplexExtrude
+cogobyte_Pl_2DPrimitive to Primitive
+
+
+
+

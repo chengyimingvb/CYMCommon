@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 402b5b37641054d2aa7fd46be6c9bc67, type: 3}
+  m_Name: Toxic Swamp
+  m_EditorClassIdentifier: 
+  lightingModel: 0
+  sunCopyColor: 1
+  density: 1
+  noiseStrength: 1
+  height: 2.5
+  baselineHeight: 0
+  distance: 0
+  distanceFallOff: 0
+  maxFogLength: 1000
+  maxFogLengthFallOff: 0
+  baselineRelativeToCamera: 0
+  baselineRelativeToCameraDelay: 0
+  noiseScale: 1
+  alpha: 0.95
+  color: {r: 0.0238, g: 0.175, b: 0.109, a: 1}
+  specularColor: {r: 0.593, g: 0.625, b: 0.207, a: 1}
+  specularThreshold: 0.6
+  specularIntensity: 0.735
+  lightDirection: {x: -1, y: 0, z: -1}
+  lightIntensity: 0.492
+  lightColor: {r: 0.73, g: 0.746, b: 0.511, a: 1}
+  speed: 0.0003
+  windDirection: {x: 1, y: 0, z: 0}
+  fogAreaCenter: {fileID: 0}
+  fogAreaFallOff: 1
+  fogAreaTopology: 1
+  fogAreaRadius: 0
+  fogAreaPosition: {x: 0, y: 0, z: 0}
+  fogAreaDepth: 0
+  fogAreaHeight: 0
+  turbulenceStrength: 0
+  useXYPlane: 0
+  skyColor: {r: 0.0238, g: 0.175, b: 0.109, a: 1}
+  skyHaze: 22
+  skySpeed: 0.062
+  skyNoiseStrength: 0.694
+  skyAlpha: 1
+  stepping: 20
+  steppingNear: 50
+  dithering: 1
+  ditherStrength: 1
