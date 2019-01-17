@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-
+using UnityEngine;
 namespace CYM
 {
     public static class CYMExtension
@@ -74,29 +74,29 @@ namespace CYM
         }
 #endregion
 
-#region cost
-/// <summary>
-/// 获得消耗的字符窜描述
-/// </summary>
-/// <param name="data"></param>
-/// <param name="Separator"></param>
-/// <returns></returns>
-public static string ToString<T>(this List<CostData<T>> data, string Separator = "", string EndSeparator = ",", bool isHaveSign = false) where T : struct
-        {
-            string temp = "";
-            if (data == null)
-            {
-                CLog.Error("data is null");
-            }
-            foreach (var item in data)
-            {
-                if (item.RealVal == 0)
-                    continue;
-                temp += Separator + item.ToString(isHaveSign, false) + EndSeparator;
-            }
-            return temp.TrimEnd(EndSeparator.ToCharArray());
-        }
-        #endregion
+        #region cost
+        /// <summary>
+        /// 获得消耗的字符窜描述
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="Separator"></param>
+        /// <returns></returns>
+        public static string ToString<T>(this List<CostData<T>> data, string Separator = "", string EndSeparator = ",", bool isHaveSign = false) where T : struct
+                {
+                    string temp = "";
+                    if (data == null)
+                    {
+                        CLog.Error("data is null");
+                    }
+                    foreach (var item in data)
+                    {
+                        if (item.RealVal == 0)
+                            continue;
+                        temp += Separator + item.ToString(isHaveSign, false) + EndSeparator;
+                    }
+                    return temp.TrimEnd(EndSeparator.ToCharArray());
+                }
+                #endregion
 
         #region enum
         /// <summary>
@@ -188,6 +188,10 @@ public static string ToString<T>(this List<CostData<T>> data, string Separator =
                 return false;
             return true;
         }
+        #endregion
+
+        #region vector3
+        
         #endregion
     }
 

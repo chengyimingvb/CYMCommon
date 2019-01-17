@@ -30,16 +30,22 @@ namespace CYM.UI
     public class BaseText : Presenter<BaseTextData>
     {
         #region 组建
-        /// <summary>
-        /// 组建
-        /// </summary>
-        public Text Text;
+        [SerializeField]
+        bool IsAnim = false;
+        [SerializeField]
+        protected Text Text;
+        #endregion
+
+        #region prop
+        Tween Tween;
         #endregion
 
         #region life
-        protected override void Awake()
+        public override void Refresh()
         {
-            base.Awake();
+            base.Refresh();
+            text = Data.GetName();
+
         }
         #endregion
 
@@ -52,18 +58,13 @@ namespace CYM.UI
         {
             Text.text = desc;
         }
-        public override void Refresh()
-        {
-            base.Refresh();
-            Text.text = Data.GetName();
-        }
         public void SetText(string key,params string[] ps)
         {
-            Text.text = BaseLanguageMgr.Get(key,ps);
+            text = BaseLanguageMgr.Get(key,ps);
         }
         public void SetTextStr(string str)
         {
-            Text.text = str;
+            text = str;
         }
         #endregion
 
@@ -71,7 +72,24 @@ namespace CYM.UI
         public string text
         {
             get { return Text.text; }
-            set { Text.text = value; }
+            set
+            {
+                if (IsAnim)
+                {
+                    if (Tween != null)
+                        Tween.Kill();
+                    Tween = DOTween.To(() => Text.text, (x) => Text.text = x, value, 0.3f);
+                }
+                else
+                {
+                    Text.text = value;
+                }
+            }
+        }
+        public bool IsAnimation
+        {
+            get { return IsAnim; }
+            set { IsAnim = value; }
         }
         #endregion
     }

@@ -1,0 +1,129 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 6
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: HeatMap
+  m_Shader: {fileID: 4800000, guid: 5d8ff0c57ec1ddb429455c502e7c08be, type: 3}
+  m_ShaderKeywords: 
+  m_LightmapFlags: 5
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ColorPickMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DistributionTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _HeightNoiseTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OcclusionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Floats:
+    - _BumpScale: 1
+    - _CavityType: 0
+    - _ColorPickSmoothness: 0
+    - _ColorPickThreshold: 1
+    - _Convex: 0
+    - _Cutoff: 0.5
+    - _Depth: 0.03
+    - _DetailNormalMapScale: 1
+    - _DstBlend: 0
+    - _Glossiness: 0.5
+    - _HeightMapSize: 512
+    - _HeightNoiseScale: 0.1
+    - _HeightSmoothness: 0.15204677
+    - _HeightSmoothnessBottom: 0
+    - _HeightSmoothnessTop: 0
+    - _MaskContrast: 1
+    - _MaskInv: 0
+    - _MaskTreshold: 0.5
+    - _MaxHeight: 1
+    - _MaxSlope: 90
+    - _Metallic: 0
+    - _MinHeight: 0
+    - _MinSlope: 0
+    - _Mode: 0
+    - _OcclusionStrength: 1
+    - _Octaves: 0
+    - _Parallax: 0.02
+    - _Scale: 0
+    - _SeaLevel: 0
+    - _SeaLevelSign: 0
+    - _Seed: 0
+    - _SlopeDiv: 57.295776
+    - _SlopeMul: 106.496
+    - _SlopeSmoothness: 0
+    - _SlopeSmoothnessBottom: 0.1
+    - _SlopeSmoothnessTop: 0.1
+    - _SrcBlend: 1
+    - _StepSize: 10
+    - _Steps: 5
+    - _Strength: 1
+    - _SunEnabled: 0
+    - _SunSmoothness: 1
+    - _UVSec: 0
+    - _WeightMul: 1
+    - _ZWrite: 1
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorPickColor: {r: 0, g: 0, b: 0, a: 0}
+    - _ColorPickThreshold: {r: 2, g: 0.12, b: 2, a: 0}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _SunDirection: {r: 1, g: 0, b: 0, a: 0}

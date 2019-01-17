@@ -1,0 +1,95 @@
+﻿#pragma kernel CSMaskFirst
+#pragma kernel CSMaskNext
+#pragma kernel CSWeightFirst
+#pragma kernel CSWeightNext
+
+SamplerState _LinearClamp;
+
+Texture2D<float4> Mask;
+RWStructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> LastBuffer;
+
+int Resolution;
+uint StepSize;
+int Invert;
+int Tiled;
+float MaskWeight;
+float MaskMul;
+float BorderBlending;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+// Gets the mask weight for the given position
+float GetMaskWeight(int x, int y)
+{
+  float minX = min(x, (StepSize - 1) - x) / BorderBlending;
+  float minY = min(y, (StepSize - 1) - y) / BorderBlending;
+
+  return smoothstep(0, 1, saturate(min(minX, minY)));
+}
+
+[numthreads(32,32,1)]
+void CSMaskFirst (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+    
+  int bufferIndex = GetSingleIndex(id.y, id.x);
+  
+  float2 uv = (float2)id / StepSize;
+  float maskValue = Mask.SampleLevel(_LinearClamp, uv, 0).r;
+
+  if(Invert == 1)
+    maskValue = 1.0f - maskValue;
+
+  float src = SrcBuffer[bufferIndex];
+
+  if(Tiled)
+    SrcBuffer[bufferIndex] = lerp(src, lerp(src, src * maskValue, MaskWeight) * MaskMul, GetMaskWeight(id.x, id.y));
+  else
+    SrcBuffer[bufferIndex] = lerp(src, src * maskValue, MaskWeight) * MaskMul;
+}
+
+[numthreads(32,32,1)]
+void CSMaskNext (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+  
+  int bufferIndex = GetSingleIndex(id.y, id.x);
+  
+  float2 uv = (float2)id / StepSize;
+  float maskValue = Mask.SampleLevel(_LinearClamp, uv, 0).r;
+  
+  if(Invert == 1)
+    maskValue = 1.0f - maskValue;
+  
+  SrcBuffer[bufferIndex] = LastBuffer[bufferIndex] + (SrcBuffer[bufferIndex] * MaskMul - LastBuffer[bufferIndex]) * MaskWeight * maskValue;
+  LastBuffer[bufferIndex] = SrcBuffer[bufferIndex];
+}
+
+[numthreads(32,32,1)]
+void CSWeightFirst(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+  
+  int bufferIndex = GetSingleIndex(id.y, id.x);  
+  
+  LastBuffer[bufferIndex] = SrcBuffer[bufferIndex];
+}
+
+[numthreads(32,32,1)]
+void CSWeightNext(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+    
+  int bufferIndex = GetSingleIndex(id.y, id.x);
+    
+  SrcBuffer[bufferIndex] = LastBuffer[bufferIndex] + (SrcBuffer[bufferIndex] - LastBuffer[bufferIndex]) * MaskWeight;
+  LastBuffer[bufferIndex] = SrcBuffer[bufferIndex];
+}

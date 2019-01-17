@@ -82,6 +82,8 @@ namespace CYM.UI
     {
         #region inspector
         [SerializeField]
+        TextAnchor Anchor = TextAnchor.UpperLeft;
+        [SerializeField]
         BasePresenter BasePrefab;
         [SerializeField]
         bool IsFixedScrollBar = false;
@@ -96,6 +98,7 @@ namespace CYM.UI
         bool SortReversedList = false;
         public int SortBy = -1;
         float ScrollBarSize = 0.0f;
+        bool IsDirtyReload = false;
         #endregion
 
         #region life
@@ -112,6 +115,13 @@ namespace CYM.UI
         }
         void Update()
         {
+            if (IsDirtyReload)
+            {
+                IsDirtyReload = false;
+                RefreshData();
+                Refresh();
+            }
+
             if (_updateSpacing)
             {
                 _UpdateSpacing(spacing);
@@ -180,6 +190,16 @@ namespace CYM.UI
         }
         public override void Refresh()
         {
+            base.Refresh();
+            foreach (var item in _activeCellViews.data)
+            {
+                if (item == null)
+                    continue;
+                OnRefreshCell(item, item.DataIndex, item.Index);
+            }
+        }
+        void RefreshData()
+        {
             if (Data != null && Data.GetCustomDatas != null && BasePrefab != null)
             {
                 if (scrollDirection == ScrollDirectionEnum.Vertical)
@@ -204,53 +224,57 @@ namespace CYM.UI
                     }
                 }
                 //重载数据
-                ReloadData(NormalizedScrollPosition);
+                ReloadData(0.0f);
+                if (Scrollbar != null)
+                {
+                    Scrollbar.size = ScrollBarSize;
+                }
             }
-            base.Refresh();
         }
         public override void OnViewShow(bool b)
         {
-
+            RefreshData();
             base.OnViewShow(b);
         }
         void InitializesScroller()
         {
             GameObject go;
 
-            // cache some components
             _scrollRect = this.GetComponent<ScrollRect>();
             _scrollRectTransform = _scrollRect.GetComponent<RectTransform>();
+            if (Scrollbar != null)
+                ScrollBarSize = Scrollbar.size;
+            if (_scrollRect != null)
+            {
+                _scrollRect.inertia = true;
+                _scrollRect.decelerationRate = 0.2f;
+            }
 
             go = _scrollRect.content.gameObject;
             if (scrollDirection == ScrollDirectionEnum.Vertical)
-                go.AddComponent<VerticalLayoutGroup>();
+                _layoutGroup=go.AddComponent<VerticalLayoutGroup>();
             else
-                go.AddComponent<HorizontalLayoutGroup>();
+                _layoutGroup=go.AddComponent<HorizontalLayoutGroup>();
             _container = go.GetComponent<RectTransform>();
 
-            if(Scrollbar!=null)
-                ScrollBarSize = Scrollbar.size;
-            // cache the scrollbar if it exists
+            _layoutGroup.spacing = spacing;
+            _layoutGroup.padding = padding;
+            _layoutGroup.childAlignment = Anchor;
+
             if (scrollDirection == ScrollDirectionEnum.Vertical)
             {
                 _scrollRect.verticalScrollbar = Scrollbar;
+                _layoutGroup.childForceExpandHeight = true;
+                _layoutGroup.childForceExpandWidth = false;
+                _scrollRect.vertical = true;
             }
             else
             {
                 _scrollRect.horizontalScrollbar = Scrollbar;
+                _layoutGroup.childForceExpandHeight = false;
+                _layoutGroup.childForceExpandWidth = true;
+                _scrollRect.horizontal = true;
             }
-
-            // cache the layout group and set up its spacing and padding
-            _layoutGroup = _container.GetComponent<HorizontalOrVerticalLayoutGroup>();
-            _layoutGroup.spacing = spacing;
-            _layoutGroup.padding = padding;
-            _layoutGroup.childAlignment = TextAnchor.UpperLeft;
-            _layoutGroup.childForceExpandHeight = true;
-            _layoutGroup.childForceExpandWidth = true;
-
-            // force the scroller to scroll in the direction we want
-            _scrollRect.horizontal = scrollDirection == ScrollDirectionEnum.Horizontal;
-            _scrollRect.vertical = scrollDirection == ScrollDirectionEnum.Vertical;
 
             // create the padder objects
 
@@ -287,7 +311,7 @@ namespace CYM.UI
         /// <typeparam name="TCD">custom data </typeparam>
         /// <param name="getCustomDatas"></param>
         /// <param name="onRefresh"></param>
-        public override void Init(BaseScrollData data) //where TP : Presenter<TD>, new() where TD : PresenterData, new()
+        public override void Init(BaseScrollData data) 
         {
             base.Init(data);
             if (BasePrefab == null)
@@ -321,6 +345,10 @@ namespace CYM.UI
                 SortReversedList = true;
             }
             SortBy = by;
+        }
+        public void SetDirtyReloadData()
+        {
+            IsDirtyReload = true;
         }
         #endregion
 
@@ -750,24 +778,12 @@ namespace CYM.UI
         /// <summary>
         /// This is the first cell view index showing in the scroller's visible area
         /// </summary>
-        public int StartCellViewIndex
-        {
-            get
-            {
-                return _activeCellViewsStartIndex;
-            }
-        }
+        public int StartCellViewIndex { get; private set; }
 
         /// <summary>
         /// This is the last cell view index showing in the scroller's visible area
         /// </summary>
-        public int EndCellViewIndex
-        {
-            get
-            {
-                return _activeCellViewsEndIndex;
-            }
-        }
+        public int EndCellViewIndex { get; private set; }
 
         /// <summary>
         /// This is the first data index showing in the scroller's visible area
@@ -776,7 +792,7 @@ namespace CYM.UI
         {
             get
             {
-                return _activeCellViewsStartIndex % NumberOfCells;
+                return StartCellViewIndex % NumberOfCells;
             }
         }
 
@@ -787,7 +803,7 @@ namespace CYM.UI
         {
             get
             {
-                return _activeCellViewsEndIndex % NumberOfCells;
+                return EndCellViewIndex % NumberOfCells;
             }
         }
 
@@ -1334,16 +1350,6 @@ namespace CYM.UI
         private SmallList<BasePresenter> _activeCellViews = new SmallList<BasePresenter>();
 
         /// <summary>
-        /// The index of the first cell view that is being displayed
-        /// </summary>
-        private int _activeCellViewsStartIndex;
-
-        /// <summary>
-        /// The index of the last cell view that is being displayed
-        /// </summary>
-        private int _activeCellViewsEndIndex;
-
-        /// <summary>
         /// The index of the first element of the middle section of cell view sizes.
         /// Used only when looping
         /// </summary>
@@ -1654,8 +1660,8 @@ namespace CYM.UI
             }
 
             // update the start and end indices
-            _activeCellViewsStartIndex = startIndex;
-            _activeCellViewsEndIndex = endIndex;
+            StartCellViewIndex = startIndex;
+            EndCellViewIndex = endIndex;
 
             // adjust the padding elements to offset the cell views correctly
             _SetPadders();
@@ -1667,8 +1673,8 @@ namespace CYM.UI
         private void _RecycleAllCells()
         {
             while (_activeCellViews.Count > 0) _RecycleCell(_activeCellViews[0]);
-            _activeCellViewsStartIndex = 0;
-            _activeCellViewsEndIndex = 0;
+            StartCellViewIndex = 0;
+            EndCellViewIndex = 0;
         }
 
         /// <summary>
@@ -1725,9 +1731,15 @@ namespace CYM.UI
 
             // set the size of the layout element
             if (scrollDirection == ScrollDirectionEnum.Vertical)
+            {
                 layoutElement.minHeight = _cellViewSizeArray[cellIndex] - (cellIndex > 0 ? _layoutGroup.spacing : 0);
+                layoutElement.minWidth = BasePrefabRect.sizeDelta.x;
+            }
             else
+            {
                 layoutElement.minWidth = _cellViewSizeArray[cellIndex] - (cellIndex > 0 ? _layoutGroup.spacing : 0);
+                layoutElement.minHeight = BasePrefabRect.sizeDelta.y;
+            }
 
             // add the cell to the active list
             if (listPosition == ListPositionEnum.First)
@@ -1754,8 +1766,8 @@ namespace CYM.UI
             if (NumberOfCells == 0) return;
 
             // calculate the size of each padder
-            var firstSize = _cellViewOffsetArray[_activeCellViewsStartIndex] - _cellViewSizeArray[_activeCellViewsStartIndex];
-            var lastSize = _cellViewOffsetArray.Last() - _cellViewOffsetArray[_activeCellViewsEndIndex];
+            var firstSize = _cellViewOffsetArray[StartCellViewIndex] - _cellViewSizeArray[StartCellViewIndex];
+            var lastSize = _cellViewOffsetArray.Last() - _cellViewOffsetArray[EndCellViewIndex];
 
             if (scrollDirection == ScrollDirectionEnum.Vertical)
             {
@@ -1811,7 +1823,7 @@ namespace CYM.UI
             _CalculateCurrentActiveCellRange(out startIndex, out endIndex);
 
             // if the index hasn't changed, ignore and return
-            if (startIndex == _activeCellViewsStartIndex && endIndex == _activeCellViewsEndIndex) return;
+            if (startIndex == StartCellViewIndex && endIndex == EndCellViewIndex) return;
 
             // recreate the visibile cells
             _ResetVisibleCellViews();

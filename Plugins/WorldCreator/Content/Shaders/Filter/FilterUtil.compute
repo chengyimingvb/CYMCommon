@@ -1,0 +1,268 @@
+﻿#pragma kernel CSCopyToTexture
+#pragma kernel CSCopyHeightCut
+#pragma kernel CSCopyHeightSlopeCut
+#pragma kernel CSCopy
+#pragma kernel CSCopyTiled
+#pragma kernel CSCopyBorders
+#pragma kernel CSClearMinMax
+#pragma kernel CSMinMaxFirst
+#pragma kernel CSMinMax
+#pragma kernel CSCopyMinMax
+#pragma kernel CSNormalize
+#pragma kernel CSNormalizeTiled
+
+RWStructuredBuffer<float> SrcBorderBuffer;
+RWStructuredBuffer<float> TmpBorderBuffer;
+
+RWStructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+RWStructuredBuffer<float> MinMaxBuffer;
+
+RWTexture2D<float4>  DestTexture;
+
+uint Tiling;
+uint Resolution;
+uint StepSize;
+uint NormalizeOffset;
+float BorderBlending;
+float MinHeight;
+float MaxHeight;
+float HeightSmoothTop;
+float HeightSmoothBottom;
+
+float SlopeDiv;
+float SlopeMul;
+float MinSlope;
+float MaxSlope;
+float SlopeSmoothTop;
+float SlopeSmoothBottom;
+
+// Gets the mask weight for the given position
+float GetMaskWeight(int x, int y)
+{
+  float minX = min(x, (StepSize - 1) - x) / BorderBlending;
+  float minY = min(y, (StepSize - 1) - y) / BorderBlending;
+
+  return smoothstep(0, 1, saturate(min(minX, minY)));
+}
+
+
+[numthreads(32,32,1)]
+void CSCopyToTexture (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+
+  DestTexture[id.xy] = SrcBuffer[id.y * Resolution + id.x];
+}
+
+[numthreads(32,32,1)]
+void CSCopyHeightCut (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+
+  float tmp = TmpBuffer[id.y * Resolution + id.x];
+  float result = SrcBuffer[id.y * Resolution + id.x];
+
+  float factor = 1.0f;
+  if(tmp < MinHeight)
+    factor = 1.0f - (MinHeight - tmp) / HeightSmoothBottom;
+  else if(tmp > MaxHeight)
+    factor = 1.0f - (tmp - MaxHeight) / HeightSmoothTop;
+
+  if (Tiling == 1)
+    factor *= GetMaskWeight(id.x, id.y);
+
+  SrcBuffer[id.y * Resolution + id.x] = lerp(result, tmp, saturate(factor));
+}
+
+[numthreads(32, 32, 1)]
+void CSCopyHeightSlopeCut(uint3 id : SV_DispatchThreadID)
+{
+  int x = (int)id.x;
+  int y = (int)id.y;
+
+  if (id.x >= StepSize || id.y >= StepSize)
+    return;
+
+  float tmp = TmpBuffer[y * Resolution + x];
+  float result = SrcBuffer[y * Resolution + x];
+
+  // Height
+  /////////
+
+  float factor = 1.0f;
+  if (tmp < MinHeight)
+    factor = saturate(1.0f - (MinHeight - tmp) / HeightSmoothBottom); 
+  else if (tmp > MaxHeight)
+    factor = saturate(1.0f - (tmp - MaxHeight) / HeightSmoothTop);
+
+  // Slope
+  ////////
+  int left = clamp(x - 1, 0, (int)StepSize - 1);
+  int right = clamp(x + 1, 0, (int)StepSize - 1);
+  int top = clamp(y - 1, 0, (int)StepSize - 1);
+  int bottom = clamp(y + 1, 0, (int)StepSize - 1);
+
+  float slope = (float)(atan(abs(TmpBuffer[top    * Resolution + x]     - tmp) * SlopeMul) * SlopeDiv +
+                        atan(abs(TmpBuffer[bottom * Resolution + x]     - tmp) * SlopeMul) * SlopeDiv +
+                        atan(abs(TmpBuffer[y      * Resolution + left]  - tmp) * SlopeMul) * SlopeDiv +
+                        atan(abs(TmpBuffer[y      * Resolution + right] - tmp) * SlopeMul) * SlopeDiv) * 0.25f;
+
+  if(slope < MinSlope)
+    factor *= (1.0f - saturate((MinSlope - slope) / 90.0f)) * SlopeSmoothBottom;
+  else if(slope >= MaxSlope)
+    factor *= (1.0f - saturate((slope - MaxSlope) / 90.0f)) * SlopeSmoothTop;
+
+  if (Tiling == 1)
+    factor *= GetMaskWeight(id.x, id.y);
+
+  // Result
+  ////////
+  SrcBuffer[id.y * Resolution + id.x] = lerp(result, tmp, saturate(factor));
+}
+
+[numthreads(32,32,1)]
+void CSCopy (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize)
+    return;
+
+  SrcBuffer[id.y * Resolution + id.x] = TmpBuffer[id.y * Resolution + id.x];
+}
+
+
+[numthreads(32, 32, 1)]
+void CSCopyTiled(uint3 id : SV_DispatchThreadID)
+{
+  if (id.x >= StepSize || id.y >= StepSize)
+    return;
+  
+  SrcBuffer[id.y * Resolution + id.x] = lerp(SrcBuffer[id.y * Resolution + id.x], 
+    TmpBuffer[id.y * Resolution + id.x], GetMaskWeight(id.x, id.y));
+}
+
+
+[numthreads(256, 1, 1)]
+void CSCopyBorders(uint3 id : SV_DispatchThreadID)
+{
+  if (id.x >= StepSize * 4 + 4)
+    return;
+
+  SrcBorderBuffer[id.x] = TmpBorderBuffer[id.x];
+}
+
+[numthreads(1,1,1)]
+void CSClearMinMax(uint3 id : SV_DispatchThreadID)
+{
+  MinMaxBuffer[0] = 3.402823e+38f;
+  MinMaxBuffer[1] = 1.175494e-38f;
+}
+
+[numthreads(32,32,1)]
+void CSMinMaxFirst(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize) 
+    return;
+
+  float minVal = 3.402823e+38f;
+  float maxVal = 1.175494e-38f;
+  
+  int x = id.x * 2;
+  int y = id.y * 2;
+  
+  float values[4];
+  values[0] = SrcBuffer[y * Resolution + x];
+  values[1] = SrcBuffer[y * Resolution + x + 1];
+  values[2] = SrcBuffer[(y + 1) * Resolution + x];
+  values[3] = SrcBuffer[(y + 1) * Resolution + x + 1];
+  
+  for(int i = 0 ; i < 4 ; i++)
+  {
+    minVal = min(minVal, values[i]);
+    maxVal = max(maxVal, values[i]);
+  }
+
+  TmpBuffer[id.y * Resolution + id.x] = minVal;
+  TmpBuffer[id.y * Resolution + id.x + Resolution / 2] = maxVal;
+}
+
+[numthreads(32,32,1)]
+void CSMinMax (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize) 
+    return;
+
+  int x = id.x * 2;
+  int y = id.y * 2;
+  
+  int srcY = NormalizeOffset * (Resolution / 2) + y;
+  int tmpY = (1 - NormalizeOffset) * (Resolution / 2) + id.y;
+    
+  float minVal = 3.402823e+38f;
+  float maxVal = 1.175494e-38f;
+  
+  float minValues[4];
+  minValues[0] = TmpBuffer[srcY * Resolution + x];
+  minValues[1] = TmpBuffer[srcY * Resolution + x + 1];
+  minValues[2] = TmpBuffer[(srcY + 1) * Resolution + x];
+  minValues[3] = TmpBuffer[(srcY + 1) * Resolution + x + 1];
+  
+  float maxValues[4];
+  maxValues[0] = TmpBuffer[srcY * Resolution + x + (Resolution / 2)];
+  maxValues[1] = TmpBuffer[srcY * Resolution + x + 1 + (Resolution / 2)];
+  maxValues[2] = TmpBuffer[(srcY + 1) * Resolution + x + (Resolution / 2)];
+  maxValues[3] = TmpBuffer[(srcY + 1) * Resolution + x + 1 + (Resolution / 2)];
+  
+  for(int i = 0 ; i < 4 ; i++)
+  {
+    minVal = min(minVal, minValues[i]);
+    maxVal = max(maxVal, maxValues[i]);
+  }
+
+  TmpBuffer[tmpY * Resolution + id.x] = minVal;
+  TmpBuffer[tmpY * Resolution + id.x + Resolution / 2] = maxVal;
+}
+
+[numthreads(1,1,1)]
+void CSCopyMinMax (uint3 id : SV_DispatchThreadID)
+{
+  int y = (1 - NormalizeOffset) * (Resolution / 2);
+  MinMaxBuffer[0] = min(MinMaxBuffer[0], SrcBuffer[y * Resolution]);
+  MinMaxBuffer[1] = max(MinMaxBuffer[1], SrcBuffer[y * Resolution + (Resolution / 2)]);
+
+  if (MinMaxBuffer[1] - MinMaxBuffer[0] < 0.001f)
+  {
+    MinMaxBuffer[0] = 0.0f;
+    MinMaxBuffer[1] = 0.001f;
+  }
+}
+
+[numthreads(32,32,1)]
+void CSNormalize(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= Resolution || id.y >= Resolution) 
+    return;
+    
+  float min = MinMaxBuffer[0];
+  float max = MinMaxBuffer[1];
+   
+    
+  SrcBuffer[id.y * Resolution + id.x] = (SrcBuffer[id.y * Resolution + id.x] - min) / (max - min);
+}
+
+[numthreads(32, 32, 1)]
+void CSNormalizeTiled(uint3 id : SV_DispatchThreadID)
+{
+  if (id.x >= Resolution || id.y >= Resolution)
+    return;
+
+  float min = MinMaxBuffer[0];
+  float max = MinMaxBuffer[1];
+  
+  float srcVal = SrcBuffer[id.y * Resolution + id.x];
+  float w = GetMaskWeight(id.x, id.y);
+
+  SrcBuffer[id.y * Resolution + id.x] = lerp(srcVal, (srcVal - min) / (max - min), w);
+}

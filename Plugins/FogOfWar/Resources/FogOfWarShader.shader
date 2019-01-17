@@ -20,6 +20,7 @@
 	// for fast world space reconstruction
 	uniform float4x4 _InverseView;
 
+	uniform float3 _CameraWorldPosition;
 	uniform float _FogTextureSize;
 	uniform float _MapSize;
 	uniform float4 _MapOffset;
@@ -34,16 +35,14 @@
 		float3 interpolatedRay : TEXCOORD1;
 	};
 
-	v2f vert(uint vertexID : SV_VertexID)
+	v2f vert(float4 vertex : POSITION)
     {
         float far = _ProjectionParams.z;
         float2 orthoSize = unity_OrthoParams.xy;
         float isOrtho = unity_OrthoParams.w; // 0: perspective, 1: orthographic
 
-        // Vertex ID -> clip space vertex position
-        float x = vertexID != 1 ? -1 : 3;
-        float y = vertexID == 2 ? -3 : 1;
-        float3 viewpos = float3(x, y, 1);
+        // Vertex pos -> clip space vertex position
+        float3 viewpos = float3(vertex.xy * 2 - 1, 1);
 
         // Perspective: view space vertex position of the far plane
         float3 rayPers = mul(unity_CameraInvProjection, viewpos.xyzz * far).xyz;
@@ -158,8 +157,8 @@
 
 				#ifdef TEXTUREFOG
 					// raycast plane
-					float3 rayorigin = _CameraWS;
-					float3 raydir = normalize(i.interpolatedRay);
+					float3 rayorigin = _CameraWorldPosition;
+					float3 raydir = normalize(wsPos - rayorigin);
 					float3 planeorigin = float3(0, _FogColorTexScale.y, 0);
 					float3 planenormal = float3(0, 1, 0);
 					float t = dot(planeorigin - rayorigin, planenormal) / dot(planenormal, raydir);

@@ -27,7 +27,8 @@ namespace CYM
     [Serializable]
     public class BaseConfig<TClass> : TDValue, ICloneable  where TClass : BaseConfig<TClass>, new()
     {
-        public BaseGlobal SelfBaseGlobal => BaseGlobal.Ins;
+        protected BaseGlobal SelfBaseGlobal => BaseGlobal.Ins;
+        protected BaseGRMgr GRMgr => SelfBaseGlobal.GRMgr;
         protected BaseUnit SelfBaseUnit { get; set; }
         protected object[] AddedObjs { get; private set; }
 
@@ -125,8 +126,8 @@ namespace CYM
         public virtual Sprite GetIcon()
         {
             if (!Icon.IsInvStr())
-                return BaseGlobal.Ins.GRMgr.GetIcon(Icon);
-            return BaseGlobal.Ins.GRMgr.GetIcon(TDID);
+                return GRMgr.GetIcon(Icon);
+            return GRMgr.GetIcon(TDID);
         }
         /// <summary>
         /// 获得禁用的图标,有可能没有
@@ -135,8 +136,8 @@ namespace CYM
         public virtual Sprite GetDisIcon()
         {
             if (!Icon.IsInvStr())
-                return BaseGlobal.Ins.GRMgr.GetIcon(Icon + BaseConstMgr.Suffix_Disable);
-            return BaseGlobal.Ins.GRMgr.GetIcon(TDID + BaseConstMgr.Suffix_Disable);
+                return GRMgr.GetIcon(Icon + BaseConstMgr.Suffix_Disable);
+            return GRMgr.GetIcon(TDID + BaseConstMgr.Suffix_Disable);
         }
 
         /// <summary>
@@ -146,8 +147,8 @@ namespace CYM
         public virtual GameObject GetPrefab()
         {
             if (!Prefab.IsInvStr())
-                return BaseGlobal.Ins.GRMgr.GetPrefab(Prefab);
-            return BaseGlobal.Ins.GRMgr.GetPrefab(TDID);
+                return GRMgr.GetPrefab(Prefab);
+            return GRMgr.GetPrefab(TDID);
         }
         /// <summary>
         /// 获得animator
@@ -155,7 +156,7 @@ namespace CYM
         /// <returns></returns>
         public virtual RuntimeAnimatorController GetAnimator()
         {
-            return BaseGlobal.Ins.GRMgr.GetAnimator(TDID);
+            return GRMgr.GetAnimator(TDID);
         }
         #endregion
 

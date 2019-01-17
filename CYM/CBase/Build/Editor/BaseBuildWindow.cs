@@ -62,12 +62,6 @@ namespace CYM
         #endregion
 
         #region life
-        private void Awake()
-        {
-        }
-        protected void OnDestroy()
-        {
-        }
         protected void OnEnable()
         {
             EnsureProjectFiles();
@@ -81,7 +75,18 @@ namespace CYM
             RefreshSceneNames();
             CLog.Info("打开开发者界面");   
         }
-
+        void DrawGUI()
+        {
+            Present_Main();
+            Present_DLC();
+            Present_Setting();
+            Present_Explorer();
+            Present_ExpressSetup();
+            Present_SubWindow();
+            Present_LevelList();
+            Present_ScriptTemplate();
+            Present_Other();
+        }
         #endregion
 
         #region 构建
@@ -601,19 +606,6 @@ namespace CYM
             Utile.XenoTemplateTool.RefreshTemplates(BaseConstMgr.Path_Editor,false);
         }
         #endregion
-
-        void DrawGUI()
-        {
-            Present_Main();
-            Present_DLC();
-            Present_Setting();
-            Present_Explorer();
-            Present_ExpressSetup();
-            Present_SubWindow();
-            Present_LevelList();
-            Present_ScriptTemplate();
-            Present_Other();
-        }
 
         #region Override
         [HideInInspector]

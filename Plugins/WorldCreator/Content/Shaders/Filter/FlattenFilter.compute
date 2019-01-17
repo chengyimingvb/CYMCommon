@@ -1,0 +1,31 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+int StepSize;
+int Resolution;
+
+float GeneralStrength;
+float FlattenStrength;
+float FlattenAnchor;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+  
+  if(x > bufferEnd || y > bufferEnd)
+    return; 
+  
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+  TmpBuffer[GetSingleIndex(y, x)] = lerp(currentValue, ((currentValue - FlattenAnchor) * FlattenStrength + FlattenAnchor), GeneralStrength);
+}

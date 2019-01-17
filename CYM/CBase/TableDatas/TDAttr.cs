@@ -73,6 +73,7 @@ namespace CYM
         Percent,//百分比 e.g. 10%,选择性1位小数
         KMG,    //单位显示 e.g. 1K/1M/1G,数字小于1K取整 
         Integer, //取整
+        Bool,//布尔 0:false 1:true
     }
     /// <summary>
     /// 属性操作类型
@@ -121,10 +122,6 @@ namespace CYM
         public bool IsForwardBuff { get; set; } = true;
         public NumberType NumberType { get; set; } = NumberType.Normal;
         public bool IsHide { get; set; } = false;
-        public TDAttrData()
-        {
-            Icon = "Attr_生命回复";
-        }
         public string GetMax()
         {
             if (Max == float.MaxValue)
@@ -137,9 +134,12 @@ namespace CYM
                 return BaseConstMgr.STR_Infinite;
             return Min.ToString();
         }
-        public override string GetName()
+        public override Sprite GetIcon()
         {
-            return base.GetName();
+            var ret = GRMgr.GetIcon(BaseConstMgr.Prefix_Attr+TDID);
+            if(ret==null)
+                ret = base.GetIcon();
+            return ret;
         }
     }
 
@@ -168,7 +168,13 @@ namespace CYM
             string[] names = Enum.GetNames(type);
             foreach (var item in names)
             {
-                data.Add(Find(item));
+                var val = Find(item);
+                if (val==null || val.TDID.IsInvStr())
+                {
+                    CLog.Error("没有这个属性:{0}",item);
+                    continue;
+                }
+                data.Add(val);
             }
             AttrDataList.Add(type, data);
         }

@@ -61,6 +61,7 @@ namespace VolumetricFogAndMist {
 		SerializedProperty _fogAreaPosition, _fogAreaCenter, _fogAreaFollowMode, _fogAreaTopology, _fogAreaRadius, _fogAreaHeight, _fogAreaDepth, _fogAreaFallOff, _fogAreaSortingMode, _fogAreaRenderOrder, _fogAreaShowGizmos;
         SerializedProperty _downsampling, _forceComposition, _edgeImprove, _edgeThreshold, _stepping, _steppingNear, _dithering, _ditherStrength, _jitterStrength, _spsrBehaviour, _useSinglePassStereoRenderingMatrix, _updateTextureSpread, _timeBetweenTextureUpdates;
 		SerializedProperty _enableMask, _maskLayer, _maskDownsampling;
+        SerializedProperty _reduceFlickerBigWorlds;
 		string fogMaskTestResult;
 		StringBuilder fogMaskTestResultSB;
         int pointLightInspectorCount;
@@ -195,6 +196,7 @@ namespace VolumetricFogAndMist {
 			_useSinglePassStereoRenderingMatrix = serializedObject.FindProperty("_useSinglePassStereoRenderingMatrix");
 			_updateTextureSpread = serializedObject.FindProperty("_updateTextureSpread");
 			_timeBetweenTextureUpdates = serializedObject.FindProperty("_timeBetweenTextureUpdates");
+            _reduceFlickerBigWorlds = serializedObject.FindProperty("_reduceFlickerBigWorlds");
 
 			_enableMask = serializedObject.FindProperty("_enableMask");
 			_maskLayer = serializedObject.FindProperty("_maskLayer");
@@ -901,7 +903,7 @@ namespace VolumetricFogAndMist {
 			EditorGUILayout.BeginVertical();
 
 			bool maskChanged = false;
-			bool maskEnabledInShader = shaderAdvancedOptionsInfo != null && shaderAdvancedOptionsInfo.GetAdvancedOptionState("FOG_MASK");
+			bool maskEnabledInShader = shaderAdvancedOptionsInfo != null && (shaderAdvancedOptionsInfo.GetAdvancedOptionState("FOG_MASK") || shaderAdvancedOptionsInfo.GetAdvancedOptionState("FOG_INVERTED_MASK"));
 			_enableMask.boolValue = maskEnabledInShader;
 			expandFogMaskSection = EditorGUILayout.Foldout(expandFogMaskSection, _enableMask.boolValue ? FOG_MASK_ON : FOG_MASK_OFF, sectionHeaderStyle);
 			if (expandFogMaskSection) {
@@ -987,6 +989,7 @@ namespace VolumetricFogAndMist {
 					EditorGUILayout.EndHorizontal();
 
 					GUI.enabled = true;
+                    EditorGUILayout.PropertyField(_reduceFlickerBigWorlds, new GUIContent("Big World Antiflicker", "Reduces flickering due to floating point precission issues when camera is the far distance."));
 				}
 
 				EditorGUILayout.PropertyField(_timeBetweenTextureUpdates, new GUIContent("Texture Update Interval", "Minimum time between texture updates. Reduce or change this to 0 to make directional light influence change smoothly at performance exchange."));

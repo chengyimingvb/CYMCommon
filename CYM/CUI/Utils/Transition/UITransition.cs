@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 
 /// <summary>
 /// 通过响应式触发
@@ -29,7 +30,7 @@ namespace CYM.UI
         #region Inspector
         [SerializeField]
         public RectTransform RectTrans;
-        [SerializeField]
+        [SerializeField,HideIf("Inspector_HideDuration")]
         public float Duration = 0.2f;
         [SerializeField]
         public float Delay = 0.0f;
@@ -133,6 +134,13 @@ namespace CYM.UI
             }
         }
 
+        #endregion
+
+        #region inspector editor
+        protected virtual bool Inspector_HideDuration()
+        {
+            return false;
+        }
         #endregion
     }
 

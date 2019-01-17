@@ -3,10 +3,12 @@ using UnityEditor;
 using UnityEngine;
 using System.Collections;
 using CYM;
+using Sirenix.OdinInspector.Editor;
+
 namespace CYM.Cam
 {
     [CustomEditor(typeof(RTSCamera))]
-    public class RTSCameraEditor : Editor
+    public class RTSCameraEditor : OdinEditor
     {
 
         private RTSCamera mCam;
@@ -33,8 +35,8 @@ namespace CYM.Cam
 
                 EditorGUILayout.LabelField("Scroll Settings");
 
-                ISRTSCScrollAnimationType tempType = mCam.scrollAnimationType;
-                tempType = (ISRTSCScrollAnimationType)EditorGUILayout.EnumPopup("  Animation Type", tempType);
+                CamScrollAnimationType tempType = mCam.scrollAnimationType;
+                tempType = (CamScrollAnimationType)EditorGUILayout.EnumPopup("  Animation Type", tempType);
 
                 if (tempType != mCam.scrollAnimationType
                     && EditorUtility.DisplayDialog("Replacing Changes", "If you switch to another animation type, your settings in current mode will be replaced or modified.", "Continue", "Cancel"))
@@ -45,7 +47,7 @@ namespace CYM.Cam
 
                 switch (mCam.scrollAnimationType)
                 {
-                    case ISRTSCScrollAnimationType.Simple:
+                    case CamScrollAnimationType.Simple:
 
                         Keyframe f_minHigh = mCam.scrollHigh.keys[0];
                         Keyframe f_maxHigh = mCam.scrollHigh.keys[mCam.scrollHigh.keys.Length - 1];
@@ -70,7 +72,7 @@ namespace CYM.Cam
 
                         break;
 
-                    case ISRTSCScrollAnimationType.Advanced:
+                    case CamScrollAnimationType.Advanced:
                         mCam.scrollXAngle = EditorGUILayout.CurveField(new GUIContent("    Scroll X Angle", "Scroll X Angle Animation"), mCam.scrollXAngle);
                         mCam.scrollHigh = EditorGUILayout.CurveField(new GUIContent("    Scroll High", "Scroll High Animation"), mCam.scrollHigh);
                         break;
@@ -177,10 +179,6 @@ namespace CYM.Cam
                 mCam.screenEdgeMovementControl = EditorGUILayout.Toggle("  Screen Edge Movement", mCam.screenEdgeMovementControl);
                 if (mCam.screenEdgeMovementControl)
                 {
-                    if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.Android || EditorUserBuildSettings.activeBuildTarget == BuildTarget.iOS || EditorUserBuildSettings.activeBuildTarget == BuildTarget.WSAPlayer)
-                    {
-                        EditorGUILayout.HelpBox("Please notice that mouse control is not supported on mobile platform. Mouse control is enabled now for you to debug in editor, but it will disable automatically when you build.", MessageType.Warning);
-                    }
                     mCam.desktopMoveSpeed = EditorGUILayout.FloatField("    Move Speed", mCam.desktopMoveSpeed);
                 }
                 mCam.mouseDragControl = EditorGUILayout.Toggle("  Drag Control", mCam.mouseDragControl);

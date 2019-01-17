@@ -73,7 +73,7 @@ namespace CYM
             if (InstantiateObjs != null)
                 foreach (var item in InstantiateObjs)
                     GameObject.Instantiate(item);
-
+            Application.wantsToQuit += OnWantsToQuit;
             Ins = this;
             MonoType = MonoType.Global;
             base.Awake();
@@ -104,6 +104,7 @@ namespace CYM
         {
             //CALLBACK
             LuaMgr.Callback_OnLuaParseEnd -= OnLuaParsed;
+            Application.wantsToQuit -= OnWantsToQuit;
             base.OnDestroy();
         }
         /// <summary>
@@ -145,11 +146,11 @@ namespace CYM
         }
         public void OnApplicationQuit()
         {
-            if (!Application.isEditor)
-            {
-                System.Diagnostics.Process.GetCurrentProcess().Kill();
-                System.Environment.Exit(0);
-            }
+            //if (!Application.isEditor)
+            //{
+            //    System.Diagnostics.Process.GetCurrentProcess().Kill();
+            //    System.Environment.Exit(0);
+            //}
         }
         #endregion
 
@@ -180,6 +181,10 @@ namespace CYM
         protected virtual void OnLuaParsed()
         {
 
+        }
+        protected bool OnWantsToQuit()
+        {
+            return false;
         }
         #endregion
 

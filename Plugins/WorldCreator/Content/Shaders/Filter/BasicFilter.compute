@@ -1,0 +1,125 @@
+﻿#pragma kernel CSRNG
+
+RWStructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+int Resolution;
+int StepSize;
+int StartValue;
+int Seed;
+
+float Roughness;
+float LevelStrength;
+
+static float W1 = 9;
+static float W2 = 3;
+static float W3 = 3;
+static float W4 = 1;
+static float W5 = W1 + W2 + W3 + W4;
+
+static float randomSignArray[2] = { 1, -1 };
+
+uint Hash(uint x)
+{
+  x = x ^ Seed;
+  x += (x << 10);
+  x = x ^ (x >> 6);
+  x += (x << 3);
+  x = x ^ (x >> 11);
+  x += (x << 15);
+  return x;
+}
+
+float RandomFloat(int x, int y)
+{
+  return (float)Hash((uint) x ^ Hash((uint) y)) / 0xFFFFFFFF;
+}
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+// RNG
+//////
+
+float CalcPixelRNG(int x, int y, int newX, int newY, uint index)
+{
+  float dmin, dmax, n;
+  float bufferValue = SrcBuffer[GetSingleIndex(y,x)];
+  
+  int maxSize = StepSize - 1;
+  x = clamp(x, 0, maxSize);
+  y = clamp(y, 0, maxSize);
+    
+  int yOffsetValue = index / 2 == 0 ? -1 : 1;
+  int xOffsetValue = index % 2 == 0 ? -1 : 1;
+  
+  int yOff = clamp(y + yOffsetValue, 0, maxSize);
+  int xOff = clamp(x + xOffsetValue, 0, maxSize);
+  
+  float bv = SrcBuffer[GetSingleIndex(yOff, x)];
+  float cv = SrcBuffer[GetSingleIndex(y, xOff)];
+  float dv = SrcBuffer[GetSingleIndex(yOff, xOff)];
+  
+  if(bufferValue < bv)
+  {
+    dmin = bufferValue;
+    dmax = bv;
+  }
+  else
+  {
+    dmin = bv;
+    dmax = bufferValue;
+  }
+  
+  if (cv > dmax)
+    dmax = cv;
+  else if (cv < dmin)
+    dmin = cv;
+  if (dv > dmax)
+    dmax = dv;
+  else if (dv < dmin)
+    dmin = dv;
+  
+  n = (W1 * bufferValue + W2 * bv + W3 * cv + W4 * dv) / W5;
+  
+  
+  uint hash = Hash((uint)newX ^ Hash((uint)newY));
+  float rand = (float)hash / 0xFFFFFFFF;
+
+  float randomFloat = rand;
+  int randomSign = randomSignArray[(int)(hash % 2)];
+	  
+  float delta = dmax - dmin;
+  if (dmax - n < delta / 2)
+    return n + (randomFloat * (dmax - n) * Roughness) * randomSign;
+  return n + (randomFloat * (n - dmin) * Roughness) * randomSign;    
+}
+
+[numthreads(32,32,1)]
+void CSRNG (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x > (uint)StepSize || id.y > (uint)StepSize)
+    return;
+    
+  uint xVal = id.x * 2;
+  uint yVal = id.y * 2;
+  
+  if(StepSize > StartValue)
+  {
+    for(uint i = 0 ; i < 4 ; i++)
+	  {
+	    int newX = xVal + i % 2;
+	    int newY = yVal + i / 2;
+      TmpBuffer[GetSingleIndex(newY, newX)] = CalcPixelRNG(id.x, id.y, newX, newY, i);
+	  }
+  }
+  else
+  {
+    TmpBuffer[GetSingleIndex(yVal, xVal)]         = LevelStrength * RandomFloat(xVal    , yVal);
+    TmpBuffer[GetSingleIndex(yVal, xVal + 1)]     = LevelStrength * RandomFloat(xVal + 1, yVal);
+    TmpBuffer[GetSingleIndex(yVal + 1, xVal)]     = LevelStrength * RandomFloat(xVal    , yVal + 1);
+    TmpBuffer[GetSingleIndex(yVal + 1, xVal + 1)] = LevelStrength * RandomFloat(xVal + 1, yVal + 1);
+  }
+}

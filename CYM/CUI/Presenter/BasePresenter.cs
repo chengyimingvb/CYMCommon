@@ -22,6 +22,7 @@ namespace CYM.UI
         public virtual void ShowByPanel(bool isDefault = false) { }
         public virtual void Toggle() { }
         public virtual void OnViewShow(bool b) { }
+        public virtual void Blind(){ }
 
         /// <summary>
         /// 属否自动刷新
@@ -62,6 +63,8 @@ namespace CYM.UI
         /// </summary>
         public virtual bool NeedUpdate { get; } = false;
 
+        [Tooltip("字体类型")]
+        public FontType FontType = FontType.Normal;
         [Tooltip("是否可以点击,优先级低")]
         public bool IsCanClick = false;
         [Tooltip("是否默认为显示状态")]
@@ -143,17 +146,24 @@ namespace CYM.UI
             }
             return false;
         }
-        public Font GetFontByLanguage()
+        public Font GetFont(FontType fonttype = FontType.Normal)
         {
             LanguageType type = SelfBaseGlobal.LangMgr.CurLangType;
-            if (UIConfig.Fonts.ContainsKey(type))
+            if (fonttype == FontType.Title)
             {
-                return UIConfig.Fonts[type];
+                if (UIConfig.OverrideTitleFonts.ContainsKey(type))
+                    return UIConfig.OverrideTitleFonts[type];
+                else
+                    return UIConfig.DefaultTitleFont;
             }
-            else
+            else if (fonttype == FontType.Normal)
             {
-                return UIConfig.DefaultFont;
+                if (UIConfig.OverrideNormalFonts.ContainsKey(type))
+                    return UIConfig.OverrideTitleFonts[type];
+                else
+                    return UIConfig.DefaultNormalFont;
             }
+            return UIConfig.DefaultFont;
         }
         #endregion
 
@@ -358,10 +368,10 @@ namespace CYM.UI
                 SetInteractable(Data.IsInteractable.Invoke(Index));
                 SetSelected(Data.IsSelected.Invoke(Index));
 
-                Font newFont = GetFontByLanguage();
+                Font newFont = GetFont(FontType);
                 foreach (var item in Texts)
                 {
-                    if (item != null&&item.font!= newFont)
+                    if (item != null && item.font!= newFont && newFont!=null)
                         item.font = newFont;
                 }
             }
@@ -431,6 +441,18 @@ namespace CYM.UI
         {
             IsDirty = true;
             BaseUIView.ActivePresenterUpdate(this);
+        }
+        /// <summary>
+        /// 闪烁
+        /// </summary>
+        public override void Blind()
+        {
+            //如果presenter 带了 UITranslate 那么等tween完了以后在设置SetActive
+            if (ShowTransitions != null && ShowTransitions.Length > 0)
+            {
+                foreach (var item in ShowTransitions)
+                    item.OnShow(true, false);
+            }
         }
         #endregion
 

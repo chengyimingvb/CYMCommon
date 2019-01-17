@@ -1,0 +1,139 @@
+﻿#pragma kernel CSMain
+#pragma kernel CSClearMinMax
+#pragma kernel CSMinMaxFirst
+#pragma kernel CSMinMax
+#pragma kernel CSCopyMinMax
+
+StructuredBuffer<float> SrcBuffer;
+StructuredBuffer<float> TerraceBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+RWStructuredBuffer<float> MinMaxBuffer;
+
+static const float PI = 3.14159265358979323846f;
+
+uint StepSize;
+uint Resolution;
+uint NormalizeOffset;
+
+int Value0;
+float Value2;
+float Value3;
+float Value5;
+float NormalizedErosionStrength;
+
+float Min;
+float MinVal;
+float Max;
+
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+
+  if(x > bufferEnd || y > bufferEnd)
+    return;
+  
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+  
+  if (currentValue > MinVal && currentValue < Value5/300*(Max - Min))
+  {
+    int p = 0;
+    while (currentValue > TerraceBuffer[p])
+    {
+      if(p == Value0)
+        break;
+      p++;
+    }
+    TmpBuffer[GetSingleIndex(y, x)] = currentValue - (currentValue - TerraceBuffer[p - 1])*pow(abs(Value2/300.0f), Value3)*NormalizedErosionStrength;  
+  }  
+  else
+    TmpBuffer[GetSingleIndex(y, x)] = currentValue;
+}
+
+[numthreads(1,1,1)]
+void CSClearMinMax(uint3 id : SV_DispatchThreadID)
+{
+  MinMaxBuffer[0] = 0.0f;
+  MinMaxBuffer[1] = 1.0f;
+}
+
+[numthreads(32,32,1)]
+void CSMinMaxFirst(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize) 
+    return;
+
+  float minVal = 0.0f;
+  float maxVal = 1.0f;
+  
+  int x = id.x * 2;
+  int y = id.y * 2;
+  
+  float values[4];
+  values[0] = SrcBuffer[y * Resolution + x];
+  values[1] = SrcBuffer[y * Resolution + x + 1];
+  values[2] = SrcBuffer[(y + 1) * Resolution + x];
+  values[3] = SrcBuffer[(y + 1) * Resolution + x + 1];
+  
+  for(int i = 0 ; i < 4 ; i++)
+  {
+    minVal = min(minVal, values[i]);
+    maxVal = max(maxVal, values[i]);
+  }
+
+  TmpBuffer[id.y * Resolution + id.x] = minVal;
+  TmpBuffer[id.y * Resolution + id.x + Resolution / 2] = maxVal;
+}
+
+[numthreads(32,32,1)]
+void CSMinMax (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= StepSize || id.y >= StepSize) 
+    return;
+
+  int x = id.x * 2;
+  int y = id.y * 2;
+  
+  int srcY = NormalizeOffset * (Resolution / 2) + y;
+  int tmpY = (1 - NormalizeOffset) * (Resolution / 2) + id.y;
+    
+  float minVal = 0.0f;
+  float maxVal = 1.0f;
+  
+  float minValues[4];
+  minValues[0] = TmpBuffer[srcY * Resolution + x];
+  minValues[1] = TmpBuffer[srcY * Resolution + x + 1];
+  minValues[2] = TmpBuffer[(srcY + 1) * Resolution + x];
+  minValues[3] = TmpBuffer[(srcY + 1) * Resolution + x + 1];
+  
+  float maxValues[4];
+  maxValues[0] = TmpBuffer[srcY * Resolution + x + (Resolution / 2)];
+  maxValues[1] = TmpBuffer[srcY * Resolution + x + 1 + (Resolution / 2)];
+  maxValues[2] = TmpBuffer[(srcY + 1) * Resolution + x + (Resolution / 2)];
+  maxValues[3] = TmpBuffer[(srcY + 1) * Resolution + x + 1 + (Resolution / 2)];
+  
+  for(int i = 0 ; i < 4 ; i++)
+  {
+    minVal = min(minVal, minValues[i]);
+    maxVal = max(maxVal, maxValues[i]);
+  }
+
+  TmpBuffer[tmpY * Resolution + id.x] = minVal;
+  TmpBuffer[tmpY * Resolution + id.x + Resolution / 2] = maxVal;
+}
+
+[numthreads(1,1,1)]
+void CSCopyMinMax (uint3 id : SV_DispatchThreadID)
+{
+  int y = (1 - NormalizeOffset) * (Resolution / 2);
+  MinMaxBuffer[0] = min(0.0f, SrcBuffer[y * Resolution]);
+  MinMaxBuffer[1] = max(1.0f, SrcBuffer[y * Resolution + (Resolution / 2)]);
+}

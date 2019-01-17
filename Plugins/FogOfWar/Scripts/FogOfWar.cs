@@ -30,6 +30,7 @@ namespace FoW
         public int fogTextureSize;
         public int fogTex;
         public int outsideFogStrength;
+        public int cameraWorldPosition;
         public int stereoSeparation;
 
         public void Initialise()
@@ -45,6 +46,7 @@ namespace FoW
             fogTextureSize = Shader.PropertyToID("_FogTextureSize");
             fogTex = Shader.PropertyToID("_FogTex");
             outsideFogStrength = Shader.PropertyToID("_OutsideFogStrength");
+            cameraWorldPosition = Shader.PropertyToID("_CameraWorldPosition");
             stereoSeparation = Shader.PropertyToID("_StereoSeparation");
         }
     }
@@ -461,6 +463,7 @@ namespace FoW
             _material.SetColor(_ids.fogColor, fogColor);
             _material.SetMatrix(_ids.inverseView, cam.cameraToWorldMatrix);
             _material.SetFloat(_ids.outsideFogStrength, outsideFogStrength);
+            _material.SetVector(_ids.cameraWorldPosition, cam.transform.position);
             _material.SetFloat(_ids.stereoSeparation, cam.stereoSeparation);
 
             // orthographic is treated very differently in the shader, so we have to make sure it executes the right code

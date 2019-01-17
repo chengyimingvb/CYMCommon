@@ -108,7 +108,7 @@ namespace VolumetricFogAndMist {
         const string DEPTH_CAM_NAME = "VFMDepthCamera";
         const string DEPTH_SUN_CAM_NAME = "VFMDepthSunCamera";
         const string VFM_BUILD_FIRST_INSTALL = "VFMFirstInstall";
-        const string VFM_BUILD_HINT = "VFMBuildHint95b4";
+        const string VFM_BUILD_HINT = "VFMBuildHint96zb2";
 
         static VolumetricFog _fog;
 
@@ -1986,6 +1986,24 @@ namespace VolumetricFogAndMist {
 
 
 
+        [SerializeField]
+        bool
+            _reduceFlickerBigWorlds;
+
+        public bool reduceFlickerBigWorlds
+        {
+            get { return _reduceFlickerBigWorlds; }
+            set
+            {
+                if (value != _reduceFlickerBigWorlds)
+                {
+                    _reduceFlickerBigWorlds = value;
+                    isDirty = true;
+                }
+            }
+        }
+
+
         #endregion
 
 
@@ -2094,6 +2112,7 @@ namespace VolumetricFogAndMist {
         RenderBuffer[] mrt;
         int _renderingInstancesCount;
         bool shouldUpdateMaterialProperties;
+		int lastFrameCount;
 
         [NonSerialized]
         public Material fogMat;
@@ -2193,8 +2212,13 @@ namespace VolumetricFogAndMist {
             } else {
                 if (fogRenderer == null) {
                     mainCamera = Camera.main;
-                    if (mainCamera == null)
+                    if (mainCamera==null) {
+                        mainCamera = FindObjectOfType<Camera>();
+                    }
+                    if (mainCamera == null) {
+                        Debug.LogError("Volumetric Fog: no camera found!");
                         return;
+                    }
                     fogRenderer = mainCamera.GetComponent<VolumetricFog>();
                     if (fogRenderer == null) {
                         fogRenderer = mainCamera.gameObject.AddComponent<VolumetricFog>();
@@ -2827,18 +2851,18 @@ namespace VolumetricFogAndMist {
                 return;
             }
 
-            if (!_hasCamera) {
-                CheckFogAreaDimensions();
-                if (_sunShadows && !fogRenderer.sunShadows) {
-                    fogRenderer.sunShadows = true;  // forces casting shadows on fog renderer
-                }
-            }
+				if (!_hasCamera) {
+					CheckFogAreaDimensions ();
+					if (_sunShadows && !fogRenderer.sunShadows) {
+						fogRenderer.sunShadows = true;  // forces casting shadows on fog renderer
+					}
+				}
 
-            if (shouldUpdateMaterialProperties) {
-                UpdateMaterialPropertiesNow();
-            }
+				if (shouldUpdateMaterialProperties) {
+					UpdateMaterialPropertiesNow ();
+				}
 
-            if (Application.isPlaying) {
+			if (lastFrameCount != Time.frameCount && Application.isPlaying) {
                 if (_useRealTime) {
                     deltaTime = Time.time - timeOfLastRender;
                     timeOfLastRender = Time.time;
@@ -2865,45 +2889,73 @@ namespace VolumetricFogAndMist {
                     useSinglePassStereoRenderingMatrix = false;
                 }
             }
-            if (fogRenderer.useSinglePassStereoRenderingMatrix && UnityEngine.XR.XRSettings.enabled) {
+
+            bool vrOn = UnityEngine.XR.XRSettings.enabled;
+
+            Vector3 camPos = mainCamera.transform.position;
+            bool shiftToZero = fogRenderer.reduceFlickerBigWorlds;
+            if (shiftToZero)
+            {
+                fogMat.SetVector("_FlickerFreeCamPos", camPos);
+                mainCamera.transform.position = Vector3.zero;
+                if (vrOn)
+                {
+                    mainCamera.ResetWorldToCameraMatrix();
+                }
+            } else
+            {
+                fogMat.SetVector("_FlickerFreeCamPos", Vector3.zero);
+            }
+            
+            if (mainCamera.orthographic)
+            {
+                fogMat.SetVector("_ClipDir", mainCamera.transform.forward);
+            }
+            if (vrOn && fogRenderer.useSinglePassStereoRenderingMatrix) { 
                 fogMat.SetMatrix("_ClipToWorld", mainCamera.cameraToWorldMatrix);
-            } else {
+            }
+            else
+            {
                 fogMat.SetMatrix("_ClipToWorld", mainCamera.cameraToWorldMatrix * mainCamera.projectionMatrix.inverse);
             }
 
-            if (mainCamera.orthographic)
-                fogMat.SetVector("_ClipDir", mainCamera.transform.forward);
-
-            if (fogRenderer.sun && _lightScatteringEnabled) {
-                UpdateScatteringData();
+            if (shiftToZero)
+            {
+                mainCamera.transform.position = camPos;
             }
 
-            // Updates point light illumination
-            if (pointLightParams.Length != MAX_POINT_LIGHTS) {
-                CheckPointLightData();
-            }
-            for (int k = 0; k < pointLightParams.Length; k++) {
-                Light pointLightComponent = pointLightParams[k].light;
-                if (pointLightComponent != null) {
-                    if (pointLightParams[k].color != pointLightComponent.color) {
-                        pointLightParams[k].color = pointLightComponent.color;
-                        isDirty = true;
-                    }
-                    if (pointLightParams[k].range != pointLightComponent.range) {
-                        pointLightParams[k].range = pointLightComponent.range;
-                        isDirty = true;
-                    }
-                    if (pointLightParams[k].position != pointLightComponent.transform.position) {
-                        pointLightParams[k].position = pointLightComponent.transform.position;
-                        isDirty = true;
-                    }
-                    if (pointLightParams[k].intensity != pointLightComponent.intensity) {
-                        pointLightParams[k].intensity = pointLightComponent.intensity;
-                        isDirty = true;
-                    }
-                }
-            }
-            SetPointLightMaterialProperties();
+			if (lastFrameCount != Time.frameCount || !Application.isPlaying) {
+				if (fogRenderer.sun && _lightScatteringEnabled) {
+					UpdateScatteringData ();
+				}
+
+				// Updates point light illumination
+				if (pointLightParams.Length != MAX_POINT_LIGHTS) {
+					CheckPointLightData ();
+				}
+				for (int k = 0; k < pointLightParams.Length; k++) {
+					Light pointLightComponent = pointLightParams [k].light;
+					if (pointLightComponent != null) {
+						if (pointLightParams [k].color != pointLightComponent.color) {
+							pointLightParams [k].color = pointLightComponent.color;
+							isDirty = true;
+						}
+						if (pointLightParams [k].range != pointLightComponent.range) {
+							pointLightParams [k].range = pointLightComponent.range;
+							isDirty = true;
+						}
+						if (pointLightParams [k].position != pointLightComponent.transform.position) {
+							pointLightParams [k].position = pointLightComponent.transform.position;
+							isDirty = true;
+						}
+						if (pointLightParams [k].intensity != pointLightComponent.intensity) {
+							pointLightParams [k].intensity = pointLightComponent.intensity;
+							isDirty = true;
+						}
+					}
+				}
+				SetPointLightMaterialProperties ();
+			}
 
             // Render fog before transparent objects are drawn and only having into account the depth of opaque objects
             if (_downsampling > 1f || _forceComposition) {
@@ -2927,7 +2979,7 @@ namespace VolumetricFogAndMist {
                     SetBlurTexture(source, rtReducedDestinationDesc);
                 }
 
-                if (!_edgeImprove || UnityEngine.XR.XRSettings.enabled || SystemInfo.supportedRenderTargetCount < 2) {
+                if (!_edgeImprove || vrOn || SystemInfo.supportedRenderTargetCount < 2) {
                     Graphics.Blit(source, reducedDestination, fogMat, 3);
                     if (_edgeImprove) {
                         Graphics.Blit(source, reducedDepthTexture, fogMat, 4);
@@ -2960,6 +3012,12 @@ namespace VolumetricFogAndMist {
                 }
                 Graphics.Blit(source, destination, fogMat, 0);
             }
+
+            if (shiftToZero && vrOn) {
+                mainCamera.ResetWorldToCameraMatrix();
+            }
+
+			lastFrameCount = Time.frameCount;
         }
 
         int GetScaledSize(int size, float factor) {

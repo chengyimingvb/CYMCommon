@@ -1,0 +1,289 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+static const float PI = 3.14159265358979323846f;
+
+int StepSize;
+
+float GeneralStrength;
+float ErosionStrength;
+float NormalizedErosionStrength;
+float CurrentWidth;
+float CurrentHeight;
+float MinAngle;
+float MaxAngle;
+int LayerStrength;
+int Resolution;
+int MinCount;
+int MaxCount;
+int Invert;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+  
+  if(x > bufferEnd || y > bufferEnd)
+    return;
+  
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+ 
+  int xNeg = x == 0 ? x + 1 : x - 1;
+  int xPos = x == bufferEnd ? x - 1 : x + 1;
+  int yNeg = y == 0 ? y + 1 : y - 1;
+  int yPos = y == bufferEnd ? y - 1 : y + 1;
+  
+  float arrayErosion[9];
+  arrayErosion[0] = SrcBuffer[GetSingleIndex(yNeg, xNeg)];
+  arrayErosion[1] = SrcBuffer[GetSingleIndex(yNeg, x)];
+  arrayErosion[2] = SrcBuffer[GetSingleIndex(yNeg, xPos)];
+  arrayErosion[3] = SrcBuffer[GetSingleIndex(y, xNeg)];
+  arrayErosion[4] = SrcBuffer[GetSingleIndex(y, xPos)];
+  arrayErosion[5] = SrcBuffer[GetSingleIndex(yPos, xNeg)];
+  arrayErosion[6] = SrcBuffer[GetSingleIndex(yPos, x)];
+  arrayErosion[7] = SrcBuffer[GetSingleIndex(yPos, xPos)];
+  arrayErosion[8] = currentValue;
+
+  int counter = -1;
+  float delta = 0.0f;
+  float value = 0.0f;
+
+  float minErosion = 1000000.0f;
+  float maxErosion = -1000000.0f;
+
+  for (int i = 0; i < 9; i++)
+  {
+    minErosion = min(minErosion, arrayErosion[i]);
+    maxErosion = max(maxErosion, arrayErosion[i]);
+    
+    if (arrayErosion[i] <= currentValue)
+      counter++;
+  }
+  
+  if (Invert == 1)
+  {
+    float tmp = maxErosion;
+    maxErosion = minErosion;
+    minErosion = tmp;
+  }
+
+
+  float angleA = (float)(atan(abs(maxErosion - minErosion) *
+    CurrentHeight / (CurrentWidth / StepSize)) * 360.0 / PI / 2.0);
+
+  if (MinCount <= MaxCount)
+  {
+    if (MinAngle <= MaxAngle)
+    {
+      if (counter >= MinCount && counter <= MaxCount)
+      {
+        if (angleA >= MinAngle && angleA <= MaxAngle)
+        {
+          float maxY = -5.0f, maxX = -6.0f, minY = -7.0f, minX = -8.0f;
+          for (int pY = -1; pY <= 1; pY++)
+          {
+            for (int pX = -1; pX <= 1; pX++)
+            {
+              if (pY == 0 && pX == 0)
+                continue;
+
+              if (y + pY > -1 && y + pY < StepSize && x + pX > -1 && x + pX < StepSize)
+              {
+                if (maxErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  maxY = pY;
+                  maxX = pX;
+                }
+                else if (minErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  minY = pY;
+                  minX = pX;
+                }
+              }
+            }
+          }
+          if (maxY == -minY && maxX == -minX)
+          {
+            delta = (maxErosion - minErosion)*GeneralStrength;
+            value = delta*NormalizedErosionStrength;
+          }
+          else
+          {
+            delta = (maxErosion - minErosion)*GeneralStrength;
+            value = delta*NormalizedErosionStrength/LayerStrength;
+          }
+        }
+        else
+        {
+          delta = (maxErosion - minErosion) * GeneralStrength;
+          value = delta * NormalizedErosionStrength / LayerStrength / 4.0f;
+        }
+      }
+      else
+        value = 0.0f;
+    }
+    else
+    {
+      if (counter >= MinCount && counter <= MaxCount)
+      {
+        if (angleA >= MinAngle || angleA <= MaxAngle)
+        {
+          float maxY = -5.0f, maxX = -6.0f, minY = -7.0f, minX = -8.0f;
+          for (int pY = -1; pY <= 1; pY++)
+          {
+            for (int pX = -1; pX <= 1; pX++)
+            {
+              if (pY == 0 && pX == 0)
+                continue;
+
+              if (y + pY > -1 && y + pY < StepSize && x + pX > -1 && x + pX < StepSize)
+              {
+                if (maxErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  maxY = pY;
+                  maxX = pX;
+                }
+                else if (minErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  minY = pY;
+                  minX = pX;
+                }
+              }
+            }
+          }
+          if (maxY == -minY && maxX == -minX)
+          {
+            delta = (maxErosion - minErosion) * GeneralStrength;
+            value = delta * NormalizedErosionStrength;
+          }
+          else
+          {
+            delta = (maxErosion - minErosion) * GeneralStrength;
+            value = delta * NormalizedErosionStrength / LayerStrength;
+          }
+        }
+        else
+        {
+          delta = (maxErosion - minErosion) * GeneralStrength;
+          value = delta * NormalizedErosionStrength / LayerStrength / 4.0f;
+        }
+      }
+      else
+        value = 0.0f;
+    }
+  }
+  else
+  {
+    if (MinAngle <= MaxAngle)
+    {
+      if (counter >= MinCount || counter <= MaxCount)
+      {
+        if (angleA >= MinAngle && angleA <= MaxAngle)
+        {
+          float maxY = -5.0f, maxX = -6.0f, minY = -7.0f, minX = -8.0f;
+          for (int pY = -1; pY <= 1; pY++)
+          {
+            for (int pX = -1; pX <= 1; pX++)
+            {
+              if (pY == 0 && pX == 0)
+                continue;
+
+              if (y + pY > -1 && y + pY < StepSize && x + pX > -1 && x + pX < StepSize)
+              {
+                if (maxErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  maxY = pY;
+                  maxX = pX;
+                }
+                else if (minErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  minY = pY;
+                  minX = pX;
+                }
+              }
+            }
+          }
+          if (maxY == -minY && maxX == -minX)
+          {
+            delta = (maxErosion - minErosion) * GeneralStrength;
+            value = delta * NormalizedErosionStrength;
+          }
+          else
+          {
+            delta = (maxErosion - minErosion) * GeneralStrength;
+            value = delta * NormalizedErosionStrength / LayerStrength;
+          }
+        }
+        else
+        {
+          delta = (maxErosion - minErosion) * GeneralStrength;
+          value = delta * NormalizedErosionStrength / LayerStrength / 4.0f;
+        }
+      }
+      else
+        value = 0.0f;
+    }
+    else
+    {
+      if (counter >= MinCount || counter <= MaxCount)
+      {
+        if (angleA >= MinAngle || angleA <= MaxAngle)
+        {
+          float maxY = -5.0f, maxX = -6.0f, minY = -7.0f, minX = -8.0f;
+          for (int pY = -1; pY <= 1; pY++)
+          {
+            for (int pX = -1; pX <= 1; pX++)
+            {
+              if (pY == 0 && pX == 0)
+                continue;
+
+              if (y + pY > -1 && y + pY < StepSize && x + pX > -1 && x + pX < StepSize)
+              {
+                if (maxErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  maxY = pY;
+                  maxX = pX;
+                }
+                else if (minErosion == SrcBuffer[GetSingleIndex(y + pY, x + pX)])
+                {
+                  minY = pY;
+                  minX = pX;
+                }
+              }
+            }
+          }
+          if (maxY == -minY && maxX == -minX)
+          {
+            delta = (maxErosion - minErosion) * GeneralStrength;
+            value = delta * NormalizedErosionStrength;
+          }
+          else
+          {
+            delta = (maxErosion - minErosion) * GeneralStrength;
+            value = delta * NormalizedErosionStrength / LayerStrength;
+          }
+        }
+        else
+        {
+          delta = (maxErosion - minErosion) * GeneralStrength;
+          value = delta * NormalizedErosionStrength / LayerStrength / 4.0f;
+        }
+      }
+      else
+        value = 0.0f;
+    }
+  }
+
+
+  TmpBuffer[GetSingleIndex(y, x)] = currentValue - value;
+}

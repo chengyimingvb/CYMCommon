@@ -177,6 +177,7 @@ namespace CYM
     public interface IBaseBattleMgr
     {
         void LockGameStartFlow(bool b);
+        bool IsInBattle { get; }
         #region Callback
         event Callback Callback_OnStartNewGame;
         event Callback Callback_OnGameStartOver;

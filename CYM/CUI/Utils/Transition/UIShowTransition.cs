@@ -82,5 +82,12 @@ namespace CYM.UI
             }
         }
         #endregion
+
+        #region Inspector Editor
+        protected override bool Inspector_HideDuration()
+        {
+            return true;
+        }
+        #endregion
     }
 }

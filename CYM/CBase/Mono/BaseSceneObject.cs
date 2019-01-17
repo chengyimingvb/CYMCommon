@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 //**********************************************
@@ -17,36 +18,32 @@ namespace CYM
     {
         #region inspector
         [SerializeField]
-        bool ReParse=true;
-        [SerializeField]
         protected Transform RootPoints;
         #endregion
 
         #region prop
         public static BaseSceneObject Ins;
-        #endregion
-
-        #region prop
+        public static Terrain ActiveTerrain => Terrain.activeTerrain;
         public List<Transform> Points { get; private set; } = new List<Transform>();
         protected Dictionary<string, Transform> PointsDic { get; private set; } = new Dictionary<string, Transform>();
         #endregion
 
+        #region life
         public override void Awake()
         {
             Ins = (BaseSceneObject)this;
             base.Awake();
             Parse();
         }
-
-        void Update()
+        public override void OnEnable()
         {
-            if(ReParse)
-            {
-                Parse();
-                ReParse = false;
-            }
+            base.OnEnable();
+            Parse();
         }
+        #endregion
 
+        #region set
+        [Button("Parse")]
         protected virtual void Parse()
         {
             if (RootPoints != null)
@@ -64,8 +61,15 @@ namespace CYM
                 }
             }
         }
+        #endregion
 
         #region get
+        public Vector3 GetInterpolatedNormal(int x,int z)
+        {
+            if (ActiveTerrain == null)
+                throw new Exception("ActiveTerrain == null");
+            return ActiveTerrain.terrainData.GetInterpolatedNormal(x,z);
+        }
         /// <summary>
         /// 获得出身点
         /// </summary>
@@ -89,6 +93,16 @@ namespace CYM
             if (!PointsDic.ContainsKey(name))
                 return null;
             return PointsDic[name];
+        }
+        /// <summary>
+        /// 获得高度
+        /// </summary>
+        /// <returns></returns>
+        public float GetHeight(float x,float z)
+        {
+            if (ActiveTerrain == null)
+                throw new Exception("ActiveTerrain == null");
+            return ActiveTerrain.terrainData.GetHeight((int)x, (int)z) + ActiveTerrain.transform.position.y;
         }
         #endregion
 

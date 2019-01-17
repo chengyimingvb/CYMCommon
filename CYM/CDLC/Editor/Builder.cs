@@ -390,9 +390,11 @@ namespace CYM.DLC
         {
             EditorUserBuildSettings.SwitchActiveBuildTarget(GetBuildTargetGroup(), GetBuildTarget());
             AssetDatabase.Refresh();
+            //File.Move(BaseConstMgr.Path_CYMCommonASMdef, BaseConstMgr.Path_CYMCommonASMdefTemp);
         }
         static void OnPostBuild()
         {
+            //File.Move(BaseConstMgr.Path_CYMCommonASMdefTemp, BaseConstMgr.Path_CYMCommonASMdef);
         }
         static void CopyDLCToEXE(DLCItem item)
         {

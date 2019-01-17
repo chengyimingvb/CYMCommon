@@ -1,0 +1,157 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+static const float PI = 3.14159265358979323846f;
+
+int StepSize;
+
+float GeneralStrength;
+float NormalizedErosionStrength;
+float CurrentHeight;
+float CurrentWidth;
+float Power;
+float Blend;
+int Resolution;
+int SmoothStrength;
+int MinCount;
+int MaxCount;
+float MinAngle;
+float MaxAngle;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+  
+  if(x > bufferEnd || y > bufferEnd)
+    return;
+  
+  float delta = 0.0f;
+  float value = 0.0f;
+
+  int yMin = 0, yMax = 0, xMin = 0, xMax = 0;
+  if (y > 0 && y < bufferEnd)
+  {
+    yMin = -1;
+    yMax = 1;
+  }
+  else if (y == 0)
+  {
+    yMin = 0;
+    yMax = 1;
+  }
+  else if (y == bufferEnd)
+  {
+    yMin = -1;
+    yMax = 0;
+  }
+
+  if (x > 0 && x < bufferEnd)
+  {
+    xMin = -1;
+    xMax = 1;
+  }
+  else if (x == 0)
+  {
+    xMin = 0;
+    xMax = 1;
+  }
+  else if (x == bufferEnd)
+  {
+    xMin = -1;
+    xMax = 0;
+  }
+  int counter1 = 0;
+  int counter2 = 0;
+  float totalValue = 0.0f;
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+  float minValue = currentValue;
+
+  TmpBuffer[GetSingleIndex(y, x)] = currentValue;
+
+  for (int pY = yMin; pY <= yMax; pY++)
+  {
+    for (int pX = xMin; pX <= xMax; pX++)
+    {
+      float innerValue = SrcBuffer[GetSingleIndex(y + pY, x + pX)];
+      totalValue += innerValue;
+      counter1++;
+
+      if (innerValue <= minValue)
+        minValue = innerValue;
+
+      if (innerValue <= currentValue)
+        counter2++;
+    }
+  }
+
+  if (MinCount <= MaxCount)
+  {
+    if (counter2 > MinCount && counter2 < MaxCount)
+    {
+      float angleA = atan((currentValue - minValue) * CurrentHeight /
+                   (CurrentWidth / StepSize)) * 360.0f / PI / 2.0f;
+
+      if (MinAngle <= MaxAngle)
+      {
+        if (angleA > MinAngle && angleA < MaxAngle)
+        {
+          float b = 1.0f - (MaxAngle - angleA) / MaxAngle * Blend;
+          float total = totalValue / counter1;
+          TmpBuffer[GetSingleIndex(y, x)] = currentValue -
+                                  (currentValue - (total * Power + currentValue) / (1.0f + Power)) * Blend;
+        }
+      }
+      else
+      {
+        if (angleA > MinAngle || angleA < MaxAngle)
+        {
+          float b = 1.0f - (MinAngle - angleA) / MinAngle * Blend;
+          float total = totalValue / counter1;
+          TmpBuffer[GetSingleIndex(y, x)] = currentValue -
+                                  (currentValue - (total * Power + currentValue) / (1.0f + Power)) * Blend;
+        }
+      }
+    }
+  }
+  else
+  {
+    if (counter2 >= MinCount || counter2 <= MaxCount)
+    {
+      float angleA =
+        atan((currentValue - minValue) * CurrentHeight /
+                   (CurrentWidth / StepSize)) * 360.0f / PI / 2.0f;
+
+      if (MinAngle <= MaxAngle)
+      {
+        if (angleA > MinAngle && angleA < MaxAngle)
+        {
+          float b = 1.0f - (MaxAngle - angleA) / MaxAngle * Blend;
+          float total = totalValue / counter1;
+          TmpBuffer[GetSingleIndex(y, x)] = currentValue -
+                                  (currentValue - (total * Power + currentValue) / (1.0f + Power)) * Blend;
+        }
+      }
+      else
+      {
+        if (angleA > MinAngle || angleA < MaxAngle)
+        {
+          float b = 1.0f - (MinAngle - angleA) / MinAngle * Blend;
+          float total = totalValue / counter1;
+          TmpBuffer[GetSingleIndex(y, x)] = currentValue -
+                                  (currentValue - (total * Power + currentValue) / (1.0f + Power)) * Blend;
+        }
+      }
+    }
+  }
+}

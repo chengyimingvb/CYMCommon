@@ -17,7 +17,10 @@ namespace CYM.Cam
     public class RTSCamera : MonoBehaviour
     {
 
-        public ISRTSCScrollAnimationType scrollAnimationType;
+        public float DesktopMoveDragSpeed { get; set; } = 10.0f;
+        public float DesktopMoveSpeed { get;  set; } = 300;
+
+        public CamScrollAnimationType scrollAnimationType;
         public AnimationCurve scrollXAngle = AnimationCurve.Linear(0, 0, 1, 1);
         public AnimationCurve scrollHigh = AnimationCurve.Linear(0, 0, 1, 1);
         public float groundHigh;
@@ -92,8 +95,6 @@ namespace CYM.Cam
         #endregion
 
         #region static_methods
-        static public RTSCamera GetInstantiated() { return self; }
-
         static public void LockFixedPointForMain(Transform pos)
         {
             if (self.allowFollow)
@@ -177,11 +178,13 @@ namespace CYM.Cam
         {
             self = this;
             selfT = transform;
-            //groundMask = 1<<groundLayer;
         }
 
         public void Start()
         {
+            DesktopMoveDragSpeed = desktopMoveDragSpeed;
+            DesktopMoveSpeed = desktopMoveSpeed;
+
             objectPos = CalculateCurrentObjectPosition();
             scrollValue = Mathf.Clamp01(scrollValue);
             objectPos.y = scrollHigh.Evaluate(scrollValue);
@@ -211,10 +214,10 @@ namespace CYM.Cam
 
             if (screenEdgeMovementControl)
             {
-                if (Input.mousePosition.y >= Screen.height - 1f) Move(selfT.forward, desktopMoveSpeed * Time.deltaTime);
-                if (Input.mousePosition.y <= 1) Move(-selfT.forward, desktopMoveSpeed * Time.deltaTime);
-                if (Input.mousePosition.x <= 1) Move(-selfT.right, desktopMoveSpeed * Time.deltaTime);
-                if (Input.mousePosition.x >= Screen.width - 1f) Move(selfT.right, desktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.y >= Screen.height - 1f) Move(selfT.forward, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.y <= 1) Move(-selfT.forward, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.x <= 1) Move(-selfT.right, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.x >= Screen.width - 1f) Move(selfT.right, DesktopMoveSpeed * Time.deltaTime);
             }
 
             if (mouseScrollControl)
@@ -224,20 +227,22 @@ namespace CYM.Cam
 
             if (mouseDragControl)
             {
-                if (Input.GetMouseButton(mouseRotateButton))
-                {
-                    Rotate(Input.GetAxis("Mouse X") * desktopRotateSpeed);
-                }
+                //if (Input.GetMouseButton(mouseRotateButton))
+                //{
+                //    Rotate(Input.GetAxis("Mouse X") * desktopRotateSpeed);
+                //}
 
                 if (Input.GetMouseButton(mouseDragButton))
                 {
                     float mouseX = Input.GetAxis("Mouse X") / Screen.width * 10000f;
                     float mouseY = Input.GetAxis("Mouse Y") / Screen.height * 10000f;
 
-                    NormalizedMove(-selfT.right * mouseX, desktopMoveDragSpeed * Time.deltaTime);
-
-                    Vector3 modifyForward = (selfT.forward + selfT.up * 0.5f).normalized;
-                    NormalizedMove(-modifyForward * mouseY, desktopMoveDragSpeed * Time.deltaTime);
+                    Vector3 modifyRight = -Vector3.right;
+                    //modifyRight = -selfT.right
+                    NormalizedMove(modifyRight * mouseX, DesktopMoveDragSpeed * Time.deltaTime);
+                    Vector3 modifyForward = Vector3.forward;
+                    //modifyForward = -(selfT.forward + selfT.up * 0.5f).normalized ;
+                    NormalizedMove(-modifyForward * mouseY, DesktopMoveDragSpeed * Time.deltaTime);
                 }
             }
 
@@ -372,7 +377,7 @@ namespace CYM.Cam
     }
 }
 
-public enum ISRTSCScrollAnimationType
+public enum CamScrollAnimationType
 {
     Simple, Advanced
 }

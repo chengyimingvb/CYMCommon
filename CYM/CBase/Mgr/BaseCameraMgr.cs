@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using static CameraPlay;
-using BeautifyEffect;
 using CYM.Highlighting;
 using UnityEngine.Internal;
 
@@ -14,12 +13,13 @@ namespace CYM
         public Camera MainCamera { get; private set; }
         protected Transform MainCameraTrans { get; set; }
         protected HighlighterRenderer HighlighterRenderer { get; set; }
-        protected Beautify Beautify { get; set; }
+        public const float TopHight = 300.0f;
+        public const float MidHight = 137.0f;
         public float CameraHight { get; private set; }
-        public bool IsTopHight { get { return CameraHight >= 300.0f; } }
-        public bool IsLowHight { get { return CameraHight <= 137.0f; } }
-        public bool IsMiddleHight { get { return CameraHight > 137.0f && CameraHight < 300.0f; } }
-        public float ZoomPercent { get { return CameraHight / 300.0f; } }
+        public bool IsTopHight { get { return CameraHight >= TopHight; } }
+        public bool IsLowHight { get { return CameraHight <= MidHight; } }
+        public bool IsMiddleHight { get { return CameraHight > MidHight && CameraHight < TopHight; } }
+        public float ZoomPercent { get { return CameraHight / 400; } }
         #endregion
 
         #region mgr
@@ -43,7 +43,6 @@ namespace CYM
             MainCamera = Mono.GetComponentInChildren<Camera>();
             MainCameraTrans = MainCamera.transform;
             HighlighterRenderer = Mono.GetComponentInChildren<HighlighterRenderer>();
-            Beautify = Mono.GetComponentInChildren<Beautify>();
         }
         public override void OnUpdate()
         {
@@ -78,16 +77,10 @@ namespace CYM
             MainCamera.allowMSAA = b;
             BaseSettings.EnableMSAA = b;
         }
-        public virtual void EnableBeautify(bool b)
-        {
-            if(Beautify!=null)
-                Beautify.enabled = b;
-            BaseSettings.EnableBeautify = b;
-        }
         public virtual void EnableBloom(bool b)
         {
-            if (Beautify != null)
-                Beautify.bloom = b;
+            //if (Beautify != null)
+            //    Beautify.bloom = b;
             BaseSettings.EnableBloom = b;
         }
         public virtual void EnableSSAO(bool b)

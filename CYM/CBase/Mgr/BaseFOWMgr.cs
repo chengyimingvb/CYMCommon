@@ -11,6 +11,9 @@ using CYM;
 using CYM.UI;
 using CYM.AI;
 using FoW;
+using DG.Tweening.Core;
+using DG.Tweening.Plugins.Options;
+using DG.Tweening;
 
 namespace CYM
 {
@@ -19,6 +22,8 @@ namespace CYM
         #region prop
         private bool isDirty = false;
         private FogOfWar FOW { get; set; }
+        TweenerCore<float, float, FloatOptions> fogAlphaTween;
+        public bool IsFogShow { get; private set; } = true;
         #endregion
 
         #region life
@@ -41,6 +46,16 @@ namespace CYM
         #endregion
 
         #region set
+        public void Show(bool b)
+        {
+            if (IsFogShow == b)
+                return;
+            IsFogShow = b;
+            if (fogAlphaTween != null)
+                fogAlphaTween.Kill();
+            //tween地图颜色
+            fogAlphaTween = DOTween.To(() => FOW.fogColor.a, x => FOW.fogColor.a = x, b ? 0.4f : 0.0f, 0.3f);
+        }
         /// <summary>
         /// 更新谜雾图
         /// </summary>
@@ -61,7 +76,11 @@ namespace CYM
         public void EnableFOW(bool b)
         {
             if (FOW != null)
+            {
+                if (FOW.enabled == b)
+                    return;
                 FOW.enabled = b;
+            }
         }
         #endregion
 

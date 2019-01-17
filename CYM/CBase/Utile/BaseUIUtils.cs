@@ -212,6 +212,14 @@ namespace CYM
             return DecorateStr(KMG((int)number), number, true, false);
         }
 
+        public static string Bool(float val)
+        {
+            if (val <= 0.0f)
+                return "No";
+            else
+                return "Yes";
+        }
+
         // 裁剪小数部分
         public static string PercentByInt(int percent)
         {

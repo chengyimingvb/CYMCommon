@@ -249,7 +249,70 @@ namespace VolumetricFogAndMist {
 			}
 		}
 
-		public void ResetFogOfWarAlpha(Vector3 worldPosition, float radius) {
+
+        /// <summary>
+        /// Changes the alpha value of the fog of war within bounds creating a transition from current alpha value to specified target alpha. It takes into account FogOfWarCenter and FogOfWarSize.
+        /// Note that only x and z coordinates are used. Y (vertical) coordinate is ignored.
+        /// </summary>
+        /// <param name="bounds">in world space coordinates.</param>
+        /// <param name="fogNewAlpha">target alpha value.</param>
+        /// <param name="duration">duration of transition in seconds (0 = apply fogNewAlpha instantly).</param>
+        public void SetFogOfWarAlpha(Bounds bounds, float fogNewAlpha, float duration) {
+            if (fogOfWarTexture == null)
+                return;
+
+            Vector3 worldPosition = bounds.center;
+            float tx = (worldPosition.x - _fogOfWarCenter.x) / _fogOfWarSize.x + 0.5f;
+            if (tx < 0 || tx > 1f)
+                return;
+            float tz = (worldPosition.z - _fogOfWarCenter.z) / _fogOfWarSize.z + 0.5f;
+            if (tz < 0 || tz > 1f)
+                return;
+
+            int tw = fogOfWarTexture.width;
+            int th = fogOfWarTexture.height;
+            int px = (int)(tx * tw);
+            int pz = (int)(tz * th);
+            int colorBufferPos = pz * tw + px;
+            byte newAlpha8 = (byte)(fogNewAlpha * 255);
+            Color32 existingColor = fogOfWarColorBuffer[colorBufferPos];
+            if (newAlpha8 != existingColor.a) { // just to avoid over setting the texture in an Update() loop
+                float trz = bounds.extents.z / _fogOfWarSize.z;
+                float trx = bounds.extents.x / _fogOfWarSize.z;
+                int deltaz = (int)(th * trz);
+                int deltax = (int)(th * trx);
+                for (int r = pz - deltaz; r <= pz + deltaz; r++) {
+                    if (r > 0 && r < th - 1) {
+                        for (int c = px - deltax; c <= px + deltax; c++) {
+                            if (c > 0 && c < tw - 1) {
+                                int distancex = Mathf.CeilToInt(px - c);
+                                int distancez = Mathf.CeilToInt(pz - r);
+                                if (distancex <= deltax && distancez <= deltaz) {
+                                    colorBufferPos = r * tw + c;
+                                    Color32 colorBuffer = fogOfWarColorBuffer[colorBufferPos];
+                                    byte targetAlpha = (byte)Mathf.Lerp(newAlpha8, colorBuffer.a, ((float)distancez / deltaz) * ((float)distancex / deltax));
+                                    if (targetAlpha < 255) {
+                                        if (duration > 0) {
+                                            AddFogOfWarTransitionSlot(c, r, colorBuffer.a, targetAlpha, 0, duration);
+                                        } else {
+                                            colorBuffer.a = targetAlpha;
+                                            fogOfWarColorBuffer[colorBufferPos] = colorBuffer;
+                                            fogOfWarTexture.SetPixel(c, r, colorBuffer);
+                                            requiresTextureUpload = true;
+                                            if (_fogOfWarRestoreDuration > 0) {
+                                                AddFogOfWarTransitionSlot(c, r, targetAlpha, 255, _fogOfWarRestoreDelay, _fogOfWarRestoreDuration);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public void ResetFogOfWarAlpha(Vector3 worldPosition, float radius) {
 			if (fogOfWarTexture == null)
 				return;
 			

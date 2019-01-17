@@ -5,6 +5,7 @@ using UnityEngine;
 using System.Linq;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using DG.Tweening;
 
 namespace CYM.UI
 {
@@ -31,6 +32,10 @@ namespace CYM.UI
         /// 用户自定义数据缓存
         /// </summary>
         IList<object> CustomDatas=new List<object>();
+        /// <summary>
+        /// 刷新Layout
+        /// </summary>
+        Timer RefreshLayoutTimer = new Timer(0.02f);
         #endregion
 
         #region life
@@ -66,6 +71,7 @@ namespace CYM.UI
                 {
                     OnRefresh.Invoke(item, CustomDatas == null ? null : CustomDatas[item.Index]);
                 }
+                RefreshLayoutTimer.Restart();
             }
         }
         public override void OnFixedUpdate()
@@ -91,6 +97,12 @@ namespace CYM.UI
             {
                 base.OnFixedUpdate();
             }
+
+            if (RefreshLayoutTimer.CheckOverOnce())
+            {
+                //刷新布局
+                LayoutRebuilder.ForceRebuildLayoutImmediate(RectTrans);
+            }
         }
         public void AutoFix()
         {
@@ -104,31 +116,6 @@ namespace CYM.UI
         #endregion
 
         #region init
-        /// <summary>
-        /// 自动刷新
-        /// </summary>
-        /// TP=控件
-        /// TD=控件数据
-        /// TCD=用户数据
-        /// customDatas=用户数据列表
-        /// <returns></returns>
-        public virtual TP[] Init<TP, TD,TCD>(IList<TCD> customDatas,Func<int,TCD, TD> getPD) where TP : Presenter<TD>, new() where TD : PresenterData, new()
-        {
-            if (customDatas == null)
-            {
-                CLog.Error("customDatas 为 null");
-            }
-            Init(new PresenterData());
-            InitCount(customDatas.Count);
-            OnRefresh = null;
-            OnFixedRefresh = null;
-            var retData = GetGOs<TP, TD>();
-            foreach (var item in Children)
-            {
-                (item as TP).Init(getPD.Invoke(item.Index, customDatas[item.Index]));
-            }
-            return retData;
-        }
         /// <summary>
         /// 自动刷新
         /// </summary>
@@ -161,7 +148,7 @@ namespace CYM.UI
         /// count=初始化数量
         /// onRefresh=自定义刷新方法
         /// <returns></returns>
-        public virtual TP[] Init<TP, TD>(int count, Callback<object, object> onRefresh, Callback<object, object> onFixedRefresh, TD pData=null) where TP : Presenter<TD>, new() where TD : PresenterData, new()
+        public virtual TP[] Init<TP, TD>(int count, Callback<object, object> onRefresh, Callback<object, object> onFixedRefresh=null, TD pData=null) where TP : Presenter<TD>, new() where TD : PresenterData, new()
         {
             if (onRefresh == null)
             {
@@ -225,34 +212,6 @@ namespace CYM.UI
             OnFixedRefresh = null;
             return GetGOs<TP, TD>(data);
         }
-        /// <summary>
-        /// 初始化通过数量
-        /// </summary>
-        /// <typeparam name="TP"></typeparam>
-        /// <typeparam name="TD"></typeparam>
-        /// <param name="count"></param>
-        /// <returns></returns>
-        public virtual TP[] InitByCount<TP, TD>(int count) where TP : Presenter<TD>, new() where TD : PresenterData, new()
-        {
-            InitCount(count);
-            OnRefresh = null;
-            OnFixedRefresh = null;
-            return GetGOs<TP, TD>();
-        }
-        /// <summary>
-        /// 初始化通过数量
-        /// </summary>
-        /// <typeparam name="TP"></typeparam>
-        /// <typeparam name="TD"></typeparam>
-        /// <param name="count"></param>
-        /// <returns></returns>
-        //public virtual TP[] InitByExist<TP, TD>(params TD[] data) where TP : Presenter<TD>, new() where TD : PresenterData, new()
-        //{
-        //    OnRefresh = null;
-        //    OnFixedRefresh = null;
-        //    InitExist();
-        //    return GetGOs<TP, TD>(data);
-        //}
         /// <summary>
         /// 通过数量初始化
         /// </summary>

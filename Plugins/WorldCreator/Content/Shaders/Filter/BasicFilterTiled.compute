@@ -1,0 +1,151 @@
+﻿#pragma kernel CSRNG
+
+RWStructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> SrcBorderBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+RWStructuredBuffer<float> TmpBorderBuffer;
+
+int Resolution;
+int StepSize;
+int StartValue;
+int Seed;
+int XOff;
+int ZOff;
+
+float Roughness;
+float LevelStrength;
+
+static float W1 = 9;
+static float W2 = 3;
+static float W3 = 3;
+static float W4 = 1;
+static float W5 = W1 + W2 + W3 + W4;
+
+static float randomSignArray[2] = { 1, -1 };
+
+uint Hash(uint x)
+{
+  x = x ^ Seed;
+  x += (x << 10);
+  x = x ^ (x >> 6);
+  x += (x << 3);
+  x = x ^ (x >> 11);
+  x += (x << 15);
+  return x;
+}
+
+float RandomFloat(int x, int y)
+{
+  return (float)Hash((uint) (x + XOff) ^ Hash((uint) (y + ZOff))) / 0xFFFFFFFF;
+}
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+float GetOldValue(int x, int y)
+{
+  const int rightOff = StepSize + 2;
+  const int topOff = rightOff + StepSize + 2;
+  const int bottomOff = topOff + StepSize;
+
+  if (x < 0)
+    return SrcBorderBuffer[y + 1];
+  if (x == StepSize)
+    return SrcBorderBuffer[rightOff + y + 1];
+  if (y < 0)
+    return SrcBorderBuffer[topOff + x];
+  if(y == StepSize)
+    return SrcBorderBuffer[bottomOff + x];
+  return SrcBuffer[GetSingleIndex(y, x)];
+}
+
+void SetNewValue(int x, int y, float v)
+{
+  const int doubleStep = StepSize * 2;
+  const int rightOff = doubleStep + 2;
+  const int topOff = rightOff + doubleStep + 2;
+  const int bottomOff = topOff + doubleStep;
+
+  if (x < 0)
+    TmpBorderBuffer[y + 1] = v;
+  else if (x == doubleStep)
+    TmpBorderBuffer[rightOff + y + 1] = v;
+  else if (y < 0)
+    TmpBorderBuffer[topOff + x] = v;
+  else if (y == doubleStep)
+    TmpBorderBuffer[bottomOff + x] = v;
+  else
+    TmpBuffer[GetSingleIndex(y, x)] = v;
+}
+
+// RNG
+//////
+float CalcPixelRNG(int newX, int newY)
+{
+  int x = floor(newX / 2.0f);
+  int y = floor(newY / 2.0f);
+
+  float dmin, dmax, n;
+  float bufferValue = GetOldValue(x, y);
+
+  int yOffsetValue = (uint)newY % 2 == 0 ? -1 : 1;
+  int xOffsetValue = (uint)newX % 2 == 0 ? -1 : 1;
+  
+  int yOff = y + yOffsetValue;
+  int xOff = x + xOffsetValue;
+  
+  float bv = GetOldValue(x, yOff);
+  float cv = GetOldValue(xOff, y);
+  float dv = GetOldValue(xOff, yOff);
+  
+  if(bufferValue < bv)
+  {
+    dmin = bufferValue;
+    dmax = bv;
+  }
+  else
+  {
+    dmin = bv;
+    dmax = bufferValue;
+  }
+  
+  if (cv > dmax)
+    dmax = cv;
+  else if (cv < dmin)
+    dmin = cv;
+  if (dv > dmax)
+    dmax = dv;
+  else if (dv < dmin)
+    dmin = dv;
+  
+  n = (W1 * bufferValue + W2 * bv + W3 * cv + W4 * dv) / W5;
+  
+  
+  uint hash = Hash((uint)(newX + XOff) ^ Hash((uint)(newY + ZOff)));
+  float rand = (float)hash / 0xFFFFFFFF;
+
+  float randomFloat = rand;
+  int randomSign = randomSignArray[hash % 2];
+	  
+  float delta = dmax - dmin;
+  if (dmax - n < delta / 2)
+    return n + (randomFloat * (dmax - n) * Roughness) * randomSign;
+  return n + (randomFloat * (n - dmin) * Roughness) * randomSign;    
+}
+
+[numthreads(32,32,1)]
+void CSRNG (uint3 id : SV_DispatchThreadID)
+{
+  if(id.x > (uint)StepSize * 2 + 1 || id.y > (uint)StepSize * 2 + 1)
+    return;
+    
+  int xVal = (int)id.x - 1;
+  int yVal = (int)id.y - 1;
+  
+  if(StepSize > StartValue)  
+    SetNewValue(xVal, yVal, CalcPixelRNG(xVal, yVal));  
+  else  
+    SetNewValue(xVal, yVal, LevelStrength * RandomFloat(xVal, yVal));
+}

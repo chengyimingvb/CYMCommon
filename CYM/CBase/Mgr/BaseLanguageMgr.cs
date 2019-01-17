@@ -185,6 +185,8 @@ namespace CYM
         /// <param name="desc"></param>
         public virtual void Add(LanguageType type, string key, string desc, string fileName = "")
         {
+            if (key.StartsWith(BaseConstMgr.Prefix_Notes))
+                return;
             if (key.IsInvStr() || desc.IsInvStr())
                 return;
             if (!lanKeys.Contains(key))
@@ -252,6 +254,7 @@ namespace CYM
                 CLog.Error("无法读取下面文件{0}:", item);
                 return;
             }
+            //读取每一个Sheet
             for (int i = 0; i < dataSet.NumberOfSheets; ++i)
             {
                 ISheet sheet = dataSet.GetSheetAt(i);

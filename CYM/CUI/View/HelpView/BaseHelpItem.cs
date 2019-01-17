@@ -67,7 +67,7 @@ namespace CYM.UI
         public void Show(string key,float? duration=null,params object[] ps)
         {
             Show(true);
-            Info.Text.text = GetStr(key,ps);
+            Info.text = GetStr(key,ps);
             if (duration.HasValue)
                 Duration = duration.Value;
             else
@@ -80,7 +80,7 @@ namespace CYM.UI
         public void ShowStr(string str, float? duration = null)
         {
             Show(true);
-            Info.Text.text = str;
+            Info.text = str;
             if (duration.HasValue)
                 Duration = duration.Value;
             else

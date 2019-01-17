@@ -1,0 +1,61 @@
+﻿#pragma kernel CSPath
+
+RWStructuredBuffer<float> DestBuffer;
+RWStructuredBuffer<float> DestBorderBuffer;
+Texture2D<float4>  PathTexture;
+
+int Resolution;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+float GetOldValue(int x, int y)
+{
+  const int rightOff = Resolution + 2;
+  const int topOff = rightOff + Resolution + 2;
+  const int bottomOff = topOff + Resolution;
+
+  if (x < 0)
+    return DestBorderBuffer[y + 1];
+  if (x == Resolution)
+    return DestBorderBuffer[rightOff + y + 1];
+  if (y < 0)
+    return DestBorderBuffer[topOff + x];
+  if (y == Resolution)
+    return DestBorderBuffer[bottomOff + x];
+  return DestBuffer[GetSingleIndex(y, x)];
+}
+
+void SetNewValue(int x, int y, float v)
+{
+  const int doubleStep = Resolution;
+  const int rightOff = doubleStep + 2;
+  const int topOff = rightOff + doubleStep + 2;
+  const int bottomOff = topOff + doubleStep;
+
+  if (x < 0)
+    DestBorderBuffer[y + 1] = v;
+  else if (x >= Resolution)
+    DestBorderBuffer[rightOff + y + 1] = v;
+  else if (y < 0)
+    DestBorderBuffer[topOff + x] = v;
+  else if (y >= Resolution)
+    DestBorderBuffer[bottomOff + x] = v;
+  else
+    DestBuffer[GetSingleIndex(y, x)] = v;
+}
+
+[numthreads(32,32,1)]
+void CSPath (uint3 id : SV_DispatchThreadID)
+{
+  int2 realID = (int2)id.xy - int2(1,1);
+
+  if (realID.x > Resolution || realID.y > Resolution)
+    return;
+
+  float4 path = PathTexture[clamp(realID, int2(0, 0), int2(Resolution - 1, Resolution - 1))];
+
+  SetNewValue(realID.x, realID.y, lerp(GetOldValue(realID.x, realID.y), path.r, path.a));
+}

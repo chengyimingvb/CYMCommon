@@ -72,10 +72,6 @@ namespace CYM
         /// </summary>
         public bool EnableMSAA = true;
         /// <summary>
-        /// 开启后期效果
-        /// </summary>
-        public bool EnableBeautify = true;
-        /// <summary>
         /// 开启SSAO
         /// </summary>
         public bool EnableSSAO = false;
@@ -413,7 +409,6 @@ namespace CYM
 
             SelfBaseGlobal.CameraMgr.EnableHUD(data.EnableHUD);
             SelfBaseGlobal.CameraMgr.EnableMSAA(data.EnableMSAA);
-            SelfBaseGlobal.CameraMgr.EnableBeautify(data.EnableBeautify);
             SelfBaseGlobal.CameraMgr.EnableBloom(data.EnableBloom);
             SelfBaseGlobal.CameraMgr.EnableSSAO(data.EnableSSAO);
 

@@ -22,6 +22,12 @@ using CYM.Utile;
 namespace CYM
 {
 
+    public enum FontType
+    {
+        Normal,
+        Title,
+    }
+
     [Serializable]
     public class LogoData
     {
@@ -80,7 +86,13 @@ namespace CYM
         [FoldoutGroup("Fonts"), SerializeField]
         public Font DefaultFont;
         [FoldoutGroup("Fonts"), SerializeField]
-        public UIFonts Fonts = new UIFonts();
+        public Font DefaultNormalFont;
+        [FoldoutGroup("Fonts"), SerializeField]
+        public Font DefaultTitleFont;
+        [FoldoutGroup("Fonts"), SerializeField]
+        public UIFonts OverrideNormalFonts = new UIFonts();
+        [FoldoutGroup("Fonts"), SerializeField]
+        public UIFonts OverrideTitleFonts = new UIFonts();
         #endregion
 
         #region dyn

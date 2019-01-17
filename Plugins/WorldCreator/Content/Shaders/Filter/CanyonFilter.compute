@@ -1,0 +1,132 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+static const float PI = 3.14159265358979323846f;
+
+int StepSize;
+
+float GeneralStrength;
+float ErosionStrength;
+float NormalizedErosionStrength;
+float CurrentWidth;
+float CurrentHeight;
+int Resolution;
+int Value0;
+int Value1;
+float Value2;
+float Value3;
+int Invert;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+  
+  if(x > bufferEnd || y > bufferEnd)
+    return;
+  
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+ 
+  int xNeg = x == 0 ? 1 : -1;
+  int xPos = x == bufferEnd ? -1 : 1;
+  int yNeg = y == 0 ? 1 : -1;
+  int yPos = y == bufferEnd ? -1 : 1;
+  
+  int2 indices[8];
+  indices[0] = int2(yNeg, xNeg);
+  indices[1] = int2(yNeg, 0);
+  indices[2] = int2(yNeg, xPos);
+  indices[3] = int2(0, xNeg);
+  indices[4] = int2(0, xPos);
+  indices[5] = int2(yPos, xNeg);
+  indices[6] = int2(yPos, 0);
+  indices[7] = int2(yPos, xPos);
+  
+  float arrayErosion[9];
+  for(int i = 0 ; i < 8 ; i++)
+  { 
+    int2 ind = indices[i]; 
+    float v = SrcBuffer[GetSingleIndex(y + ind.x, x + ind.y)];
+    arrayErosion[i] = v - ((v - currentValue) / 4) * step(2, (abs(ind.x) + abs(ind.y)));
+  }
+  arrayErosion[8] = currentValue;
+  int counter = 0;
+  float delta = 0.0f;
+  float value = 0.0f;
+  float max = currentValue;
+  float min = currentValue;
+
+  for(int j = 0; j < 9; j++)
+  {
+    float erosion = arrayErosion[j];
+    if(erosion <= currentValue)
+      counter++;
+    if(erosion > max)
+      max = erosion;
+    if(erosion < min)
+      min = erosion;
+  }
+
+  if(Value0 <= Value1)
+  {
+    if(counter >= Value0 && counter <= Value1)
+    {
+      if((max - min) / (currentValue - min) < Value2 / 100.0f)
+      {
+        delta = (max - currentValue) * GeneralStrength;
+        value = delta * NormalizedErosionStrength;
+      }
+      else
+      {
+        delta = (currentValue - min) * GeneralStrength;
+        value = -delta * NormalizedErosionStrength * Value3 / 50.0f;
+      }
+    }
+    else
+    {
+      delta = (currentValue - min) * GeneralStrength;
+      value = -delta * NormalizedErosionStrength;
+    }
+
+    if(Invert == 0)
+      TmpBuffer[GetSingleIndex(y, x)] = currentValue - value;
+    else
+      TmpBuffer[GetSingleIndex(y, x)] = currentValue + value;
+  }
+  else if(Value0 > Value1)
+  {
+    if(counter >= Value0 || counter <= Value1)
+    {
+      if((max - min) / (currentValue - min) < Value2 / 100.0f)
+      {
+        delta = (max - currentValue) * GeneralStrength;
+        value = delta * NormalizedErosionStrength;
+      }
+      else
+      {
+        delta = (currentValue - min) * GeneralStrength;
+        value = -delta * NormalizedErosionStrength * Value3 / 50.0f;
+      }
+    }
+    else
+    {
+      delta = (currentValue - min) * GeneralStrength;
+      value = -delta * NormalizedErosionStrength;
+    }
+
+    if(Invert == 0)
+      TmpBuffer[GetSingleIndex(y, x)] = currentValue - value;
+    else
+      TmpBuffer[GetSingleIndex(y, x)] = currentValue + value;
+  }
+}

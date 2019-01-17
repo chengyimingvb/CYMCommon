@@ -22,9 +22,25 @@ namespace CYM
     public class BaseMono : MonoBehaviour
     {
         private Transform _cacheTransform;
-        public Transform Trans { get { return _cacheTransform ?? (_cacheTransform = transform); } }
+        public Transform Trans
+        {
+            get
+            {
+                if(Application.isPlaying)
+                    return _cacheTransform ?? (_cacheTransform = transform);
+                return transform;
+            }
+        }
         private GameObject _cacheGameObject;
-        public GameObject GO { get { return _cacheGameObject ?? (_cacheGameObject = gameObject); } }
+        public GameObject GO
+        {
+            get
+            {
+                if (Application.isPlaying)
+                    return _cacheGameObject ?? (_cacheGameObject = gameObject);
+                return gameObject;
+            }
+        }
         public string Tag { get { return GO.tag; } set { GO.tag = value; } }
         public int Layer { get { return GO.layer; } set { GO.layer = value; } }
         private Rigidbody _cacheRigidbody;

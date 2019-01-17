@@ -134,6 +134,12 @@ namespace CYM.DLC
 #endif
             {
                 request = DLCAssetMgr.LoadBundle(realBundleName,dlcName);
+                if (request == null)
+                {
+                    if(DLCAssetMgr.IsNextLogError)
+                        CLog.Error("错误:realBundleName:{0} dlcName:{1}", realBundleName, dlcName);
+                    return;
+                }
                 asset = request.LoadAsset(assetName, assetType);
             }
 

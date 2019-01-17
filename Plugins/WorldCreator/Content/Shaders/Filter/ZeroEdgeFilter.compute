@@ -1,0 +1,46 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+int Radius;
+int StepSize;
+int Resolution;
+float GeneralStrength;
+float NormalizedErosionStrength;
+
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+  
+  if(x > bufferEnd || y > bufferEnd)
+    return;
+    
+  int clampedRadius = clamp(Radius, 0, (uint)bufferEnd / 2 - 1);
+  
+  
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+    
+  if(x <= clampedRadius)
+    currentValue = currentValue - currentValue * NormalizedErosionStrength * GeneralStrength / (x + 1.0f);
+  else if(x >= bufferEnd - clampedRadius)
+    currentValue = currentValue - currentValue * NormalizedErosionStrength * GeneralStrength / (bufferEnd - x + 1.0f);
+  
+  if(y <= clampedRadius)
+    currentValue = currentValue - currentValue * NormalizedErosionStrength * GeneralStrength / (y + 1.0f);
+  else if(y >= bufferEnd - clampedRadius)
+    currentValue = currentValue - currentValue * NormalizedErosionStrength * GeneralStrength / (bufferEnd - y + 1.0f);
+    
+    
+  TmpBuffer[GetSingleIndex(y, x)] = currentValue;
+}

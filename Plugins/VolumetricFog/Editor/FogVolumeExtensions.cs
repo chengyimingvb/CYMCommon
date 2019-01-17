@@ -18,11 +18,14 @@ namespace VolumetricFogAndMist {
 			// Ensure it gets reparented if this was a context click (otherwise does nothing)
 			GameObjectUtility.SetParentAndAlign(newFogVolume, menuCommand.context as GameObject);
 
-			// Break prefab link
-			PrefabUtility.DisconnectPrefabInstance(newFogVolume);
+            // Break prefab link
+#if UNITY_2018_3_OR_NEWER
+#else
+            PrefabUtility.DisconnectPrefabInstance(newFogVolume);
+#endif
 
-			// Register root object for undo.
-			Undo.RegisterCreatedObjectUndo(newFogVolume, "Create Volumetric Fog Volume");
+            // Register root object for undo.
+            Undo.RegisterCreatedObjectUndo(newFogVolume, "Create Volumetric Fog Volume");
 			Selection.activeObject = newFogVolume;
 
 			// Enables fog volumes in fog component
@@ -44,8 +47,12 @@ namespace VolumetricFogAndMist {
 			// Ensure it gets reparented if this was a context click (otherwise does nothing)
 			GameObjectUtility.SetParentAndAlign(newFogArea, menuCommand.context as GameObject);
 
-			// Break prefab link
+            // Break prefab link
+#if UNITY_2018_3_OR_NEWER
+#else
 			PrefabUtility.DisconnectPrefabInstance(newFogArea);
+#endif
+
 
 			// Register root object for undo.
 			Undo.RegisterCreatedObjectUndo(newFogArea, "Create Volumetric Fog Area (Box)");
@@ -66,8 +73,11 @@ namespace VolumetricFogAndMist {
 			// Ensure it gets reparented if this was a context click (otherwise does nothing)
 			GameObjectUtility.SetParentAndAlign(newFogArea, menuCommand.context as GameObject);
 
-			// Break prefab link
+            // Break prefab link
+#if UNITY_2018_3_OR_NEWER
+#else
 			PrefabUtility.DisconnectPrefabInstance(newFogArea);
+#endif
 
 			// Register root object for undo.
 			Undo.RegisterCreatedObjectUndo(newFogArea, "Create Volumetric Fog Area (Sphere)");
@@ -119,8 +129,11 @@ namespace VolumetricFogAndMist {
 			GameObject newFogArea = Instantiate(fogArea);
 			newFogArea.name = "Volumetric Fog Area Layer " + layerIndex;
 
-			// Break prefab link
+            // Break prefab link
+#if UNITY_2018_3_OR_NEWER
+#else
 			PrefabUtility.DisconnectPrefabInstance(newFogArea);
+#endif
 			return newFogArea;
 
 		}

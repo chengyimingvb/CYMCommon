@@ -169,6 +169,11 @@ namespace CYM
                 data.Add(Attr[i].GetDesc(false, true, anticipationFaction));
             return data;
         }
+        /// <summary>
+        /// 通过Layer 获得加成列表
+        /// </summary>
+        /// <param name="layer"></param>
+        /// <returns></returns>
         public virtual List<string> GetAddtionDescsByLayer(int layer = 1)
         {
             List<string> data = new List<string>();
@@ -207,7 +212,6 @@ namespace CYM
             return addition;
         }
         #endregion
-
 
         #region must override
         /// <summary>

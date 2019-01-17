@@ -74,10 +74,11 @@ namespace CYM
             GameObject tempGO = DescPool.Spawn();
             CurDesc = tempGO.GetComponent<BaseRichText>();
             CurDesc.RichText.text = "";
+            CurDesc.IsAnimation = false;
             CurDesc.Show(true);
             CurDesc.transform.SetAsLastSibling();
 
-            Title.Text.text = fragment.GetName();
+            Title.text = fragment.GetName();
             if (fragment.IsNewPage)
             {
                 CurDesc.RichText.Content = "";

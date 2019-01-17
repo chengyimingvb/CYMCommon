@@ -5,6 +5,9 @@ using UnityEngine.UI;
 using DG.Tweening;
 using UnityEngine.EventSystems;
 using DG.Tweening.Core;
+using DG.Tweening.Plugins.Options;
+using Sirenix.OdinInspector;
+
 namespace CYM.UI
 {
     public enum ViewLevel
@@ -20,12 +23,7 @@ namespace CYM.UI
         public Callback<BaseView, bool> Callback_OnOpen { get; set; }
         #endregion
 
-        #region 内部
-        public BaseView ParentView { get; private set; }
-        public BaseView RootView { get; private set; }
-        #endregion
-
-        #region 公共属性
+        #region Inspector
         /// <summary>
         /// 0意味着不在任何的组里面
         /// </summary>
@@ -38,26 +36,22 @@ namespace CYM.UI
         /// GO 是否根据界面IsShow变量 自动Active
         /// </summary>
         public bool IsActiveByShow = true;
-        public bool IsShow { get; protected set; }
         public bool IsScale = true;
+        public bool IsMove = false;
+        [HideIf("Inspector_HideStartPos")]
+        public Vector2 StartPos = Vector2.zero;
         public Ease InEase = Ease.OutBack;
         public Ease OutEase = Ease.InBack;
         public float InTime = 0.3f;
         public float OutTime = 0.3f;
+        #endregion
+
+        #region 公共属性
+        public bool IsShow { get; protected set; }
         public Canvas Canvas { get; protected set; }
         public RectTransform RectTrans { get; private set; }
         public RectTransform CanvasTrans { get; private set; }
         public Camera WorldCamera { get { return Canvas.worldCamera; }  }
-        #endregion
-
-        #region 内部
-        protected TweenerCore<float, float, DG.Tweening.Plugins.Options.FloatOptions> alphaTween;
-        protected Tweener scaleTween;
-        protected bool IsDirty { get; set; } = false;
-        protected Vector3 sourceLocalPos;
-        #endregion
-
-        #region other
         /// <summary>
         /// 界面等级
         /// </summary>
@@ -70,6 +64,16 @@ namespace CYM.UI
         /// 界面所在的UI管理器
         /// </summary>
         public BaseUIMgr UIMgr { get; set; }
+        #endregion
+
+        #region 内部
+        public BaseView ParentView { get; private set; }
+        public BaseView RootView { get; private set; }
+        protected TweenerCore<float, float, FloatOptions> alphaTween;
+        protected Tweener scaleTween;
+        protected Tweener moveTween;
+        protected bool IsDirty { get; set; } = false;
+        protected Vector3 sourceLocalPos;
         #endregion
 
         #region life
@@ -196,12 +200,6 @@ namespace CYM.UI
         {
         }
 
-        //sugar
-        public void Show(bool b)
-        {
-            Show(b, null);
-        }
-
         public void Toggle()
         {
             Show(!IsShow);
@@ -316,6 +314,13 @@ namespace CYM.UI
         protected virtual void OnShow()
         {
 
+        }
+        #endregion
+
+        #region Inspector
+        bool Inspector_HideStartPos()
+        {
+            return !IsMove;
         }
         #endregion
 

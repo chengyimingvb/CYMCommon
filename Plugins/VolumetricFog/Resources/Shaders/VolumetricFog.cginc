@@ -88,7 +88,7 @@
 
  float _Jitter;
 
- #if defined(FOG_MASK)
+ #if defined(FOG_MASK) || defined(FOG_INVERTED_MASK)
  UNITY_DECLARE_DEPTH_TEXTURE(_VolumetricFogScreenMaskTexture);
  #endif
 
@@ -117,6 +117,7 @@
  };
  
  // the Vertex shader
+ float3 _FlickerFreeCamPos;
 
  v2f vert(appdata v) {
      v2f o;
@@ -154,7 +155,7 @@
      float3 farPlaneWorld = farPlaneWorld4.xyz / farPlaneWorld4.w;
                
      // Vector from the camera to the far plane
-     o.cameraToFarPlane = farPlaneWorld - _WorldSpaceCameraPos;
+     o.cameraToFarPlane = farPlaneWorld - _WorldSpaceCameraPos + _FlickerFreeCamPos;
      
      return o;
  }
@@ -211,7 +212,7 @@
     }
 
 
-    #if defined(FOG_MASK)
+    #if defined(FOG_MASK) || defined(FOG_INVERTED_MASK)
     inline float GetDepthMask(float2 uv) {
         #if defined(FOG_ORTHO)
             float depthMask = UNITY_SAMPLE_DEPTH(UNITY_SAMPLE_SCREENSPACE_TEXTURE(_VolumetricFogScreenMaskTexture, uv));
@@ -463,7 +464,7 @@ half4 getFogColor(float3 worldPos, float depth01) {
          areaCenter  *= _FogData.w;
      #endif
      
-     #if FOG_DISTANCE_ON || defined(FOG_MASK)
+     #if FOG_DISTANCE_ON || defined(FOG_MASK) || defined(FOG_INVERTED_MASK)
          float2 camCenter = wsCameraPos.xy + _FogWindDir.xy;
          camCenter *= _FogData.w;
      #endif
@@ -473,7 +474,7 @@ half4 getFogColor(float3 worldPos, float depth01) {
          areaCenter  *= _FogData.w;
      #endif
      
-     #if FOG_DISTANCE_ON || defined(FOG_MASK)
+     #if FOG_DISTANCE_ON || defined(FOG_MASK) || defined(FOG_INVERTED_MASK)
          float2 camCenter = wsCameraPos.xz + _FogWindDir.xz;
          camCenter *= _FogData.w;
      #endif
@@ -679,6 +680,8 @@ half4 getFogColor(float3 worldPos, float depth01) {
 
      #if defined(FOG_MASK)
            if (GetDepthMask(i.uv)>=depth01) return color;
+     #elif defined(FOG_INVERTED_MASK)
+           if (GetDepthMask(i.uv)<depth01) return color;
      #endif
 
      float3 worldPos = getWorldPos(i, depth01);
@@ -744,6 +747,13 @@ half4 getFogColor(float3 worldPos, float depth01) {
             o.dest1 = ZEROS;
             return o;
         }
+        #elif defined(FOG_INVERTED_MASK)
+        if (GetDepthMask(i.uv)<depth01) {
+            FragmentOutput o;
+            o.dest0 = ZEROS;
+            o.dest1 = ZEROS;
+            return o;
+        }
         #endif
 
      float3 worldPos = getWorldPos(i, depth01);
@@ -782,6 +792,8 @@ half4 getFogColor(float3 worldPos, float depth01) {
 
         #if defined(FOG_MASK)
         if (GetDepthMask(i.uv)>=depth01) return ZEROS;
+        #elif defined(FOG_INVERTED_MASK)
+        if (GetDepthMask(i.uv)<depth01) return ZEROS;
         #endif
        
      float3 worldPos = getWorldPos(i, depth01);

@@ -17,6 +17,7 @@ namespace CYM
     {
         #region prop
         RTSCamera RTSCamera;
+        IBaseBattleMgr BattleMgr => SelfBaseGlobal.BattleMgr;
         #endregion
 
         #region life
@@ -24,6 +25,18 @@ namespace CYM
         {
             base.OnEnable();
             RTSCamera = Mono.GetComponentInChildren<RTSCamera>();
+        }
+        public override void OnUpdate()
+        {
+            base.OnUpdate();
+            if (RTSCamera==null || CameraHight == float.NaN)
+                return;
+            if (BattleMgr.IsInBattle)
+            {
+                RTSCamera.DesktopMoveDragSpeed =  (ZoomPercent* RTSCamera.desktopMoveDragSpeed);
+                RTSCamera.DesktopMoveSpeed = (ZoomPercent * RTSCamera.desktopMoveSpeed);
+                //CLog.Error("测试:"+ RTSCamera.desktopMoveDragSpeed);
+            }
         }
         #endregion
 

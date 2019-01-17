@@ -198,15 +198,18 @@ namespace CYM.UI
             if (IsShow == b && !force)
                 return;
             float tempFade = 0.0f;
-            if (fadeTime != null)
-                tempFade = fadeTime.Value;
-            else
-                tempFade = b ? InTime : OutTime;
             IsShow = b;
-            if (alphaTween != null)
-                alphaTween.Kill();
-            if (scaleTween != null)
-                scaleTween.Kill();
+
+            //设置时长
+            if (fadeTime != null)tempFade = fadeTime.Value;
+            else tempFade = b ? InTime : OutTime;
+
+            //停止之前的tween
+            if (alphaTween != null)alphaTween.Kill();
+            if (scaleTween != null)scaleTween.Kill();
+            if (moveTween != null) moveTween.Kill();
+
+            //Alpha效果
             alphaTween = DOTween.To(() => canvasGroup.alpha, x => canvasGroup.alpha = x, b ? 1.0f : 0.0f, tempFade);
             if (IsShow)
             {
@@ -220,18 +223,32 @@ namespace CYM.UI
                 alphaTween.OnComplete(OnFadeOut);
                 alphaTween.SetDelay(delay);
             }
+            //缩放效果
             if (IsScale)
             {
-                scaleTween = Trans.DOScale(IsShow ? 1.0f : 0.001f, tempFade).SetEase(IsShow ? InEase : OutEase).SetDelay(delay);
+                Vector3 minScale= sourceLocalScale * 0.001f;
+                if (IsShow)                
+                    Trans.localScale = minScale;
+                scaleTween = Trans.DOScale(IsShow ? sourceLocalScale : minScale, tempFade)
+                    .SetEase(IsShow ? InEase : OutEase)
+                    .SetDelay(delay);
             }
-            if (canvasGroup != null)
-                canvasGroup.blocksRaycasts = IsShow;
+            //位移效果
+            if (IsMove)
+            {
+                if (IsShow)                
+                    RectTrans.anchoredPosition = StartPos;
+                moveTween = DOTween.To(() => RectTrans.anchoredPosition, (x) => RectTrans.anchoredPosition = x, b ? sourceAnchoredPosition : StartPos, tempFade)
+                    .SetEase(IsShow ? InEase : OutEase)
+                    .SetDelay(delay);
+            }
 
+            //屏蔽/取消屏蔽 UI点击
+            if (canvasGroup != null)canvasGroup.blocksRaycasts = IsShow;
+            //触发控件的ViewShow事件
+            foreach (var item in presenters)item.OnViewShow(b);
 
-            //触发控件的Show事件
-            foreach (var item in presenters)
-                item.OnViewShow(b);
-
+            //执行UI互斥
             if (IsShow)
             {
                 SetDirty();
@@ -274,7 +291,7 @@ namespace CYM.UI
         {
             foreach (var item in presenters)
             {
-                if( !item.IsSubPresenter&&item.IsAutoRefresh)//item.IsShow&&
+                if( !item.IsSubPresenter&&item.IsAutoRefresh)
                     item.Refresh();
             }
             //刷新panel

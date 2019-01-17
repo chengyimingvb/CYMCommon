@@ -1,0 +1,387 @@
+﻿#pragma kernel CSClear
+#pragma kernel CSCollectFlows
+#pragma kernel CSCalculateFlows
+#pragma kernel CSClearBuffer
+#pragma kernel CSApplyErosionValues
+
+// Structs
+//////////
+struct ErosionValue
+{
+  int Y16X16;
+  float Height;
+};
+
+struct FlowStart
+{
+  int Y16X16;
+};
+
+// Buffers
+//////////
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+RWByteAddressBuffer TmpBytes;
+
+// 0 = Collected Flow Starts
+// 1 = Collected Erosion Values
+RWStructuredBuffer<uint> BufferCount;
+
+RWStructuredBuffer<FlowStart> FlowStartBuffer;
+
+// Constants
+////////////
+static const float PI = 3.14159274f;
+
+// Parameters
+/////////////
+int Resolution;   
+int StepSize;   
+int Reducer;
+int ReduceFilter;
+int RandomSeed;
+
+float Wert3;
+float Value0;
+float Value1;
+float Value2;
+float Value3;
+float Value4;
+float Value5;
+float Value6;
+float DivisorSediment;
+float SedimentValue;
+float AngleHeightMul;
+float CurrentHeight;
+float CurrentWidth;
+
+
+// Functions
+////////////
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+void InterlockedAddFloat(uint addr, float value)
+{
+  uint comp, orig = TmpBytes.Load(addr);
+  [allow_uav_condition]do
+  {
+    TmpBytes.InterlockedCompareExchange(addr, comp = orig, asuint(asfloat(orig) + value), orig);
+  } while (orig != comp);
+}
+
+uint GetUInt(uint seed, uint maxVal)
+{
+  seed = seed ^ (uint)RandomSeed;
+  seed += (seed << 10);
+  seed = seed ^ (seed >> 6);
+  seed += (seed << 3);
+  seed = seed ^ (seed >> 11);
+  seed += (seed << 15);
+  return seed % maxVal;
+}
+
+int Flow160a(int vaiP1, int vaiP2, int vaiP3, int vaiP4, inout int gminY, inout int gminX, inout int cancel, inout int gLevelCount)
+{
+  float valueFix = 1.0f / StepSize;
+  float wert7 = 0.0f;
+  float wert2 = 0.0f;
+  float c = cancel;
+  
+  ErosionValue ErosionTmpValues[9];
+
+  if ((ReduceFilter * vaiP3 / 1024.0f) > c)
+  {
+    if (Value2 == 150)
+      cancel = 0;
+    cancel++;
+        
+    int levelCount = vaiP4;
+    levelCount++;
+
+    gLevelCount = levelCount;
+    int counter1 = 0;
+    int counter2 = 0;
+    int counter3 = 0;
+
+    int y = vaiP1;
+    int x = vaiP2;
+
+    int found = 0;
+    int minY = -1;
+
+    int pYMin = 0, pXMin = 0, pYMax = 0, pXMax = 0;
+    if (y > 0 && y < vaiP3 - 1)
+    {
+      pYMin = -1;
+      pYMax = 1;
+    }
+    else if (y == 0)
+    {
+      pYMin = 0;
+      pYMax = 1;
+    }
+    else if (y == vaiP3 - 1)
+    {
+      pYMin = -1;
+      pYMax = 0;
+    }
+
+    if (x > 0 && x < vaiP3 - 1)
+    {
+      pXMin = -1;
+      pXMax = 1;
+    }
+    else if (x == 0)
+    {
+      pXMin = 0;
+      pXMax = 1;
+    }
+    else if (x == vaiP3 - 1)
+    {
+      pXMin = -1;
+      pXMax = 0;
+    }
+
+    float sourceV = SrcBuffer[GetSingleIndex(y, x)];
+    float min = sourceV;
+    float laMin = min;
+
+    for (int pY = pYMin; pY <= pYMax; pY++)
+    {
+      for (int pX = pXMin; pX <= pXMax; pX++)
+      {
+        uint randSeed = (uint)(vaiP1*StepSize + vaiP2 + (pY + 1)*(1000 + 100 * counter3) + (pX + 1)*(1000 + 100 * counter3));
+        float r2 = (float)GetUInt(randSeed, (uint)Value4 + 1) / DivisorSediment;
+
+        float curV = SrcBuffer[GetSingleIndex(y + pY, x + pX)];
+        float mint1 = curV - (curV - sourceV) * abs(pY * pX) * 0.25f;
+
+        if (mint1 - r2 < laMin)
+        {
+          wert7 += curV;
+          counter3++;
+          found = 1;
+          const float angleMul = 360.0f / PI / 2.0f;
+
+          float angleA = (float)atan(abs(sourceV - mint1) * AngleHeightMul) * angleMul;
+          if (Value3 >= angleA)
+          {
+            int curX = x + pX;
+            int curY = y + pY;
+
+            ErosionValue erosion;
+            erosion.Y16X16 = ((curY << 16) & 0xFFFF0000) | (curX & 0xFFFF);
+            erosion.Height = mint1;
+
+            ErosionTmpValues[counter1] = erosion;
+            counter1++;
+
+            if (mint1 < min)
+            {
+              min = mint1;
+              minY = curY;
+            }
+          }
+        }
+        else
+        {
+          counter2++;
+          wert2 += curV;
+        }
+      }
+    }
+    
+    if (found == 1 && counter1 > 0 && minY > -1)
+    {
+      // Add to main buffer
+      uint bufferIndex;
+      InterlockedAdd(BufferCount[1], counter1, bufferIndex);
+
+      // Max 9 value Bubblesort
+      // TODO: Implement something faster.
+      const int maxIter = 10;
+      int changed = 0;
+      int iter = 0;
+      do
+      {
+        iter++;
+        changed = 0;
+        for (int i = 0; i < counter1 - 1; i++)
+        {
+          float b1 = ErosionTmpValues[i].Height;
+          float b2 = ErosionTmpValues[i + 1].Height;
+          
+          if (b2 < b1)
+          {
+            // Swap
+            ErosionValue tmpVal = ErosionTmpValues[i];
+            ErosionTmpValues[i] = ErosionTmpValues[i + 1];
+            ErosionTmpValues[i + 1] = tmpVal;
+            changed++;
+          }
+        }
+      } while (changed > 0 && iter < maxIter);
+
+
+
+      ErosionValue currentVal = ErosionTmpValues[0];
+      gminY = (currentVal.Y16X16 >> 16) & 0xFFFF;
+      gminX = currentVal.Y16X16 & 0xFFFF;
+
+      for (int j = 0; j < counter1; j++)
+      {
+        int b = 1 << j;
+        currentVal = ErosionTmpValues[j];
+
+        int currentY = (currentVal.Y16X16 >> 16) & 0xFFFF;
+        int currentX = currentVal.Y16X16 & 0xFFFF;
+        float s = SrcBuffer[GetSingleIndex(currentY, currentX)];
+        currentVal.Height = (s + wert7 / counter3 - SedimentValue / b + (wert7 + wert2) / (counter3 + counter2) / b / 100000 * Value6) / 2.0f;
+        currentVal.Height = s - (s - (s + currentVal.Height) / 2) * Wert3;
+        
+        InterlockedAddFloat(GetSingleIndex(currentY, currentX) * 4, currentVal.Height);
+      }
+
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+[numthreads(1,1,1)]
+void CSClear(uint3 id : SV_DispatchThreadID)
+{
+  BufferCount[0] = 0;
+  BufferCount[1] = 0;
+}
+
+[numthreads(32,32,1)]
+void CSCollectFlows(uint3 id : SV_DispatchThreadID)
+{
+  int y = id.y;
+  int x = id.x;
+  
+  const int MaxOff = StepSize - 1;
+  
+  if(x >= StepSize || y >= StepSize)
+    return;
+
+  
+  int pYMin = 0, pXMin = 0, pYMax = 0, pXMax = 0;
+  if (y > 0 && y < MaxOff)
+  {
+    pYMin = -1;
+    pYMax = 1;
+  }
+  else if (y == 0)
+  {
+    pYMin = 0;
+    pYMax = 1;
+  }
+  else if (y == MaxOff)
+  {
+    pYMin = -1;
+    pYMax = 0;
+  }
+
+  if (x > 0 && x < MaxOff)
+  {
+    pXMin = -1;
+    pXMax = 1;
+  }
+  else if (x == 0)
+  {
+    pXMin = 0;
+    pXMax = 1;
+  }
+  else if (x == MaxOff)
+  {
+    pXMin = -1;
+    pXMax = 0;
+  }
+
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+  float min = currentValue;
+  int cou1 = 0;
+
+  for (int pY = pYMin; pY <= pYMax; pY++)
+  {
+    for (int pX = pXMin; pX <= pXMax; pX++)
+    {
+      if (pY == 0 && pX == 0)
+        continue;
+
+      float v = SrcBuffer[GetSingleIndex(y + pY, x + pX)];
+      float min1 = v - ((v - currentValue)) * abs(pX * pY) * 0.25f;
+      if (min1 < min)
+      {
+        min = min1;
+      }
+    }
+  }
+
+  if (min != currentValue)
+  {
+    float angleA =
+      (float)(atan(abs(currentValue - min) * CurrentHeight /
+                         (CurrentWidth / StepSize)) * 360.0f / PI / 2.0f);
+
+	
+    if (Value2 > angleA)
+    {
+      int randVal = (int)GetUInt((uint)(y * MaxOff + x + MaxOff * 12345), (uint)Reducer + 1);
+      if (randVal == Reducer)
+      {
+        FlowStart flowStart;
+        flowStart.Y16X16 = (y << 16) & 0xFFFF0000 | x & 0xFFFF;
+        
+        uint bufferIndex;
+        InterlockedAdd(BufferCount[0], 1, bufferIndex);        
+        FlowStartBuffer[bufferIndex] = flowStart;     
+      }
+    }
+  }  
+}
+
+
+[numthreads(1024,1,1)]
+void CSCalculateFlows(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= BufferCount[0])
+    return;
+  
+  FlowStart flowStart = FlowStartBuffer[id.x];
+  int gMinY =(flowStart.Y16X16 >> 16) & 0xFFFF;
+  int gMinX = flowStart.Y16X16 & 0xFFFF;
+  
+  int cancel = 0;
+  int gLevelCounter = 0;
+  int pr = 1;
+  
+  while (pr == 1)
+  {
+    pr = Flow160a(gMinY, gMinX, StepSize, gLevelCounter, gMinY, gMinX, cancel, gLevelCounter);
+  }
+}
+
+[numthreads(32,32,1)]
+void CSClearBuffer(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= (uint)StepSize || id.y >= (uint)StepSize)
+    return;
+  TmpBuffer[GetSingleIndex(id.y, id.x)] = 0;
+}
+
+[numthreads(32,32,1)]
+void CSApplyErosionValues(uint3 id : SV_DispatchThreadID)
+{
+  if(id.x >= (uint)StepSize || id.y >= (uint)StepSize)
+    return;
+
+  uint index = GetSingleIndex(id.y, id.x);
+  TmpBuffer[index] = SrcBuffer[index] - TmpBuffer[index] * Wert3;
+}

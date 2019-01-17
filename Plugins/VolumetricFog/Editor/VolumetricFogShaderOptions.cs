@@ -29,8 +29,14 @@ namespace VolumetricFogAndMist {
                 new ShaderAdvancedOption
                 {
                     id = "FOG_MASK",
-                    name = "Enable Mask",
-                    description = "Enables mask defined by geometry volumes (meshes)."
+                    name = "Enable Geometry Mask",
+                    description = "Enables mask defined by geometry volumes (meshes). Fog will only be visible inside the volumes."
+                },
+                new ShaderAdvancedOption
+                {
+                    id = "FOG_INVERTED_MASK",
+                    name = "Enable Geometry Mask (Inverted)",
+                    description = "Enables mask defined by geometry volumes (meshes). Fog will NOT be visible through the volumes. Note: this option cannot be combined with the previous one."
                 },
                 new ShaderAdvancedOption
                 {

@@ -152,6 +152,8 @@ namespace CYM
         #endregion
 
         #region Prefix Suffix
+        //注释前缀
+        public const string Prefix_Notes = "#";
         //动态ID,所有动态资源的前缀,比如头像,音效,语音,包括翻译字符串等等
         public const string Prefix_DynamicTrans = "$";
         //翻译前缀
@@ -162,6 +164,8 @@ namespace CYM
         public const string Prefix_AutoSave = "AutoSave_";
         //快捷键
         public const string Prefix_Shortcut = "Shortcut_";
+        //属性图标
+        public const string Prefix_Attr = "Attr_";
         //禁用图片后缀
         public const string Suffix_Disable = "_Dis";
         //选项后缀,用于对话等系统
@@ -181,6 +185,10 @@ namespace CYM
         public const string Dir_Language = "Language";
         //配置文件
         public const string Dir_Config = "Config";
+        #endregion
+
+        #region file
+        public static string File_CYMCommon_asmdef = "CYMCommon.asmdef";
         #endregion
 
         #region extention
@@ -211,6 +219,10 @@ namespace CYM
         #endregion
 
         #region project path
+        /// <summary>
+        /// CYMCommon
+        /// </summary>
+        public static readonly string Path_Common = "Assets/CYMCommon";
         /// <summary>
         /// 工程目录
         /// </summary>
@@ -307,15 +319,23 @@ namespace CYM
         /// <summary>
         /// CYMMonobehaviour
         /// </summary>
-        public static readonly string Path_XTempCYMMonobehaviour = "Assets/CYMCommon/CYM/CUtile/Template/XenoTemplateFiles/CYMMonobehaviour.asset";
+        public static readonly string Path_XTempCYMMonobehaviour = Path.Combine(Path_Common, "CYM/CUtile/Template/XenoTemplateFiles/CYMMonobehaviour.asset");
         /// <summary>
         /// CYMMonobehaviour
         /// </summary>
-        public static readonly string Path_XTempMonobehaviour = "Assets/CYMCommon/CYM/CUtile/Template/XenoTemplateFiles/Monobehaviour.asset";
+        public static readonly string Path_XTempMonobehaviour = Path.Combine(Path_Common, "CYM/CUtile/Template/XenoTemplateFiles/Monobehaviour.asset");
+        /// <summary>
+        /// CYMCommon/CYMCommon.asmdef
+        /// </summary>
+        public static readonly string Path_CYMCommonASMdef = Path.Combine(Path_Common, File_CYMCommon_asmdef);
+        /// <summary>
+        /// CYMCommon/CYMCommon.asmdef temp
+        /// </summary>
+        public static readonly string Path_CYMCommonASMdefTemp = Path.Combine(Application.temporaryCachePath, File_CYMCommon_asmdef);
         /// <summary>
         /// 内部bundle
         /// </summary>
-        public static readonly string Path_InternalBundle = "Assets/CYMCommon/CYM/_Bundle";
+        public static readonly string Path_InternalBundle = Path.Combine(Path_Common, "CYM/_Bundle");
         #endregion
 
         #region color

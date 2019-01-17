@@ -1,0 +1,49 @@
+﻿#pragma kernel CSMain
+
+StructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+
+int StepSize;
+
+float GeneralStrength;
+float NormalizedErosionStrength;
+int Resolution;
+int SmoothStrength;
+
+int GetSingleIndex(int y, int x)
+{
+  return y * Resolution + x;
+}
+
+
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+  int bufferEnd = StepSize - 1;
+  int x = id.x;
+  int y = id.y;
+  
+  if(x > bufferEnd || y > bufferEnd)
+    return;
+  
+  float currentValue = SrcBuffer[GetSingleIndex(y, x)];
+ 
+  float totalValue = 0.0f;
+  int valueCount = 0;
+
+  for (int pY = -SmoothStrength; pY <= SmoothStrength; pY++)
+  {
+    for (int pX = -SmoothStrength; pX <= SmoothStrength; pX++)
+    {
+      if (y + pY >= 0 && y + pY < StepSize && x + pX >= 0 && x + pX < StepSize)
+      {
+        totalValue += SrcBuffer[GetSingleIndex(y + pY, x + pX)];
+        valueCount++;
+      }
+    }
+  }
+
+  totalValue /= valueCount;
+
+  TmpBuffer[GetSingleIndex(y, x)] = currentValue - (currentValue - totalValue) * GeneralStrength * NormalizedErosionStrength;
+}

@@ -99,14 +99,15 @@ namespace CYM.UI
             Show(true,true);
 
             if (Icon != null) Icon.Image.overrideSprite = GetIcon(talkData,talkFragment);
-            if (Name != null) Name.Text.text = GetName(talkData, talkFragment);
+            if (Name != null) Name.text = GetName(talkData, talkFragment);
             if (PreAudioSource != null)
             {
                 PreAudioSource.Stop();
             }
             PreAudioSource= PlayClip(GetAudio(talkData, talkFragment));
 
-            Desc.Text.text = "";
+            Desc.text = "";
+            Desc.IsAnimation = false;
             if (Tween != null)
                 Tween.Kill();
             Tween = DOTween.To(() => Desc.RichText.Content, (x) => Desc.RichText.Content = x, talkFragment.GetDesc(), 0.5f).SetDelay(0.5f).OnComplete(OnTypeEnd).OnStart(OnTweenStart);

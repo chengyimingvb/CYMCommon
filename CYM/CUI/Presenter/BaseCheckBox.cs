@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using CYM;
 using System;
 using System.Collections.Generic;
+using UnityEngine.EventSystems;
 
 namespace CYM.UI
 {
@@ -15,45 +16,31 @@ namespace CYM.UI
     {
         #region inspector
         [SerializeField]
-        Toggle ToggleObj;
-        [SerializeField]
         Text Text;
         #endregion
 
+        #region prop
+        bool IsOn = false;
+        bool IsPreOn = false;
+        #endregion
+
         #region life
-        protected override void Awake()
-        {
-            base.Awake();
-            if(ToggleObj!=null)
-            {
-                ToggleObj.onValueChanged.AddListener(OnValueChanged);
-            }
-        }
         public override void Refresh()
         {
             base.Refresh();
             if (Text != null)
                 Text.text = Data.GetName();
-            if (ToggleObj != null)
-            {
-                ToggleObj.interactable = Data.IsInteractable.Invoke(Index);
-                ToggleObj.isOn = Data.IsOn.Invoke();
-            }
+            IsPreOn=IsOn = Data.IsOn.Invoke();
         }
-        public override void Cleanup()
+        public override void OnPointerClick(PointerEventData eventData)
         {
-            if (ToggleObj != null)
+            base.OnPointerClick(eventData);
+            IsOn = !Data.IsOn.Invoke();
+            if (IsOn != IsPreOn)
             {
-                ToggleObj.onValueChanged.RemoveAllListeners();
+                IsPreOn = IsOn;
+                Data.OnValueChanged?.Invoke(IsOn);
             }
-            base.Cleanup();
-        }
-        #endregion
-
-        #region Callback
-        void OnValueChanged(bool b)
-        {
-            Data.OnValueChanged?.Invoke(b);
         }
         #endregion
     }

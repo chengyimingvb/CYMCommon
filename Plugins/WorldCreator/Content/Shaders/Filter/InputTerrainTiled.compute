@@ -1,0 +1,200 @@
+﻿#pragma kernel CSAddition
+#pragma kernel CSAverage
+#pragma kernel CSDifference
+#pragma kernel CSSubtraction
+#pragma kernel CSInverseSubtraction
+#pragma kernel CSDefault
+
+RWStructuredBuffer<float> SrcBuffer;
+RWStructuredBuffer<float> SrcBorderBuffer;
+RWStructuredBuffer<float> TmpBuffer;
+RWStructuredBuffer<float> TmpBorderBuffer;
+StructuredBuffer<float> InputBuffer;
+
+float2 DestinationStart;
+float2 DestinationEnd;
+float2 InputStart;
+float2 InputSizeFactor;
+float  InputBorderBlending;
+float  InputHeightOffset;
+float  InputHeightScale;
+
+float InputTerrainStrength;
+float BorderBlending;
+int Resolution;
+int InputStepSize;
+int OutputStepSize;
+
+// Gets the bilinear interpolated input value
+/////////////////////////////////////////////
+float GetBilinearInputValue(float2 uv, out float factor)
+{
+  const int inputSize = InputStepSize - 1;
+  int xBase = clamp(uv.x, 0, inputSize);
+  int yBase = clamp(uv.y, 0, inputSize);
+  int xOff  = clamp(xBase + 1, 0, inputSize);
+  int yOff  = clamp(yBase + 1, 0, inputSize);
+
+  float fracX = frac(uv.x);
+  float fracY = frac(uv.y);
+
+  float blendVal;
+  if (InputBorderBlending < 1.401298E-45f)
+    blendVal = 1.0f;
+  else
+  {
+    uv /= inputSize;
+    float2 blendValues = uv - float2(0.5f, 0.5f);
+    blendVal = 1.0f - max(abs(blendValues.x), abs(blendValues.y)) * 2.0f;
+    blendVal = min(blendVal / InputBorderBlending, 1.0f);
+    blendVal = smoothstep(0, 1, blendVal);
+  }
+
+  float leftTop  = InputBuffer[yBase * InputStepSize + xBase];
+  float rightTop = InputBuffer[yBase * InputStepSize + xOff];
+  float leftBot  = InputBuffer[yOff * InputStepSize + xBase];
+  float rightBot = InputBuffer[yOff * InputStepSize + xOff];
+
+  float inputVal = lerp(lerp(leftTop, rightTop, fracX), lerp(leftBot, rightBot, fracX), fracY);
+  inputVal *= InputHeightScale;
+  inputVal += InputHeightOffset;
+
+  factor = min(blendVal, InputTerrainStrength);
+  return inputVal;
+}
+
+/// Gets the source buffer value
+////////////////////////////////
+float GetOldValue(int x, int y)
+{
+  const int rightOff = OutputStepSize + 2;
+  const int topOff = rightOff + OutputStepSize + 2;
+  const int bottomOff = topOff + OutputStepSize;
+
+  if (x == -1)
+    return SrcBorderBuffer[y + 1];
+  if (x == OutputStepSize)
+    return SrcBorderBuffer[rightOff + y + 1];
+  if (y == -1)
+    return SrcBorderBuffer[topOff + x];
+  if (y == OutputStepSize)
+    return SrcBorderBuffer[bottomOff + x];
+  return SrcBuffer[y * Resolution + x];
+}
+
+// Sets the new value
+/////////////////////
+void SetNewValue(int x, int y, float v)
+{
+  const int rightOff = OutputStepSize + 2;
+  const int topOff = rightOff + OutputStepSize + 2;
+  const int bottomOff = topOff + OutputStepSize;
+
+  if (x == -1)
+    SrcBorderBuffer[y + 1] = TmpBorderBuffer[y + 1] = v;
+  else if (x == OutputStepSize)
+    SrcBorderBuffer[rightOff + y + 1] = TmpBorderBuffer[rightOff + y + 1] = v;
+  else if (y == -1)
+    SrcBorderBuffer[topOff + x] = TmpBorderBuffer[topOff + x] = v;
+  else if (y == OutputStepSize)
+    SrcBorderBuffer[bottomOff + x] = TmpBorderBuffer[bottomOff + x] = v;
+  else
+    SrcBuffer[y * Resolution + x] = TmpBuffer[y * Resolution + x] = v;
+}
+
+
+// Addition
+///////////
+[numthreads(32,32,1)]
+void CSAddition(uint3 id : SV_DispatchThreadID)
+{
+  int2 realId = (int2)DestinationStart + (int2)id;
+  if (realId.x > (int)DestinationEnd.x || realId.y > (int)DestinationEnd.y)
+    return;
+
+  float factor;
+  float input = GetBilinearInputValue((float2)realId * InputSizeFactor + InputStart, factor);
+  float src = GetOldValue(realId.x, realId.y);
+
+  SetNewValue(realId.x, realId.y, lerp(src, input + src, factor));
+}
+
+// Average
+//////////
+[numthreads(32,32,1)]
+void CSAverage(uint3 id : SV_DispatchThreadID)
+{
+  int2 realId = (int2)DestinationStart + (int2)id;
+  if (realId.x > (int)DestinationEnd.x || realId.y > (int)DestinationEnd.y)
+    return;
+
+  float factor;
+  float input = GetBilinearInputValue((float2)realId * InputSizeFactor + InputStart, factor);
+  float src = GetOldValue(realId.x, realId.y);
+
+  SetNewValue(realId.x, realId.y, lerp(src, (input + src) * 0.5f, factor));
+}
+
+// Difference
+/////////////
+[numthreads(32,32,1)]
+void CSDifference(uint3 id : SV_DispatchThreadID)
+{
+  int2 realId = (int2)DestinationStart + (int2)id;
+  if (realId.x > (int)DestinationEnd.x || realId.y > (int)DestinationEnd.y)
+    return;
+
+  float factor;
+  float input = GetBilinearInputValue((float2)realId * InputSizeFactor + InputStart, factor);
+  float src = GetOldValue(realId.x, realId.y);
+
+  SetNewValue(realId.x, realId.y, lerp(src, abs(input - src), factor));
+}
+
+// Subtraction
+//////////////
+[numthreads(32,32,1)]
+void CSSubtraction(uint3 id : SV_DispatchThreadID)
+{
+  int2 realId = (int2)DestinationStart + (int2)id;
+  if (realId.x > (int)DestinationEnd.x || realId.y > (int)DestinationEnd.y)
+    return;
+
+  float factor;
+  float input = GetBilinearInputValue((float2)realId * InputSizeFactor + InputStart, factor);
+  float src = GetOldValue(realId.x, realId.y);
+
+  SetNewValue(realId.x, realId.y, lerp(src, input - src, factor));
+}
+
+// InverseSubtraction
+/////////////////////
+[numthreads(32,32,1)]
+void CSInverseSubtraction(uint3 id : SV_DispatchThreadID)
+{
+  int2 realId = (int2)DestinationStart + (int2)id;
+  if (realId.x > (int)DestinationEnd.x || realId.y > (int)DestinationEnd.y)
+    return;
+
+  float factor;
+  float input = GetBilinearInputValue((float2)realId * InputSizeFactor + InputStart, factor);
+  float src = GetOldValue(realId.x, realId.y);
+
+  SetNewValue(realId.x, realId.y, lerp(src, src - input, factor));
+}
+
+// Default
+//////////
+[numthreads(32, 32, 1)]
+void CSDefault(uint3 id : SV_DispatchThreadID)
+{
+  int2 realId = (int2)DestinationStart + (int2)id;
+  if (realId.x > (int)DestinationEnd.x || realId.y > (int)DestinationEnd.y)
+    return;
+        
+  float factor;
+  float input = GetBilinearInputValue((float2)realId * InputSizeFactor + InputStart, factor);
+  float src = GetOldValue(realId.x, realId.y);
+
+  SetNewValue(realId.x, realId.y, lerp(src, input, factor));
+}

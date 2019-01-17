@@ -262,6 +262,10 @@ namespace CYM.DLC
         /// <returns></returns>
         public static string GetBundleName(string assetPath)
         {
+            if (assetPath == null)
+            {
+                return "";
+            }
             if (!amap.ContainsKey(assetPath))
             {
                 Error("没有这个资源:{0}", assetPath);
@@ -432,6 +436,8 @@ namespace CYM.DLC
         }
         public static Bundle LoadBundle(string bundleName,string dlc,bool asyncRequest=false)
         {
+            if (bundleName.IsInvStr() || dlc.IsInvStr())
+                return null;
             //如果bundleName == dlc 表示LoadingAssetBundleManifest
             bool isLoadingAssetBundleManifest = bundleName == dlc;
             //是否为预加载Bundle
@@ -480,7 +486,6 @@ namespace CYM.DLC
         {
             if (IsNextLogError)
                 CLog.Error(str, ps);
-            IsNextLogError = true;
         }
         #endregion
     }

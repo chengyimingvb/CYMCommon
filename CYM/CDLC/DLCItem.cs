@@ -177,7 +177,7 @@ namespace CYM.DLC
         //确保DLC相关路径存在
         void EnsureDirectories()
         {
-            if (Application.isEditor)
+            if (DLCConfig.IsEditorMode)
             {
                 BaseFileUtils.EnsureDirectory(AbsRootPath);
                 foreach (var item in Data)
@@ -210,6 +210,8 @@ namespace CYM.DLC
                     CLog.Error("路径错误:{0}", item.SearchPath);
                 }
                 item.FinalDirectory = temps[temps.Length - 1];
+                if (item.FinalDirectory == null)
+                    CLog.Error("错误");
 
                 string tempRootPath = RootPath;
                 if (!item.CustomRootPath.IsInvStr())

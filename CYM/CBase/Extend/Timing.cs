@@ -1,8 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
-#if !UNITY_4_6 && !UNITY_4_7 && !UNITY_5_0 && !UNITY_5_1 && !UNITY_5_2
 using UnityEngine.Assertions;
-#endif
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -12,7 +10,7 @@ using UnityEngine.Profiling;
 using MEC = CYM;
 // /////////////////////////////////////////////////////////////////////////////////////////
 //                              More Effective Coroutines Pro
-//                                        v3.04.1
+//                                        v3.05.1
 // 
 // This is an improved implementation of coroutines that boasts zero per-frame memory allocations,
 // runs about twice as fast as Unity's built in coroutines, and has a range of extra features.
@@ -243,7 +241,7 @@ namespace CYM
                         DontDestroyOnLoad(instanceHome);
 #endif
 
-                        _instance = instanceHome.AddComponent<Timing>();
+                        _instance = instanceHome.GetComponent<Timing>() ?? instanceHome.AddComponent<Timing>();
                     }
                     else
                     {
@@ -310,33 +308,40 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastSlowUpdateProcessSlot; coindex.i++)
                 {
-                    if (!SlowUpdatePaused[coindex.i] && SlowUpdateProcesses[coindex.i] != null && !(localTime < SlowUpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!SlowUpdatePaused[coindex.i] && SlowUpdateProcesses[coindex.i] != null && !(localTime < SlowUpdateProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Slow Update), " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
-                                    : "Processing Coroutine (Slow Update)");
-                        }
-
-                        if (!SlowUpdateProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (SlowUpdateProcesses[coindex.i] != null && float.IsNaN(SlowUpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                SlowUpdateProcesses[coindex.i] = ReplacementFunction(SlowUpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Slow Update), " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine (Slow Update)");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None)
-                            Profiler.EndSample();
+                            if (!SlowUpdateProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (SlowUpdateProcesses[coindex.i] != null && float.IsNaN(SlowUpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    SlowUpdateProcesses[coindex.i] = ReplacementFunction(SlowUpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch(System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -349,33 +354,40 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastRealtimeUpdateProcessSlot; coindex.i++)
                 {
-                    if (!RealtimeUpdatePaused[coindex.i] && RealtimeUpdateProcesses[coindex.i] != null && !(localTime < RealtimeUpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!RealtimeUpdatePaused[coindex.i] && RealtimeUpdateProcesses[coindex.i] != null && !(localTime < RealtimeUpdateProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Realtime Update), " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
-                                    : "Processing Coroutine (Realtime Update)");
-                        }
-
-                        if (!RealtimeUpdateProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (RealtimeUpdateProcesses[coindex.i] != null && float.IsNaN(RealtimeUpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                RealtimeUpdateProcesses[coindex.i] = ReplacementFunction(RealtimeUpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Realtime Update), " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine (Realtime Update)");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None)
-                            Profiler.EndSample();
+                            if (!RealtimeUpdateProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (RealtimeUpdateProcesses[coindex.i] != null && float.IsNaN(RealtimeUpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    RealtimeUpdateProcesses[coindex.i] = ReplacementFunction(RealtimeUpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -388,33 +400,40 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastUpdateProcessSlot; coindex.i++)
                 {
-                    if (!UpdatePaused[coindex.i] && UpdateProcesses[coindex.i] != null && !(localTime < UpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!UpdatePaused[coindex.i] && UpdateProcesses[coindex.i] != null && !(localTime < UpdateProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag")) 
-                                    : "Processing Coroutine");
-                        }
-
-                        if (!UpdateProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (UpdateProcesses[coindex.i] != null && float.IsNaN(UpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                UpdateProcesses[coindex.i] = ReplacementFunction(UpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None)
-                            Profiler.EndSample();
+                            if (!UpdateProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (UpdateProcesses[coindex.i] != null && float.IsNaN(UpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    UpdateProcesses[coindex.i] = ReplacementFunction(UpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -453,33 +472,40 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastFixedUpdateProcessSlot; coindex.i++)
                 {
-                    if (!FixedUpdatePaused[coindex.i] && FixedUpdateProcesses[coindex.i] != null && !(localTime < FixedUpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!FixedUpdatePaused[coindex.i] && FixedUpdateProcesses[coindex.i] != null && !(localTime < FixedUpdateProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag")) 
-                                    : "Processing Coroutine");
-                        }
-
-                        if (!FixedUpdateProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (FixedUpdateProcesses[coindex.i] != null && float.IsNaN(FixedUpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                FixedUpdateProcesses[coindex.i] = ReplacementFunction(FixedUpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None)
-                            Profiler.EndSample();
+                            if (!FixedUpdateProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (FixedUpdateProcesses[coindex.i] != null && float.IsNaN(FixedUpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    FixedUpdateProcesses[coindex.i] = ReplacementFunction(FixedUpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -498,33 +524,40 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastLateUpdateProcessSlot; coindex.i++)
                 {
-                    if (!LateUpdatePaused[coindex.i] && LateUpdateProcesses[coindex.i] != null && !(localTime < LateUpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!LateUpdatePaused[coindex.i] && LateUpdateProcesses[coindex.i] != null && !(localTime < LateUpdateProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag")) 
-                                    : "Processing Coroutine");
-                        }
-
-                        if (!LateUpdateProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (LateUpdateProcesses[coindex.i] != null && float.IsNaN(LateUpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                LateUpdateProcesses[coindex.i] = ReplacementFunction(LateUpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None)
-                            Profiler.EndSample();
+                            if (!LateUpdateProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (LateUpdateProcesses[coindex.i] != null && float.IsNaN(LateUpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    LateUpdateProcesses[coindex.i] = ReplacementFunction(LateUpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -548,34 +581,41 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastManualTimeframeProcessSlot; coindex.i++)
                 {
-                    if (!ManualTimeframePaused[coindex.i] && ManualTimeframeProcesses[coindex.i] != null && 
-                        !(localTime < ManualTimeframeProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!ManualTimeframePaused[coindex.i] && ManualTimeframeProcesses[coindex.i] != null &&
+                            !(localTime < ManualTimeframeProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Manual Timeframe), " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
-                                    : "Processing Coroutine (Manual Timeframe)");
-                        }
-
-                        if (!ManualTimeframeProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (ManualTimeframeProcesses[coindex.i] != null && float.IsNaN(ManualTimeframeProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                ManualTimeframeProcesses[coindex.i] = ReplacementFunction(ManualTimeframeProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Manual Timeframe), " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine (Manual Timeframe)");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None)
-                            Profiler.EndSample();
+                            if (!ManualTimeframeProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (ManualTimeframeProcesses[coindex.i] != null && float.IsNaN(ManualTimeframeProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    ManualTimeframeProcesses[coindex.i] = ReplacementFunction(ManualTimeframeProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -643,23 +683,30 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastEditorSlowUpdateProcessSlot; coindex.i++)
                 {
-                    if (!EditorSlowUpdatePaused[coindex.i] && EditorSlowUpdateProcesses[coindex.i] != null && 
-                        !(EditorApplication.timeSinceStartup < EditorSlowUpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (!EditorSlowUpdateProcesses[coindex.i].MoveNext())
+                        if (!EditorSlowUpdatePaused[coindex.i] && EditorSlowUpdateProcesses[coindex.i] != null &&
+                            !(EditorApplication.timeSinceStartup < EditorSlowUpdateProcesses[coindex.i].Current))
                         {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (EditorSlowUpdateProcesses[coindex.i] != null && float.IsNaN(EditorSlowUpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (!EditorSlowUpdateProcesses[coindex.i].MoveNext())
                             {
-                                EditorSlowUpdateProcesses[coindex.i] = ReplacementFunction(EditorSlowUpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
                             }
-                            coindex.i--;
+                            else if (EditorSlowUpdateProcesses[coindex.i] != null && float.IsNaN(EditorSlowUpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    EditorSlowUpdateProcesses[coindex.i] = ReplacementFunction(EditorSlowUpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
                         }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -672,23 +719,30 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastEditorUpdateProcessSlot; coindex.i++)
                 {
-                    if (!EditorUpdatePaused[coindex.i] && EditorUpdateProcesses[coindex.i] != null && 
-                        !(EditorApplication.timeSinceStartup < EditorUpdateProcesses[coindex.i].Current))
+                    try
                     {
-                        if (!EditorUpdateProcesses[coindex.i].MoveNext())
+                        if (!EditorUpdatePaused[coindex.i] && EditorUpdateProcesses[coindex.i] != null &&
+                            !(EditorApplication.timeSinceStartup < EditorUpdateProcesses[coindex.i].Current))
                         {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if (EditorUpdateProcesses[coindex.i] != null && float.IsNaN(EditorUpdateProcesses[coindex.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (!EditorUpdateProcesses[coindex.i].MoveNext())
                             {
-                                EditorUpdateProcesses[coindex.i] = ReplacementFunction(EditorUpdateProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
                             }
-                            coindex.i--;
+                            else if (EditorUpdateProcesses[coindex.i] != null && float.IsNaN(EditorUpdateProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    EditorUpdateProcesses[coindex.i] = ReplacementFunction(EditorUpdateProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
                         }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -733,33 +787,40 @@ namespace CYM
 
                 for(coindex.i = 0;coindex.i < _lastEndOfFrameProcessSlot;coindex.i++)
                 {
-                    if (!EndOfFramePaused[coindex.i] && EndOfFrameProcesses[coindex.i] != null && !(localTime < EndOfFrameProcesses[coindex.i].Current))
+                    try
                     {
-                        if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
+                        if (!EndOfFramePaused[coindex.i] && EndOfFrameProcesses[coindex.i] != null && !(localTime < EndOfFrameProcesses[coindex.i].Current))
                         {
-                            Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
-                                    (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
-                                    (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag")) 
-                                    : "Processing Coroutine");
-                        }
-
-                        if(!EndOfFrameProcesses[coindex.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(coindex))
-                                KillCoroutinesOnInstance(_indexToHandle[coindex]);
-                        }
-                        else if(EndOfFrameProcesses[coindex.i] != null && float.IsNaN(EndOfFrameProcesses[coindex.i].Current))
-                        {
-                            if(ReplacementFunction != null)
+                            if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
-                                EndOfFrameProcesses[coindex.i] = ReplacementFunction(EndOfFrameProcesses[coindex.i], _indexToHandle[coindex]);
-                                ReplacementFunction = null;
+                                Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
+                                        (_processLayers.ContainsKey(_indexToHandle[coindex]) ? "layer " + _processLayers[_indexToHandle[coindex]] : "no layer") +
+                                        (_processTags.ContainsKey(_indexToHandle[coindex]) ? ", tag " + _processTags[_indexToHandle[coindex]] : ", no tag"))
+                                        : "Processing Coroutine");
                             }
-                            coindex.i--;
-                        }
 
-                        if (ProfilerDebugAmount != DebugInfoType.None) 
-                            Profiler.EndSample();
+                            if (!EndOfFrameProcesses[coindex.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(coindex))
+                                    KillCoroutinesOnInstance(_indexToHandle[coindex]);
+                            }
+                            else if (EndOfFrameProcesses[coindex.i] != null && float.IsNaN(EndOfFrameProcesses[coindex.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    EndOfFrameProcesses[coindex.i] = ReplacementFunction(EndOfFrameProcesses[coindex.i], _indexToHandle[coindex]);
+                                    ReplacementFunction = null;
+                                }
+                                coindex.i--;
+                            }
+
+                            if (ProfilerDebugAmount != DebugInfoType.None)
+                                Profiler.EndSample();
+                        }
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogException(ex);
                     }
                 }
             }
@@ -2201,499 +2262,506 @@ namespace CYM
             float currentLocalTime = localTime;
             float currentDeltaTime = deltaTime;
 
-            switch (segment)
+            try
             {
-                case Segment.Update:
+                switch (segment)
+                {
+                    case Segment.Update:
 
-                    if (_nextUpdateProcessSlot >= UpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = UpdateProcesses;
-                        bool[] oldPausedArray = UpdatePaused;
-
-                        UpdateProcesses = new IEnumerator<float>[UpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        UpdatePaused = new bool[UpdateProcesses.Length];
-
-                        for (int i = 0;i < oldProcArray.Length;i++)
+                        if (_nextUpdateProcessSlot >= UpdateProcesses.Length)
                         {
-                            UpdateProcesses[i] = oldProcArray[i];
-                            UpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
+                            IEnumerator<float>[] oldProcArray = UpdateProcesses;
+                            bool[] oldPausedArray = UpdatePaused;
 
-                    if (UpdateTimeValues(slot.seg))
-                        _lastUpdateProcessSlot = _nextUpdateProcessSlot;
+                            UpdateProcesses = new IEnumerator<float>[UpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            UpdatePaused = new bool[UpdateProcesses.Length];
 
-                    slot.i = _nextUpdateProcessSlot++;
-                    UpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!UpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (UpdateProcesses[slot.i] != null && float.IsNaN(UpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            for (int i = 0; i < oldProcArray.Length; i++)
                             {
-                                UpdateProcesses[slot.i] = ReplacementFunction(UpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
+                                UpdateProcesses[i] = oldProcArray[i];
+                                UpdatePaused[i] = oldPausedArray[i];
                             }
-                            prewarm = !UpdatePaused[slot.i];
                         }
-                        else
+
+                        if (UpdateTimeValues(slot.seg))
+                            _lastUpdateProcessSlot = _nextUpdateProcessSlot;
+
+                        slot.i = _nextUpdateProcessSlot++;
+                        UpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
                         {
-                            prewarm = false;
-                        }
-                    }
-
-                    break;
-
-                case Segment.FixedUpdate:
-
-                    if (_nextFixedUpdateProcessSlot >= FixedUpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = FixedUpdateProcesses;
-                        bool[] oldPausedArray = FixedUpdatePaused;
-
-                        FixedUpdateProcesses = new IEnumerator<float>[FixedUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        FixedUpdatePaused = new bool[FixedUpdateProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
-                        {
-                            FixedUpdateProcesses[i] = oldProcArray[i];
-                            FixedUpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
-
-                    if (UpdateTimeValues(slot.seg))
-                        _lastFixedUpdateProcessSlot = _nextFixedUpdateProcessSlot;
-
-                    slot.i = _nextFixedUpdateProcessSlot++;
-                    FixedUpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!FixedUpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (FixedUpdateProcesses[slot.i] != null && float.IsNaN(FixedUpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (!UpdateProcesses[slot.i].MoveNext())
                             {
-                                FixedUpdateProcesses[slot.i] = ReplacementFunction(FixedUpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
+
+                                prewarm = false;
                             }
-                            prewarm = !FixedUpdatePaused[slot.i];
-                        }
-                        else
-                        {
-                            prewarm = false;
-                        }
-                    }
-
-                    break;
-
-                case Segment.LateUpdate:
-
-                    if (_nextLateUpdateProcessSlot >= LateUpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = LateUpdateProcesses;
-                        bool[] oldPausedArray = LateUpdatePaused;
-
-                        LateUpdateProcesses = new IEnumerator<float>[LateUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        LateUpdatePaused = new bool[LateUpdateProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
-                        {
-                            LateUpdateProcesses[i] = oldProcArray[i];
-                            LateUpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
-
-                    if (UpdateTimeValues(slot.seg))
-                        _lastLateUpdateProcessSlot = _nextLateUpdateProcessSlot;
-
-                    slot.i = _nextLateUpdateProcessSlot++;
-                    LateUpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!LateUpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (LateUpdateProcesses[slot.i] != null && float.IsNaN(LateUpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            else if (UpdateProcesses[slot.i] != null && float.IsNaN(UpdateProcesses[slot.i].Current))
                             {
-                                LateUpdateProcesses[slot.i] = ReplacementFunction(LateUpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
+                                if (ReplacementFunction != null)
+                                {
+                                    UpdateProcesses[slot.i] = ReplacementFunction(UpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !UpdatePaused[slot.i];
                             }
-                            prewarm = !LateUpdatePaused[slot.i];
-                        }
-                        else
-                        {
-                            prewarm = false;
-                        }
-                    }
-
-                    break;
-
-                case Segment.SlowUpdate:
-
-                    if (_nextSlowUpdateProcessSlot >= SlowUpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = SlowUpdateProcesses;
-                        bool[] oldPausedArray = SlowUpdatePaused;
-
-                        SlowUpdateProcesses = new IEnumerator<float>[SlowUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        SlowUpdatePaused = new bool[SlowUpdateProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
-                        {
-                            SlowUpdateProcesses[i] = oldProcArray[i];
-                            SlowUpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
-
-                    if (UpdateTimeValues(slot.seg))
-                        _lastSlowUpdateProcessSlot = _nextSlowUpdateProcessSlot;
-
-                    slot.i = _nextSlowUpdateProcessSlot++;
-                    SlowUpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!SlowUpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (SlowUpdateProcesses[slot.i] != null && float.IsNaN(SlowUpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            else
                             {
-                                SlowUpdateProcesses[slot.i] = ReplacementFunction(SlowUpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
+                                prewarm = false;
                             }
-                            prewarm = !SlowUpdatePaused[slot.i];
                         }
-                        else
+
+                        break;
+
+                    case Segment.FixedUpdate:
+
+                        if (_nextFixedUpdateProcessSlot >= FixedUpdateProcesses.Length)
                         {
-                            prewarm = false;
-                        }
-                    }
+                            IEnumerator<float>[] oldProcArray = FixedUpdateProcesses;
+                            bool[] oldPausedArray = FixedUpdatePaused;
 
-                    break;
+                            FixedUpdateProcesses = new IEnumerator<float>[FixedUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            FixedUpdatePaused = new bool[FixedUpdateProcesses.Length];
 
-                case Segment.RealtimeUpdate:
-
-                    if (_nextRealtimeUpdateProcessSlot >= RealtimeUpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = RealtimeUpdateProcesses;
-                        bool[] oldPausedArray = RealtimeUpdatePaused;
-
-                        RealtimeUpdateProcesses = new IEnumerator<float>[RealtimeUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        RealtimeUpdatePaused = new bool[RealtimeUpdateProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
-                        {
-                            RealtimeUpdateProcesses[i] = oldProcArray[i];
-                            RealtimeUpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
-
-                    if (UpdateTimeValues(slot.seg))
-                        _lastRealtimeUpdateProcessSlot = _nextRealtimeUpdateProcessSlot;
-
-                    slot.i = _nextRealtimeUpdateProcessSlot++;
-                    RealtimeUpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!RealtimeUpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (RealtimeUpdateProcesses[slot.i] != null && float.IsNaN(RealtimeUpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            for (int i = 0; i < oldProcArray.Length; i++)
                             {
-                                RealtimeUpdateProcesses[slot.i] = ReplacementFunction(RealtimeUpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
+                                FixedUpdateProcesses[i] = oldProcArray[i];
+                                FixedUpdatePaused[i] = oldPausedArray[i];
                             }
-                            prewarm = !RealtimeUpdatePaused[slot.i];
                         }
-                        else
-                        {
-                            prewarm = false;
-                        }
-                    }
 
-                    break;
+                        if (UpdateTimeValues(slot.seg))
+                            _lastFixedUpdateProcessSlot = _nextFixedUpdateProcessSlot;
+
+                        slot.i = _nextFixedUpdateProcessSlot++;
+                        FixedUpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
+                        {
+                            if (!FixedUpdateProcesses[slot.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
+
+                                prewarm = false;
+                            }
+                            else if (FixedUpdateProcesses[slot.i] != null && float.IsNaN(FixedUpdateProcesses[slot.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    FixedUpdateProcesses[slot.i] = ReplacementFunction(FixedUpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !FixedUpdatePaused[slot.i];
+                            }
+                            else
+                            {
+                                prewarm = false;
+                            }
+                        }
+
+                        break;
+
+                    case Segment.LateUpdate:
+
+                        if (_nextLateUpdateProcessSlot >= LateUpdateProcesses.Length)
+                        {
+                            IEnumerator<float>[] oldProcArray = LateUpdateProcesses;
+                            bool[] oldPausedArray = LateUpdatePaused;
+
+                            LateUpdateProcesses = new IEnumerator<float>[LateUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            LateUpdatePaused = new bool[LateUpdateProcesses.Length];
+
+                            for (int i = 0; i < oldProcArray.Length; i++)
+                            {
+                                LateUpdateProcesses[i] = oldProcArray[i];
+                                LateUpdatePaused[i] = oldPausedArray[i];
+                            }
+                        }
+
+                        if (UpdateTimeValues(slot.seg))
+                            _lastLateUpdateProcessSlot = _nextLateUpdateProcessSlot;
+
+                        slot.i = _nextLateUpdateProcessSlot++;
+                        LateUpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
+                        {
+                            if (!LateUpdateProcesses[slot.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
+
+                                prewarm = false;
+                            }
+                            else if (LateUpdateProcesses[slot.i] != null && float.IsNaN(LateUpdateProcesses[slot.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    LateUpdateProcesses[slot.i] = ReplacementFunction(LateUpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !LateUpdatePaused[slot.i];
+                            }
+                            else
+                            {
+                                prewarm = false;
+                            }
+                        }
+
+                        break;
+
+                    case Segment.SlowUpdate:
+
+                        if (_nextSlowUpdateProcessSlot >= SlowUpdateProcesses.Length)
+                        {
+                            IEnumerator<float>[] oldProcArray = SlowUpdateProcesses;
+                            bool[] oldPausedArray = SlowUpdatePaused;
+
+                            SlowUpdateProcesses = new IEnumerator<float>[SlowUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            SlowUpdatePaused = new bool[SlowUpdateProcesses.Length];
+
+                            for (int i = 0; i < oldProcArray.Length; i++)
+                            {
+                                SlowUpdateProcesses[i] = oldProcArray[i];
+                                SlowUpdatePaused[i] = oldPausedArray[i];
+                            }
+                        }
+
+                        if (UpdateTimeValues(slot.seg))
+                            _lastSlowUpdateProcessSlot = _nextSlowUpdateProcessSlot;
+
+                        slot.i = _nextSlowUpdateProcessSlot++;
+                        SlowUpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
+                        {
+                            if (!SlowUpdateProcesses[slot.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
+
+                                prewarm = false;
+                            }
+                            else if (SlowUpdateProcesses[slot.i] != null && float.IsNaN(SlowUpdateProcesses[slot.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    SlowUpdateProcesses[slot.i] = ReplacementFunction(SlowUpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !SlowUpdatePaused[slot.i];
+                            }
+                            else
+                            {
+                                prewarm = false;
+                            }
+                        }
+
+                        break;
+
+                    case Segment.RealtimeUpdate:
+
+                        if (_nextRealtimeUpdateProcessSlot >= RealtimeUpdateProcesses.Length)
+                        {
+                            IEnumerator<float>[] oldProcArray = RealtimeUpdateProcesses;
+                            bool[] oldPausedArray = RealtimeUpdatePaused;
+
+                            RealtimeUpdateProcesses = new IEnumerator<float>[RealtimeUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            RealtimeUpdatePaused = new bool[RealtimeUpdateProcesses.Length];
+
+                            for (int i = 0; i < oldProcArray.Length; i++)
+                            {
+                                RealtimeUpdateProcesses[i] = oldProcArray[i];
+                                RealtimeUpdatePaused[i] = oldPausedArray[i];
+                            }
+                        }
+
+                        if (UpdateTimeValues(slot.seg))
+                            _lastRealtimeUpdateProcessSlot = _nextRealtimeUpdateProcessSlot;
+
+                        slot.i = _nextRealtimeUpdateProcessSlot++;
+                        RealtimeUpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
+                        {
+                            if (!RealtimeUpdateProcesses[slot.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
+
+                                prewarm = false;
+                            }
+                            else if (RealtimeUpdateProcesses[slot.i] != null && float.IsNaN(RealtimeUpdateProcesses[slot.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    RealtimeUpdateProcesses[slot.i] = ReplacementFunction(RealtimeUpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !RealtimeUpdatePaused[slot.i];
+                            }
+                            else
+                            {
+                                prewarm = false;
+                            }
+                        }
+
+                        break;
 #if UNITY_EDITOR
-                case Segment.EditorUpdate:
+                    case Segment.EditorUpdate:
 
-                    if (!OnEditorStart())
-                        return new CoroutineHandle();
+                        if (!OnEditorStart())
+                            return new CoroutineHandle();
 
-                    if (handle.Key == 0)
-                        handle = new CoroutineHandle(_instanceID);
+                        if (handle.Key == 0)
+                            handle = new CoroutineHandle(_instanceID);
 
-                    if (_nextEditorUpdateProcessSlot >= EditorUpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = EditorUpdateProcesses;
-                        bool[] oldPausedArray = EditorUpdatePaused;
-
-                        EditorUpdateProcesses = new IEnumerator<float>[EditorUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        EditorUpdatePaused = new bool[EditorUpdateProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
+                        if (_nextEditorUpdateProcessSlot >= EditorUpdateProcesses.Length)
                         {
-                            EditorUpdateProcesses[i] = oldProcArray[i];
-                            EditorUpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
+                            IEnumerator<float>[] oldProcArray = EditorUpdateProcesses;
+                            bool[] oldPausedArray = EditorUpdatePaused;
 
-                    if (UpdateTimeValues(slot.seg))
-                        _lastEditorUpdateProcessSlot = _nextEditorUpdateProcessSlot;
+                            EditorUpdateProcesses = new IEnumerator<float>[EditorUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            EditorUpdatePaused = new bool[EditorUpdateProcesses.Length];
 
-                    slot.i = _nextEditorUpdateProcessSlot++;
-                    EditorUpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!EditorUpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (EditorUpdateProcesses[slot.i] != null && float.IsNaN(EditorUpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            for (int i = 0; i < oldProcArray.Length; i++)
                             {
-                                EditorUpdateProcesses[slot.i] = ReplacementFunction(EditorUpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
+                                EditorUpdateProcesses[i] = oldProcArray[i];
+                                EditorUpdatePaused[i] = oldPausedArray[i];
                             }
-                            prewarm = !EditorUpdatePaused[slot.i];
                         }
-                        else
+
+                        if (UpdateTimeValues(slot.seg))
+                            _lastEditorUpdateProcessSlot = _nextEditorUpdateProcessSlot;
+
+                        slot.i = _nextEditorUpdateProcessSlot++;
+                        EditorUpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
                         {
-                            prewarm = false;
-                        }
-                    }
-
-                    break;
-
-                case Segment.EditorSlowUpdate:
-
-                    if (!OnEditorStart())
-                        return new CoroutineHandle();
-
-                    if (handle.Key == 0)
-                        handle = new CoroutineHandle(_instanceID);
-
-                    if (_nextEditorSlowUpdateProcessSlot >= EditorSlowUpdateProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = EditorSlowUpdateProcesses;
-                        bool[] oldPausedArray = EditorSlowUpdatePaused;
-
-                        EditorSlowUpdateProcesses = new IEnumerator<float>[EditorSlowUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        EditorSlowUpdatePaused = new bool[EditorSlowUpdateProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
-                        {
-                            EditorSlowUpdateProcesses[i] = oldProcArray[i];
-                            EditorSlowUpdatePaused[i] = oldPausedArray[i];
-                        }
-                    }
-
-                    if (UpdateTimeValues(slot.seg))
-                        _lastEditorSlowUpdateProcessSlot = _nextEditorSlowUpdateProcessSlot;
-
-                    slot.i = _nextEditorSlowUpdateProcessSlot++;
-                    EditorSlowUpdateProcesses[slot.i] = coroutine;
-
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
-
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
-
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
-
-                    while (prewarm)
-                    {
-                        if (!EditorSlowUpdateProcesses[slot.i].MoveNext())
-                        {
-                            if (_indexToHandle.ContainsKey(slot))
-                                KillCoroutinesOnInstance(_indexToHandle[slot]);
-
-                            prewarm = false;
-                        }
-                        else if (EditorSlowUpdateProcesses[slot.i] != null && float.IsNaN(EditorSlowUpdateProcesses[slot.i].Current))
-                        {
-                            if (ReplacementFunction != null)
+                            if (!EditorUpdateProcesses[slot.i].MoveNext())
                             {
-                                EditorSlowUpdateProcesses[slot.i] = ReplacementFunction(EditorSlowUpdateProcesses[slot.i], _indexToHandle[slot]);
-                                ReplacementFunction = null;
-                            }
-                            prewarm = !EditorSlowUpdatePaused[slot.i];
-                        }
-                        else
-                        {
-                            prewarm = false;
-                        }
-                    }
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
 
-                    break;
+                                prewarm = false;
+                            }
+                            else if (EditorUpdateProcesses[slot.i] != null && float.IsNaN(EditorUpdateProcesses[slot.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    EditorUpdateProcesses[slot.i] = ReplacementFunction(EditorUpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !EditorUpdatePaused[slot.i];
+                            }
+                            else
+                            {
+                                prewarm = false;
+                            }
+                        }
+
+                        break;
+
+                    case Segment.EditorSlowUpdate:
+
+                        if (!OnEditorStart())
+                            return new CoroutineHandle();
+
+                        if (handle.Key == 0)
+                            handle = new CoroutineHandle(_instanceID);
+
+                        if (_nextEditorSlowUpdateProcessSlot >= EditorSlowUpdateProcesses.Length)
+                        {
+                            IEnumerator<float>[] oldProcArray = EditorSlowUpdateProcesses;
+                            bool[] oldPausedArray = EditorSlowUpdatePaused;
+
+                            EditorSlowUpdateProcesses = new IEnumerator<float>[EditorSlowUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            EditorSlowUpdatePaused = new bool[EditorSlowUpdateProcesses.Length];
+
+                            for (int i = 0; i < oldProcArray.Length; i++)
+                            {
+                                EditorSlowUpdateProcesses[i] = oldProcArray[i];
+                                EditorSlowUpdatePaused[i] = oldPausedArray[i];
+                            }
+                        }
+
+                        if (UpdateTimeValues(slot.seg))
+                            _lastEditorSlowUpdateProcessSlot = _nextEditorSlowUpdateProcessSlot;
+
+                        slot.i = _nextEditorSlowUpdateProcessSlot++;
+                        EditorSlowUpdateProcesses[slot.i] = coroutine;
+
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
+
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
+
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
+
+                        while (prewarm)
+                        {
+                            if (!EditorSlowUpdateProcesses[slot.i].MoveNext())
+                            {
+                                if (_indexToHandle.ContainsKey(slot))
+                                    KillCoroutinesOnInstance(_indexToHandle[slot]);
+
+                                prewarm = false;
+                            }
+                            else if (EditorSlowUpdateProcesses[slot.i] != null && float.IsNaN(EditorSlowUpdateProcesses[slot.i].Current))
+                            {
+                                if (ReplacementFunction != null)
+                                {
+                                    EditorSlowUpdateProcesses[slot.i] = ReplacementFunction(EditorSlowUpdateProcesses[slot.i], _indexToHandle[slot]);
+                                    ReplacementFunction = null;
+                                }
+                                prewarm = !EditorSlowUpdatePaused[slot.i];
+                            }
+                            else
+                            {
+                                prewarm = false;
+                            }
+                        }
+
+                        break;
 #endif
-                case Segment.EndOfFrame:
+                    case Segment.EndOfFrame:
 
-                    if (_nextEndOfFrameProcessSlot >= EndOfFrameProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = EndOfFrameProcesses;
-                        bool[] oldPausedArray = EndOfFramePaused;
-
-                        EndOfFrameProcesses = new IEnumerator<float>[EndOfFrameProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        EndOfFramePaused = new bool[EndOfFrameProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
+                        if (_nextEndOfFrameProcessSlot >= EndOfFrameProcesses.Length)
                         {
-                            EndOfFrameProcesses[i] = oldProcArray[i];
-                            EndOfFramePaused[i] = oldPausedArray[i];
+                            IEnumerator<float>[] oldProcArray = EndOfFrameProcesses;
+                            bool[] oldPausedArray = EndOfFramePaused;
+
+                            EndOfFrameProcesses = new IEnumerator<float>[EndOfFrameProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            EndOfFramePaused = new bool[EndOfFrameProcesses.Length];
+
+                            for (int i = 0; i < oldProcArray.Length; i++)
+                            {
+                                EndOfFrameProcesses[i] = oldProcArray[i];
+                                EndOfFramePaused[i] = oldPausedArray[i];
+                            }
                         }
-                    }
 
-                    if (UpdateTimeValues(slot.seg))
-                        _lastEndOfFrameProcessSlot = _nextEndOfFrameProcessSlot;
+                        if (UpdateTimeValues(slot.seg))
+                            _lastEndOfFrameProcessSlot = _nextEndOfFrameProcessSlot;
 
-                    slot.i = _nextEndOfFrameProcessSlot++;
-                    EndOfFrameProcesses[slot.i] = coroutine;
+                        slot.i = _nextEndOfFrameProcessSlot++;
+                        EndOfFrameProcesses[slot.i] = coroutine;
 
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
 
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
 
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
 
-                    _eofWatcherHandle = RunCoroutineSingletonOnInstance(_EOFPumpWatcher(), _eofWatcherHandle, SingletonBehavior.Abort);
+                        _eofWatcherHandle = RunCoroutineSingletonOnInstance(_EOFPumpWatcher(), _eofWatcherHandle, SingletonBehavior.Abort);
 
-                    break;
+                        break;
 
-                case Segment.ManualTimeframe:
+                    case Segment.ManualTimeframe:
 
-                    if (_nextManualTimeframeProcessSlot >= ManualTimeframeProcesses.Length)
-                    {
-                        IEnumerator<float>[] oldProcArray = ManualTimeframeProcesses;
-                        bool[] oldPausedArray = ManualTimeframePaused;
-
-                        ManualTimeframeProcesses = new IEnumerator<float>[ManualTimeframeProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
-                        ManualTimeframePaused = new bool[ManualTimeframeProcesses.Length];
-
-                        for (int i = 0; i < oldProcArray.Length; i++)
+                        if (_nextManualTimeframeProcessSlot >= ManualTimeframeProcesses.Length)
                         {
-                            ManualTimeframeProcesses[i] = oldProcArray[i];
-                            ManualTimeframePaused[i] = oldPausedArray[i];
+                            IEnumerator<float>[] oldProcArray = ManualTimeframeProcesses;
+                            bool[] oldPausedArray = ManualTimeframePaused;
+
+                            ManualTimeframeProcesses = new IEnumerator<float>[ManualTimeframeProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
+                            ManualTimeframePaused = new bool[ManualTimeframeProcesses.Length];
+
+                            for (int i = 0; i < oldProcArray.Length; i++)
+                            {
+                                ManualTimeframeProcesses[i] = oldProcArray[i];
+                                ManualTimeframePaused[i] = oldPausedArray[i];
+                            }
                         }
-                    }
 
-                    if (UpdateTimeValues(slot.seg))
-                        _lastManualTimeframeProcessSlot = _nextManualTimeframeProcessSlot;
+                        if (UpdateTimeValues(slot.seg))
+                            _lastManualTimeframeProcessSlot = _nextManualTimeframeProcessSlot;
 
-                    slot.i = _nextManualTimeframeProcessSlot++;
-                    ManualTimeframeProcesses[slot.i] = coroutine;
+                        slot.i = _nextManualTimeframeProcessSlot++;
+                        ManualTimeframeProcesses[slot.i] = coroutine;
 
-                    if (null != tag)
-                        AddTagOnInstance(tag, handle);
+                        if (null != tag)
+                            AddTagOnInstance(tag, handle);
 
-                    if (layer.HasValue)
-                        AddLayerOnInstance((int)layer, handle);
+                        if (layer.HasValue)
+                            AddLayerOnInstance((int)layer, handle);
 
-                    _indexToHandle.Add(slot, handle);
-                    _handleToIndex.Add(handle, slot);
+                        _indexToHandle.Add(slot, handle);
+                        _handleToIndex.Add(handle, slot);
 
-                    break;
+                        break;
 
-                default:
-                    handle = new CoroutineHandle();
-                    break;
+                    default:
+                        handle = new CoroutineHandle();
+                        break;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogException(ex);
             }
 
             localTime = currentLocalTime;
@@ -4056,11 +4124,24 @@ namespace CYM
         /// </summary>
         /// <param name="handle">The handle to test.</param>
         /// <returns>Whether it's a paused coroutine.</returns>
+        [System.Obsolete("Replaced with isAliveAndPaused.", false)]
         public static bool IsPaused(CoroutineHandle handle)
         {
             Timing inst = GetInstance(handle.Key);
             return inst != null && inst._handleToIndex.ContainsKey(handle) && !inst.CoindexIsNull(inst._handleToIndex[handle]) && 
                 !inst.CoindexIsPaused(inst._handleToIndex[handle]);
+        }
+
+        /// <summary>
+        /// Tests to see if the handle you have points to a coroutine that has not ended but is paused.
+        /// </summary>
+        /// <param name="handle">The handle to test.</param>
+        /// <returns>Whether it's a paused coroutine.</returns>
+        public static bool IsAliveAndPaused(CoroutineHandle handle)
+        {
+            Timing inst = GetInstance(handle.Key);
+            return inst != null && inst._handleToIndex.ContainsKey(handle) && !inst.CoindexIsNull(inst._handleToIndex[handle]) &&
+                inst.CoindexIsPaused(inst._handleToIndex[handle]);
         }
 
         private void AddTagOnInstance(string tag, CoroutineHandle handle)
@@ -4657,11 +4738,7 @@ namespace CYM
                 return float.NaN;
             }
 
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-            if (warnOnIssue) Debug.LogWarning("WaitUntilDone cannot hold: The coroutine handle that was passed in is invalid.\n" + otherCoroutine);
-#else
             Assert.IsFalse(warnOnIssue, "WaitUntilDone cannot hold: The coroutine handle that was passed in is invalid.\n" + otherCoroutine);
-#endif
 
             return 0f;
         }
@@ -4673,20 +4750,12 @@ namespace CYM
 
             if (handle == otherHandle)
             {
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-                if (warnOnIssue) Debug.LogWarning("A coroutine cannot wait for itself.");
-#else
                 Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for itself.");
-#endif
                 return coptr;
             }
             if (handle.Key != otherHandle.Key)
             {
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-                if (warnOnIssue) Debug.LogWarning("A coroutine cannot wait for another coroutine on a different MEC instance.");
-#else
                 Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for another coroutine on a different MEC instance.");
-#endif
                 return coptr;
             }
 
@@ -4711,21 +4780,13 @@ namespace CYM
             
             if(handle == otherHandle)
             {
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-                if (warnOnIssue) Debug.LogWarning("A coroutine cannot wait for itself.");
-#else
                 Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for itself.");
-#endif
                 return;
             }
 
             if(handle.Key != otherHandle.Key)
             {
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-                if (warnOnIssue) Debug.LogWarning("A coroutine cannot wait for another coroutine on a different MEC instance.");
-#else
                 Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for another coroutine on a different MEC instance.");
-#endif
                 return;
             }
 
@@ -4769,21 +4830,13 @@ namespace CYM
 
                 if (handle == othersEnum.Current)
                 {
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-                    if (warnOnIssue) Debug.LogWarning("A coroutine cannot wait for itself.");
-#else
                     Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for itself.");
-#endif
                     continue;
                 }
 
                 if (handle.Key != othersEnum.Current.Key)
                 {
-#if UNITY_4_6 || UNITY_4_7 || UNITY_5_0 || UNITY_5_1 || UNITY_5_2
-                    if (warnOnIssue) Debug.LogWarning("A coroutine cannot wait for another coroutine on a different MEC instance.");
-#else
                     Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for another coroutine on a different MEC instance.");
-#endif
                     continue;
                 }
 
@@ -4851,6 +4904,7 @@ namespace CYM
             return _tmpRef as IEnumerator<float>;
         }
 
+#if !UNITY_2018_3_OR_NEWER
         /// <summary>
         /// Use the command "yield return Timing.WaitUntilDone(wwwObject);" to pause the current 
         /// coroutine until the wwwObject is done.
@@ -4879,6 +4933,7 @@ namespace CYM
             ReplacementFunction = ReturnTmpRefForRepFunc;
             yield return float.NaN;
         }
+#endif
 
         /// <summary>
         /// Use the command "yield return Timing.WaitUntilDone(operation);" to pause the current 
@@ -4909,7 +4964,6 @@ namespace CYM
             yield return float.NaN;
         }
 
-#if !UNITY_4_6 && !UNITY_4_7 && !UNITY_5_0 && !UNITY_5_1 && !UNITY_5_2
         /// <summary>
         /// Use the command "yield return Timing.WaitUntilDone(operation);" to pause the current 
         /// coroutine until the operation is done.
@@ -4938,7 +4992,6 @@ namespace CYM
             ReplacementFunction = ReturnTmpRefForRepFunc;
             yield return float.NaN;
         }
-#endif
 
         /// <summary>
         /// Use the command "yield return Timing.WaitUntilTrue(evaluatorFunc);" to pause the current 
@@ -6260,12 +6313,23 @@ namespace CYM
         }
 
         /// <summary>
-        /// Is true while the coroutine is paused (but not in a WaitUntilDone holding pattern). Setting this value will pause or resume the coroutine. 
+        /// Is true while the coroutine is paused.
+        /// NOTE: This value was inverted. Replaced with IsAliveAndPaused which is not inverted.
         /// </summary>
+        [System.Obsolete("This value was inverted. Replaced with IsAliveAndPaused which is not inverted.", false)]
         public bool IsPaused
         {
             get { return Timing.IsPaused(this); }
             set { if (value) Timing.PauseCoroutines(this); else Timing.ResumeCoroutines(this);}
+        }
+
+        /// <summary>
+        /// Is true while the coroutine is paused. Setting this value will pause or resume the coroutine. 
+        /// </summary>
+        public bool IsAliveAndPaused
+        {
+            get { return Timing.IsAliveAndPaused(this); }
+            set { if (value) Timing.PauseCoroutines(this); else Timing.ResumeCoroutines(this); }
         }
 
         /// <summary>
