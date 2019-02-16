@@ -18,7 +18,6 @@ namespace CYM
     public class HashList<T> : List<T>
     {
         protected HashSet<T> Hash;
-        int index;
 
         public HashList()
         {
@@ -44,7 +43,7 @@ namespace CYM
             Hash.Remove(ent);
             base.Remove(ent);
         }
-        public bool Contain(T ent)
+        public new bool Contains(T ent)
         {
             return Hash.Contains(ent);
         }
@@ -52,11 +51,6 @@ namespace CYM
         {
             Hash.Clear();
             base.Clear();
-        }
-
-        public void Reset()
-        {
-            index = 0;
         }
     }
 }

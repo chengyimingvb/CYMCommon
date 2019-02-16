@@ -1,0 +1,8 @@
+
+      _SnowGlitterGraininess ("Graininess", Range(0, 2)) = 1
+      _SnowGlitterShininess ("Shininess", Range(1, 90)) = 30
+      _SnowGlitterViewDep("View Dependency", Range(0, 1)) = 0.5
+      _SnowGlitterUVScale("UVScale", Vector) = (300, 300, 0, 0)
+      _SnowGlitterStrength("Strength", Range(0, 1)) = 1
+      _SnowGlitterThreshold("Threshold", Range(0, 1)) = 1
+      _SnowGlitterDistFade("Distance Fade", Vector) = (10, 100, 1, 1)

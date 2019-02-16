@@ -11,7 +11,7 @@ using UnityEngine;
 using CYM.Utile;
 namespace CYM
 {
-    public class BaseFPSMgr : BaseGlobalCoreMgr
+    public class BaseFPSMgr : BaseGFlowMgr
     {
         bool isShowFPS = false;
         AFPSCounter FPSCounter;

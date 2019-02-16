@@ -1,0 +1,5 @@
+
+         [NoScaleOffset]_AntiTileArray ("AntiTile Array", 2DArray) = "white" {}
+         _AntiTileDetailNoiseScaleFadeStr ("AntiTile DetailScaleFadeStr", Vector) = (8, 5, 1.0, 0)
+         _AntiTileDistanceNoiseScaleFadeStr("AntiTile Detail Scale", Vector) = (10, 100, 150, 1.0)
+         _AntiTileNormalNoiseScaleStr("AntiTile Noise Normal", Vector) = (8, 1.0, 0, 0)

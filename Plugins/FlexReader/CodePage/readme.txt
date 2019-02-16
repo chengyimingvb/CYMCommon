@@ -1,0 +1,1 @@
+I18N provides internationalization support. Check user manual for information and usage.

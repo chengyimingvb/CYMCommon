@@ -23,6 +23,7 @@ namespace CYM.UI
     }
     public enum Anchoring
     {
+        None,
         Corners,
         LeftOrRight,
         TopOrBottom
@@ -39,7 +40,7 @@ namespace CYM.UI
         Top,
         Bottom
     }
-    public class BaseTooltipView : BaseUIView
+    public class BaseTooltipView : BaseStaticUIView<BaseTooltipView>
     {
         /// <summary>
         /// 当这个标志为true的时候,自动关闭,用于UI控件的OnExit触发
@@ -80,6 +81,8 @@ namespace CYM.UI
         {
             base.Awake();
             SizeFitter = GetComponent<ContentSizeFitter>();
+            if (Default == null)
+                Default = this;
         }
         public override void OnSetNeedFlag()
         {
@@ -89,7 +92,8 @@ namespace CYM.UI
         protected override void OnCreatedView()
         {
             base.OnCreatedView();
-            Text.Init(new BaseTextData() { Name = () => { return InputDesc; }, IsTrans = false });
+            if(Text!=null)
+                Text.Init(new BaseTextData() { Name = () => InputDesc , IsTrans = false });
         }
         public override void Refresh()
         {
@@ -99,7 +103,7 @@ namespace CYM.UI
         public override void OnUpdate()
         {
             base.OnUpdate();
-            if (IsShow)
+            if (!IsCompleteClose)
             {
                 this.UpdatePositionAndPivot();
                 //有鼠标点击的时候自动关闭
@@ -113,13 +117,6 @@ namespace CYM.UI
         #endregion
 
         #region set
-        /// <summary>
-        /// 强制关闭所有继承此类的View
-        /// </summary>
-        public static void CloseAllTip()
-        {
-            IsDirtyCloseTip = true;
-        }
         public override void Show(bool b=true, float? fadeTime = null, float delay = 0, bool useGroup = true, bool force = false)
         {
             base.Show(b, fadeTime, delay, useGroup, force);
@@ -154,10 +151,11 @@ namespace CYM.UI
         }
         public void Show(string str, RectTransform AnchorToTarget, Vector2? inputPos, Vector3? inputWorldPos, float? width = null)
         {
-            this.InputMousePos = inputPos;
+            InputMousePos = inputPos;
             this.AnchorToTarget = AnchorToTarget;
-            this.InputWorldPos = inputWorldPos;
-            this.SizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+            InputWorldPos = inputWorldPos;
+            if(SizeFitter)
+                SizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
             InputDesc = str;
             IsDirtyCloseTip = false;
             Show(true,null,0.05f);
@@ -166,18 +164,22 @@ namespace CYM.UI
         protected override void OnFadeIn()
         {
             base.OnFadeIn();
-            if (Width != null)
+            if (SizeFitter)
             {
-                this.SizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-                this.RectTrans.sizeDelta = new Vector2(Width.Value, this.RectTrans.sizeDelta.y);
-            }
-            else
-            {
-                this.SizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-                if (this.RectTrans.sizeDelta.x >= 500)
+                if (Width != null)
                 {
-                    this.SizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-                    this.RectTrans.sizeDelta = new Vector2(500, this.RectTrans.sizeDelta.y);
+
+                    SizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+                    RectTrans.sizeDelta = new Vector2(Width.Value, this.RectTrans.sizeDelta.y);
+                }
+                else
+                {
+                    SizeFitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+                    if (RectTrans.sizeDelta.x >= 500)
+                    {
+                        SizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+                        RectTrans.sizeDelta = new Vector2(500, RectTrans.sizeDelta.y);
+                    }
                 }
             }
         }
@@ -252,7 +254,7 @@ namespace CYM.UI
             }
 
             // Check if we are anchored to a target
-            if (this.AnchorToTarget != null)
+            else
             {
                 if (this.Anchoring == Anchoring.Corners)
                 {
@@ -323,6 +325,8 @@ namespace CYM.UI
         /// </summary>
         public void UpdatePivot()
         {
+            if (Anchoring == Anchoring.None)
+                return;
             // Get the mouse position
             Vector3 targetPosition = GetShowPos();
 
@@ -404,7 +408,7 @@ namespace CYM.UI
 
         protected void UpdateAnchorGraphicPosition()
         {
-            if (this.AnchorGraphic == null)
+            if (this.AnchorGraphic == null||Anchoring == Anchoring.None)
                 return;
 
             // Get the rect transform

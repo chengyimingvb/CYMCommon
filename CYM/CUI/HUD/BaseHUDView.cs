@@ -1,5 +1,4 @@
-﻿using CYM.Pool;
-using UnityEngine;
+﻿using UnityEngine;
 //**********************************************
 // Class Name	: CYMUIBaseHUD
 // Discription	：None
@@ -9,27 +8,37 @@ using UnityEngine;
 // Copyright ©1995 [CYMCmmon] Powered By [CYM] Version 1.0.0 
 //**********************************************
 namespace CYM.UI
-{ 
+{
     public class BaseHUDView : BaseUIView
     {
         #region member variable
         protected BasePoolMgr spawnPool;
-        #endregion
-
-        #region property
-
+        public HashList<BaseHUDItem> Data { get; protected set; } = new HashList<BaseHUDItem>();
         #endregion
 
         #region life
+        public override void OnSetNeedFlag()
+        {
+            base.OnSetNeedFlag();
+            NeedUpdate = true;
+        }
         public override void Awake()
         {
             base.Awake();
             spawnPool = SelfBaseGlobal.PoolMgr;
         }
+        public override void OnUpdate()
+        {
+            base.OnUpdate();
+            foreach (var item in Data)
+            {
+                item.OnUpdate();
+            }
+        }
         #endregion
 
         #region methon
-        public BaseHUDItem Jump(object obj , GameObject prefab,Transform node=null)
+        public BaseHUDItem Jump(object obj, GameObject prefab, BaseUnit unit, Transform node = null)
         {
             if (prefab == null)
             {
@@ -37,7 +46,7 @@ namespace CYM.UI
                 return null;
             }
 
-            if (spawnPool != null&& spawnPool.HUD!=null)
+            if (spawnPool != null && spawnPool.HUD != null)
             {
                 Transform temp = spawnPool.HUD.SpawnTrans(prefab, null, null, Trans);
                 if (temp != null)
@@ -45,8 +54,10 @@ namespace CYM.UI
                     BaseHUDItem tempText = temp.GetComponent<BaseHUDItem>();
                     if (tempText != null)
                     {
-                        tempText.Init(obj, node);
+                        tempText.Init(obj, unit, node);
                         tempText.OnLifeOver = OnTextLifeOver;
+                        tempText.BaseUIView = this;
+                        Data.Add(tempText);
                     }
                     return tempText;
                 }
@@ -63,6 +74,7 @@ namespace CYM.UI
             if (item.GO == null)
                 return;
             spawnPool.HUD.Despawn(item.GO);
+            Data.Remove(item);
         }
         #endregion
     }

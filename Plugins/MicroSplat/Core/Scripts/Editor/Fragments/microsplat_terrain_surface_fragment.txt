@@ -6,10 +6,7 @@
       #endif
       {
          o.Normal = float3(0,0,1);
-         float3 worldNormalVertex = float3(0,1,0);
-         #if _SNOW || _TRIPLANAR || _STREAMS || _LAVA || _GLITTER || _SNOWGLITTER
-         worldNormalVertex = WorldNormalVector(i, float3(0,0,1));
-         #endif
+         float3 worldNormalVertex = WorldNormalVector(i, float3(0,0,1));
 
          MicroSplatLayer l = SurfImpl(i, worldNormalVertex);
 
@@ -45,6 +42,27 @@
                o.Occlusion = l.Occlusion;
                o.Emission = l.Emission;
             #endif
+            
+            // per pixel normal for 2018.3+
+            // In testing, doesn't seem to make a difference at all. 
+            /*
+            #if UNITY_VERSION >= 201830 && !_MICROMESH && defined(UNITY_INSTANCING_ENABLED) && !defined(SHADER_API_D3D11_9X)
+               float2 patchVertex = mul(unity_WorldToObject, i.worldPos).xy;
+               float4 instanceData = UNITY_ACCESS_INSTANCED_PROP(Terrain, _TerrainPatchInstanceData);
+              
+               float4 uvscale = instanceData.z * _TerrainHeightmapRecipSize;
+               float4 uvoffset = instanceData.xyxy * uvscale;
+               uvoffset.xy += 0.5f * _TerrainHeightmapRecipSize.xy;
+               float2 sampleCoords = (patchVertex.xy * uvscale.xy + uvoffset.xy);
+            
+               float3 geomNormal = normalize(tex2D(_TerrainNormalmapTexture, sampleCoords).xyz * 2 - 1);
+               float3 geomTangent = normalize(cross(geomNormal, float3(0, 0, 1)));
+               float3 geomBitangent = normalize(cross(geomTangent, geomNormal));
+               o.Normal = o.Normal.x * geomTangent + o.Normal.y * geomBitangent + o.Normal.z * geomNormal;
+               o.Normal = o.Normal.xzy;
+            #endif
+            */
+            
             #if _MESHOVERLAYSPLATS
                o.Alpha = l.Alpha;
             #endif

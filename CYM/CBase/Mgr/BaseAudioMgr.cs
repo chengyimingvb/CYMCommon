@@ -50,8 +50,15 @@ namespace CYM
         {
             IsEnableSFX = b;
         }
-        public AudioSource PlayUI(AudioClip clip, bool isLoop = false)
+        public AudioSource PlayUI(AudioClip clip, bool isLoop = false, bool isCache = false)
         {
+            if (isCache)
+            {
+                if (!CacheAudioClip.Contains(clip))
+                    CacheAudioClip.Add(clip);
+                else
+                    return null;
+            }
             var temp= SoundManager.PlaySFX(clip, isLoop);
             if (temp != null)
                 temp.spatialBlend = 0.0f;
@@ -70,7 +77,7 @@ namespace CYM
                 else
                     return null;
             }
-            var ret = SoundManager.PlaySFX(clip, isLoop,0.0f, volume,float.MaxValue, pos.HasValue?pos.Value: default(Vector3));
+            var ret = SoundManager.PlaySFX(clip, isLoop,0.0f, volume,float.MaxValue, pos.HasValue?pos.Value: default);
             if (ret != null)
             {
                 ret.rolloffMode = AudioRolloffMode.Linear;

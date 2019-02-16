@@ -20,7 +20,7 @@ namespace CYM
 
         #region ISpawnMgr
         public TData Gold { get; set; }
-        public List<TData> Data { get; set; } = new List<TData>();
+        public DicList<TData> Data { get; set; } = new DicList<TData>();
         public event Callback<TData> Callback_OnAdd;
         public event Callback<TData> Callback_OnSpawnGold;
         public event Callback<TData> Callback_OnSpawn;

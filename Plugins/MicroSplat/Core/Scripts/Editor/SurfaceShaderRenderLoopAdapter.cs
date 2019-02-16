@@ -83,7 +83,16 @@ namespace JBooth.MicroSplat
          sb.AppendLine("      #include \"UnityCG.cginc\"");
          sb.AppendLine("      #include \"AutoLight.cginc\"");
          sb.AppendLine("      #include \"Lighting.cginc\"");
-         sb.AppendLine("      #include \"UnityPBSLighting.cginc\"");
+         if (features.Contains<string>("_BDRFNOSPECMIN"))
+         {
+            sb.AppendLine("      #include \"Assets/MicroSplat/Core/Scripts/MicroSplatPBSLighting.cginc\"");
+         }
+         else
+         {
+            sb.AppendLine("      #include \"UnityPBSLighting.cginc\"");
+         }
+
+
          sb.AppendLine("      #include \"UnityStandardBRDF.cginc\"");
          sb.AppendLine();
 
@@ -139,9 +148,9 @@ namespace JBooth.MicroSplat
          sb.AppendLine();
          sb.AppendLine();
          // for 2018..
-         #if UNITY_2018_3_OR_NEWER
+#if UNITY_2018_3_OR_NEWER
          sb.AppendLine("     #pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap forwardadd");
-         #endif
+#endif
 
          sb.AppendLine("      #pragma target " + compiler.GetShaderModel(features));
 

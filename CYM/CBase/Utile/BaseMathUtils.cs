@@ -123,6 +123,10 @@ namespace CYM
         {
             return Mathf.Clamp(val, min, max);
         }
+        public static float Clamp(int val, int min, int max)
+        {
+            return Mathf.Clamp(val, min, max);
+        }
         /// <summary>
         /// 随机范围,包含min,不包含max
         /// </summary>

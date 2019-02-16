@@ -7,7 +7,7 @@ namespace CYM.Audio
     public partial class SoundManager : Singleton<SoundManager>
     {
 
-        private void Awake()
+        private void Awake()  
         {
             Setup();
             /* DO NOT PUT ANYTHING HERE */
@@ -31,7 +31,7 @@ namespace CYM.Audio
                 ClearAudioSources();
                 Init();
                 SetupSoundFX();
-                OnLevelLoaded(Application.loadedLevel);
+                //OnLevelLoaded(Application.loadedLevel);
             }
         }
 
@@ -147,60 +147,60 @@ namespace CYM.Audio
         /// <summary>
         /// Raises the level was loaded event.  It handles playing the right SoundConnection on level load.
         /// </summary>
-        private void HandleLevel(int level)
-        {
-            if (gameObject != gameObject || isPaused) return;
+        //private void HandleLevel(int level)
+        //{
+        //    if (gameObject != gameObject || isPaused) return;
 
-            if (Time.realtimeSinceStartup != 0f && lastLevelLoad == Time.realtimeSinceStartup)
-                return;
-            lastLevelLoad = Time.realtimeSinceStartup;
+        //    if (Time.realtimeSinceStartup != 0f && lastLevelLoad == Time.realtimeSinceStartup)
+        //        return;
+        //    lastLevelLoad = Time.realtimeSinceStartup;
 
-            string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (showDebug) Debug.Log("(" + Time.time + ") In Level Loaded: " + sceneName);
-            int _indexOf = SoundConnectionsContainsThisLevel(sceneName);
-            if (_indexOf == SOUNDMANAGER_FALSE || soundConnections[_indexOf].isCustomLevel)
-            {
-                silentLevel = true;
-            }
-            else
-            {
-                silentLevel = false;
-                currentLevel = sceneName;
-                currentSoundConnection = soundConnections[_indexOf];
-            }
+        //    string sceneName = SceneManager.GetActiveScene().name;
+        //    if (showDebug) Debug.Log("(" + Time.time + ") In Level Loaded: " + sceneName);
+        //    int _indexOf = SoundConnectionsContainsThisLevel(sceneName);
+        //    if (_indexOf == SOUNDMANAGER_FALSE || soundConnections[_indexOf].isCustomLevel)
+        //    {
+        //        silentLevel = true;
+        //    }
+        //    else
+        //    {
+        //        silentLevel = false;
+        //        currentLevel = sceneName;
+        //        currentSoundConnection = soundConnections[_indexOf];
+        //    }
 
-            if (!silentLevel && !offTheBGM)
-            {
-                if (showDebug) Debug.Log("BGM activated.");
-                StopPreviousPlaySoundConnection();
-                StartCoroutine("PlaySoundConnection", currentSoundConnection);
-            }
-            else
-            {
-                if (showDebug) Debug.Log("BGM deactivated.");
-                currentSoundConnection = null;
-                audios[0].loop = false;
-                audios[1].loop = false;
-                if (showDebug) Debug.Log("Don't play anything in this scene, cross out.");
-                currentPlaying = CheckWhosPlaying();
-                StopAllCoroutines();
-                if (currentPlaying == SOUNDMANAGER_FALSE)
-                {
-                    if (showDebug) Debug.Log("Nothing is playing, don't do anything.");
-                    return;
-                }
-                else if (CheckWhosNotPlaying() == SOUNDMANAGER_FALSE)
-                {
-                    if (showDebug) Debug.Log("Both sources are playing, probably in a crossfade. Crossfade them both out.");
-                    StartCoroutine("CrossoutAll", crossDuration);
-                }
-                else if (audios[currentPlaying].isPlaying)
-                {
-                    if (showDebug) Debug.Log("Crossing out the source that is playing.");
-                    StartCoroutine("Crossout", new object[] { audios[currentPlaying], crossDuration });
-                }
-            }
-        }
+        //    if (!silentLevel && !offTheBGM)
+        //    {
+        //        if (showDebug) Debug.Log("BGM activated.");
+        //        StopPreviousPlaySoundConnection();
+        //        StartCoroutine("PlaySoundConnection", currentSoundConnection);
+        //    }
+        //    else
+        //    {
+        //        if (showDebug) Debug.Log("BGM deactivated.");
+        //        currentSoundConnection = null;
+        //        audios[0].loop = false;
+        //        audios[1].loop = false;
+        //        if (showDebug) Debug.Log("Don't play anything in this scene, cross out.");
+        //        currentPlaying = CheckWhosPlaying();
+        //        StopAllCoroutines();
+        //        if (currentPlaying == SOUNDMANAGER_FALSE)
+        //        {
+        //            if (showDebug) Debug.Log("Nothing is playing, don't do anything.");
+        //            return;
+        //        }
+        //        else if (CheckWhosNotPlaying() == SOUNDMANAGER_FALSE)
+        //        {
+        //            if (showDebug) Debug.Log("Both sources are playing, probably in a crossfade. Crossfade them both out.");
+        //            StartCoroutine("CrossoutAll", crossDuration);
+        //        }
+        //        else if (audios[currentPlaying].isPlaying)
+        //        {
+        //            if (showDebug) Debug.Log("Crossing out the source that is playing.");
+        //            StartCoroutine("Crossout", new object[] { audios[currentPlaying], crossDuration });
+        //        }
+        //    }
+        //}
 
         /// <summary>
         /// Plays the clip immediately regardless of a playing SoundConnection, with an option to loop.  Calls an event once the clip is done.
@@ -281,9 +281,9 @@ namespace CYM.Audio
 
             SoundConnection sc;
             if (loop)
-                sc = new SoundConnection(Application.loadedLevelName, PlayMethod.ContinuousPlayThrough, clip2play);
+                sc = new SoundConnection(SceneManager.GetActiveScene().name, PlayMethod.ContinuousPlayThrough, clip2play);
             else
-                sc = new SoundConnection(Application.loadedLevelName, PlayMethod.OncePlayThrough, clip2play);
+                sc = new SoundConnection(SceneManager.GetActiveScene().name, PlayMethod.OncePlayThrough, clip2play);
             PlayConnection(sc);
         }
 
@@ -296,10 +296,10 @@ namespace CYM.Audio
         /// <param name='loop'>
         /// Whether the clip should loop
         /// </param>
-        private void _Play(AudioClip clip2play, bool loop)
-        {
-            _Play(clip2play, loop, null);
-        }
+        //private void _Play(AudioClip clip2play, bool loop)
+        //{
+        //    _Play(clip2play, loop, null);
+        //}
 
         /// <summary>
         /// Plays the clip by crossing out what's currently playing regardless of a playing SoundConnection.  It will not resume on it's own.
@@ -307,15 +307,15 @@ namespace CYM.Audio
         /// <param name='clip2play'>
         /// The clip to play.
         /// </param>
-        private void _Play(AudioClip clip2play)
-        {
-            _Play(clip2play, false);
-        }
+        //private void _Play(AudioClip clip2play)
+        //{
+        //    _Play(clip2play, false);
+        //}
 
         /// <summary>
         /// Stops all sound immediately.
         /// </summary>
-        private void _StopMusicImmediately()
+        private void _StopMusicImmediately() 
         {
             StopAllCoroutines();
             StartCoroutine("CrossoutAll", 0f);

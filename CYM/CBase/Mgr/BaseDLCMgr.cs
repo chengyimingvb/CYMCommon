@@ -16,7 +16,7 @@ AssetBundle 管理类
 
 namespace CYM
 {
-    public class BaseDLCMgr : BaseGlobalCoreMgr,ILoader
+    public class BaseDLCMgr : BaseGFlowMgr,ILoader
     {
         #region Callback Val
         /// <summary>
@@ -87,7 +87,7 @@ namespace CYM
             DLCAssetMgr.UnloadAsset(asset);
         }
 
-        public IEnumerator Load()
+        public virtual IEnumerator Load()
         {
             string[] directories = Directory.GetDirectories(DLCAssetMgr.GetDLCRootPath());
             foreach (var directoryPath in directories)

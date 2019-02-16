@@ -1,0 +1,315 @@
+
+      #pragma instancing_options procedural:setup
+      #pragma multi_compile GPU_FRUSTUM_ON __
+
+      #if _MSRENDERLOOP_SURFACESHADER
+         #include "UnityPBSLighting.cginc"
+      #endif
+
+      sampler2D_half _TerrainDesc;
+      float4 _TerrainBounds;
+      float4 _TerrainDesc_TexelSize;
+
+      half4 _TerrainBlendParams;
+      half4 _SlopeBlendParams;
+      half4 _SnowBlendParams;
+      half4 _FeatureFilters;
+      #if _TBOBJECTNORMALBLEND
+      sampler2D _NormalOriginal;
+      #endif
+
+      // VS support for indirect rendering
+
+      #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+
+         struct IndirectShaderData
+         {
+            float4x4 PositionMatrix;
+            float4x4 InversePositionMatrix;
+            float4 ControlData;
+         };
+
+         #if defined(SHADER_API_GLCORE) || defined(SHADER_API_D3D11) || defined(SHADER_API_GLES3) || defined(SHADER_API_METAL) || defined(SHADER_API_VULKAN) || defined(SHADER_API_PSSL) || defined(SHADER_API_XBOXONE)
+            StructuredBuffer<IndirectShaderData> IndirectShaderDataBuffer;
+            StructuredBuffer<IndirectShaderData> VisibleShaderDataBuffer;
+         #endif   
+      #endif
+
+      void setupScale()
+      {
+         #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+            #ifdef GPU_FRUSTUM_ON
+               unity_ObjectToWorld = VisibleShaderDataBuffer[unity_InstanceID].PositionMatrix;
+               unity_WorldToObject = VisibleShaderDataBuffer[unity_InstanceID].InversePositionMatrix;
+            #else
+               unity_ObjectToWorld = IndirectShaderDataBuffer[unity_InstanceID].PositionMatrix;
+               unity_WorldToObject = IndirectShaderDataBuffer[unity_InstanceID].InversePositionMatrix;
+            #endif
+
+            #ifdef FAR_CULL_ON_PROCEDURAL_INSTANCING
+               #define transformPosition mul(unity_ObjectToWorld, float4(0,0,0,1)).xyz
+                  #define distanceToCamera length(transformPosition - _WorldSpaceCameraPos.xyz)
+                     float cull = 1.0 - saturate((distanceToCamera - _CullFarStart) / _CullFarDistance);
+                     unity_ObjectToWorld = mul(unity_ObjectToWorld, float4x4(cull, 0, 0, 0, 0, cull, 0, 0, 0, 0, cull, 0, 0, 0, 0, 1));
+                  #undef transformPosition
+               #undef distanceToCamera
+            #endif
+         #endif
+      }
+
+      void setup()
+      {
+         #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+            #ifdef GPU_FRUSTUM_ON
+               unity_ObjectToWorld = VisibleShaderDataBuffer[unity_InstanceID].PositionMatrix;
+               unity_WorldToObject = VisibleShaderDataBuffer[unity_InstanceID].InversePositionMatrix;
+            #else
+               unity_ObjectToWorld = IndirectShaderDataBuffer[unity_InstanceID].PositionMatrix;
+               unity_WorldToObject = IndirectShaderDataBuffer[unity_InstanceID].InversePositionMatrix;
+            #endif
+         #endif
+      }
+
+
+      struct SurfaceOutputCustom
+      {
+         fixed3 Albedo;
+         fixed3 Normal;
+         half3 Emission;
+         half Metallic;
+         half Smoothness;
+         half Occlusion;
+         fixed Alpha;
+         Input input;
+      };
+
+      float3 Barycentric(float2 p, float2 a, float2 b, float2 c)
+      {
+          float2 v0 = b - a;
+          float2 v1 = c - a;
+          float2 v2 = p - a;
+          float d00 = dot(v0, v0);
+          float d01 = dot(v0, v1);
+          float d11 = dot(v1, v1);
+          float d20 = dot(v2, v0);
+          float d21 = dot(v2, v1);
+          float denom = d00 * d11 - d01 * d01;
+          float v = (d11 * d20 - d01 * d21) / denom;
+          float w = (d00 * d21 - d01 * d20) / denom;
+          float u = 1.0f - v - w;
+          return float3(u, v, w);
+      }
+
+      float4 SampleTerrainDesc(inout SurfaceOutputCustom s, out float normBlend)
+      {
+         float2 worldUV = (s.input.worldPos.xz - _TerrainBounds.xy);
+         float2 uv = worldUV / max(float2(0.001, 0.001), _TerrainBounds.zw);
+
+         s.input.uv_Control0 = uv;
+
+         float2 ratio = _TerrainDesc_TexelSize.zw / _TerrainBounds.zw;
+
+         float2 uvCorner = worldUV * ratio;
+
+         float2 uvSide = frac(uvCorner);
+         uvCorner = floor(uvCorner);
+
+         float2 uvTop = uvCorner + 1;
+         uvCorner *= _TerrainDesc_TexelSize.xy;
+         uvTop *= _TerrainDesc_TexelSize.xy;
+
+         float2 uv0 = uvCorner;
+         float2 uv1 = float2(uvCorner.x, uvTop.y);
+         float2 uv2 = float2(uvTop.x, uvTop.y);
+
+         if (uvSide.x > uvSide.y)
+         {
+            uv2 = uvTop;
+         }
+         float4 h0 = tex2D(_TerrainDesc, uv0);
+         float4 h1 = tex2D(_TerrainDesc, uv1);
+         float4 h2 = tex2D(_TerrainDesc, uv2);
+         float3 weights = Barycentric(uv, uv0, uv1, uv2);
+         float4 th = h0 * weights.x + h1 * weights.y + h2 * weights.z;
+         th.w += _TerrainBlendParams.z; // add terrain height..
+         float d = abs(th.w - s.input.worldPos.y);
+         normBlend = saturate(d / _SlopeBlendParams.w);
+         th.w = saturate(d / _TerrainBlendParams.x);
+         th.w = pow(th.w, _TerrainBlendParams.w);
+         return th;
+
+      }
+
+      float3x3 ComputeTerrainTBN(float4 th, out float3 terrainTangent, out float3 terrainBitangent)
+      {
+         terrainTangent = (cross(th.xyz, float3(0,0,1)));
+         terrainBitangent = (cross(th.xyz, terrainTangent));
+         float3x3 tbn = float3x3(terrainTangent, terrainBitangent, th.xyz);
+         return tbn;
+      }
+
+      float3 GetWorldNormalBlend(SurfaceOutputCustom s, float4 th, float normBlend)
+      {
+         float3 worldNormalBlend = th.xyz;
+         #if _SNOW || _TRIPLANAR
+         worldNormalBlend = lerp(th.xyz, WorldNormalVector(s.input, s.input.worldNormal), normBlend);
+         #endif
+         return worldNormalBlend;
+      }
+
+
+
+      void DoTerrainLayer(inout SurfaceOutputCustom s, float4 th, inout float3 worldNormalBlend, float3x3 tbn)
+      {
+         MicroSplatLayer terrainS = (MicroSplatLayer)0;
+         terrainS.Normal = half3(0, 1, 0);
+         if (_FeatureFilters.x < 1)
+         {
+            terrainS = SurfImpl(s.input, worldNormalBlend);
+            s.Alpha = (1.0-th.w);
+
+            // slope
+            #if _TBOBJECTNORMALBLEND
+               float3 normalCustom = UnpackNormal (tex2D (_NormalOriginal, s.input.uv_Control0.xy));
+               half3 slopeNormal = WorldNormalVector (s.input, normalCustom);
+            #else
+               half3 slopeNormal = s.input.worldNormal;
+            #endif
+            slopeNormal.xz += terrainS.Normal.xy * _SlopeBlendParams.z;
+            slopeNormal = normalize(slopeNormal);
+            half slope = max(0, (dot(slopeNormal, half3(0, 1, 0)) - _SlopeBlendParams.x) * _SlopeBlendParams.y);
+
+
+
+            s.Alpha = min(s.Alpha + slope, 1);
+            s.Alpha = lerp(s.Alpha, HeightBlend(0.5, terrainS.Height, s.Alpha, _TerrainBlendParams.y), _TerrainBlendParams.y);
+            
+            #if !_TBDISABLE_ALPHACONTROL
+               s.Alpha *= s.input.color.a;
+            #endif
+         }
+
+
+         #if _SNOW
+            if (_FeatureFilters.y < 1)
+            {
+               worldNormalBlend = lerp(worldNormalBlend, half3(0,1,0), _SnowBlendParams.x);
+               s.Alpha = max(s.Alpha, DoSnowSimple(terrainS, s.input.uv_Control0, mul(terrainS.Normal, tbn), worldNormalBlend, s.input.worldPos, 0, 0.4));
+            }
+         #endif
+
+         terrainS.Normal = mul(terrainS.Normal, tbn);
+
+         s.Albedo = terrainS.Albedo;
+         s.Normal = terrainS.Normal;
+         s.Smoothness = terrainS.Smoothness;
+         s.Metallic = terrainS.Metallic;
+         s.Occlusion = terrainS.Occlusion;
+      }
+
+
+      float3x3 BlendWithTerrainSRP(inout SurfaceOutputCustom s, inout float3 wsTangent, inout float3 wsBitangent, inout float3 wsNormal)
+      {
+         float normBlend;
+         float4 th = SampleTerrainDesc(s, normBlend);
+         float3 tang; float3 bitang;
+         float3x3 tbn = ComputeTerrainTBN(th, tang, bitang);
+         float3 worldNormalBlend = GetWorldNormalBlend(s, th, normBlend);
+         DoTerrainLayer(s, th, worldNormalBlend, tbn);
+         wsTangent = tang;
+         wsBitangent = lerp(bitang, wsBitangent, s.Alpha);
+         wsNormal = th.xyz;
+         return tbn;
+      }
+
+      void BlendWithTerrain(inout SurfaceOutputCustom s, inout half3 sh)
+      {
+         float normBlend;
+         float4 th = SampleTerrainDesc(s, normBlend);
+         float3 tang; float3 bitang;
+         float3x3 tbn = ComputeTerrainTBN(th, tang, bitang);
+         float3 worldNormalBlend = GetWorldNormalBlend(s, th, normBlend);
+
+         // reconstruct view dir into correct space. 
+         // Wish this could be preserved, but ends up in world space for no good reason, so we have to go back
+         // to object space, then into tangent again.. 2 extra matrix mul's per pixel.. 
+
+         float3 wsvd = mul(unity_WorldToObject, float4(s.input.viewDir, 1)).xyz;
+         s.input.viewDir = mul(tbn,wsvd);
+
+
+         DoTerrainLayer(s, th, worldNormalBlend, tbn);
+      }
+
+      #if _MSRENDERLOOP_SURFACESHADER
+         #if _BDRFLAMBERT 
+            SurfaceOutput ToStandard(SurfaceOutputCustom s)
+            {
+               SurfaceOutput o = (SurfaceOutput)0;
+               UNITY_INITIALIZE_OUTPUT(SurfaceOutput, o);
+               o.Albedo = s.Albedo;
+               o.Normal = s.Normal;
+               o.Gloss = s.Smoothness;
+               o.Specular = s.Occlusion;
+               o.Emission = s.Emission;
+               o.Alpha = s.Alpha;
+               return o;
+            }
+         #else
+            SurfaceOutputStandard ToStandard(SurfaceOutputCustom s)
+            {
+               SurfaceOutputStandard o = (SurfaceOutputStandard)0;
+               UNITY_INITIALIZE_OUTPUT(SurfaceOutputStandard, o);
+               o.Albedo = s.Albedo;
+               o.Normal = s.Normal;
+               o.Smoothness = s.Smoothness;
+               o.Metallic = s.Metallic;
+               o.Occlusion = s.Occlusion;
+               o.Emission = s.Emission;
+               o.Alpha = s.Alpha;
+               return o;
+            }
+         #endif // _BDRFLAMBERT
+      #endif // _MSRENDERLOOP_SURFACESHADER
+
+      #if _MSRENDERLOOP_SURFACESHADER
+      inline void LightingTerrainBlendable_GI( inout SurfaceOutputCustom s, UnityGIInput data, inout UnityGI gi )
+      {
+         BlendWithTerrain(s, data.ambient);
+         #if _BDRFLAMBERT
+         LightingLambert_GI(ToStandard(s), data, gi);
+         #else
+         LightingStandard_GI(ToStandard(s), data, gi );
+         #endif
+      }
+
+      inline half4 LightingTerrainBlendable( SurfaceOutputCustom s, half3 viewDir, UnityGI gi )
+      {
+         half3 sh = 0;
+         BlendWithTerrain(s, sh);
+         #if _BDRFLAMBERT
+            return LightingLambert(ToStandard(s), gi);
+         #else
+            return LightingStandard(ToStandard(s), viewDir, gi );
+         #endif
+      }
+
+      half4 LightingTerrainBlendable_Deferred (SurfaceOutputCustom s, half3 viewDir, UnityGI gi, out half4 outDiffuseOcclusion, out half4 outSpecSmoothness, out half4 outNormal)
+      {
+         half3 sh = 0;
+         BlendWithTerrain(s, sh);
+         #if _BDRFLAMBERT
+            return LightingLambert_Deferred(ToStandard(s), gi, outDiffuseOcclusion, outSpecSmoothness, outNormal);
+         #else
+            return LightingStandard_Deferred(ToStandard(s), viewDir, gi, outDiffuseOcclusion, outSpecSmoothness, outNormal);
+         #endif
+      }
+      #endif
+
+      void blendSurf (Input i, inout SurfaceOutputCustom o) 
+      {
+         UNITY_INITIALIZE_OUTPUT(SurfaceOutputCustom, o);
+         o.input = i;
+         o.Normal = float3 (0, 0, 1);
+      }
+

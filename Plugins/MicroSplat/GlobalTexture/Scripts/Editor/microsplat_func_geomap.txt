@@ -1,0 +1,190 @@
+
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_GeoTex);
+      sampler2D_half _GeoCurve;
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_GlobalTintTex);
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_GlobalNormalTex);
+      half2 _GlobalTextureParams;
+      float4 _GlobalTintFade;
+      float4 _GlobalNormalFade;
+      float3 _GeoParams;
+      float4 _GeoRange;
+      float4 _GeoCurveParams;
+      float4 _GlobalTintUVScale;
+      float4 _GlobalNormalUVScale;
+
+
+
+      // pertex needs to be applied individually
+      void GeoTexturePerTex(inout RawSamples s, float3 worldPos, Config config)
+      {
+         float2 geoUV = float2(0, worldPos.y * _GeoParams.y + _GeoParams.z);
+
+         #if _GEOCURVE
+            float curveScale = max(_GeoCurveParams.x, 0.01);
+            float2 worldUV = worldPos.xz * (1.0 / curveScale) + (_GeoCurveParams.y / curveScale);
+            float sn = sin ( _GeoCurveParams.z );
+            float cn = cos ( _GeoCurveParams.z  );
+            float2x2 mtx = float2x2( cn, -sn, sn, cn);
+            worldUV = mul ( worldUV, mtx );
+            float offset = tex2D(_GeoCurve, float2(worldUV.x, 0.5)).r;
+            geoUV.y += offset;
+         #endif
+
+
+         half4 geoTex = UNITY_SAMPLE_TEX2D_SAMPLER(_GeoTex, _Diffuse, geoUV);
+         float geoStr = _GeoParams.x * geoTex.a;
+         #if _GEORANGE
+            geoStr *= saturate((worldPos.y - _GeoRange.x) / max(_GeoRange.y - _GeoRange.x, 0.0001));
+            geoStr *= 1.0 - saturate((worldPos.y - _GeoRange.z) / max(_GeoRange.w - _GeoRange.z, 0.0001));
+         #endif
+         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 0.0));
+         s.albedo0.rgb = lerp(s.albedo0.rgb, BlendMult2X(s.albedo0.rgb, geoTex.rgb), geoStr * perTexGeoStr0.x);
+         s.albedo1.rgb = lerp(s.albedo1.rgb, BlendMult2X(s.albedo1.rgb, geoTex.rgb), geoStr * perTexGeoStr1.x);
+         #if !_MAX2LAYER
+            s.albedo2.rgb = lerp(s.albedo2.rgb, BlendMult2X(s.albedo2.rgb, geoTex.rgb), geoStr * perTexGeoStr2.x);
+         #endif
+         #if !_MAX2LAYER && !_MAX3LAYER
+            s.albedo3.rgb = lerp(s.albedo3.rgb, BlendMult2X(s.albedo3.rgb, geoTex.rgb), geoStr * perTexGeoStr3.x);
+         #endif
+      }
+
+      // no per tex is faster, just final value.
+      void GeoTexture(inout half3 albedo, float3 worldPos, Config config)
+      {
+         #if !_PERTEXGEO
+         float2 geoUV = float2(0, worldPos.y * _GeoParams.y + _GeoParams.z);
+            #if _GEOCURVE
+               float curveScale = max(_GeoCurveParams.x, 0.01);
+               float2 worldUV = worldPos.xz * (1.0 / curveScale) + (_GeoCurveParams.y / curveScale);
+               float sn = sin ( _GeoCurveParams.z );
+               float cn = cos ( _GeoCurveParams.z  );
+               float2x2 mtx = float2x2( cn, -sn, sn, cn);
+               worldUV = mul ( worldUV, mtx );
+               float offset = tex2D(_GeoCurve, float2(worldUV.x, 0.5)).r;
+               geoUV.y += offset;
+            #endif
+
+         half4 geoTex = UNITY_SAMPLE_TEX2D_SAMPLER(_GeoTex, _Diffuse, geoUV);
+         float geoStr = _GeoParams.x * geoTex.a;
+         #if _GEORANGE
+            geoStr *= saturate((worldPos.y - _GeoRange.x) / max(_GeoRange.y - _GeoRange.x, 0.0001));
+            geoStr *= 1.0 - saturate((worldPos.y - _GeoRange.z) / max(_GeoRange.w - _GeoRange.z, 0.0001));
+         #endif
+
+         albedo = lerp(albedo, BlendMult2X(albedo, geoTex.rgb), geoStr);
+         #endif
+      }
+
+      // pertex needs to be applied individually
+      void GlobalTintTexturePerTex(inout RawSamples s, Config config, float camDist)
+      {
+         float2 uv = (config.uv + _GlobalTintUVScale.zw) * _GlobalTintUVScale.xy;
+         half4 tex = UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalTintTex, _Diffuse, uv);
+         float str = _GlobalTextureParams.x * tex.a;
+         float fade = saturate((camDist - _GlobalTintFade.x) / max(_GlobalTintFade.y, 0.01));
+         str *= lerp(_GlobalTintFade.z, _GlobalTintFade.w, fade);
+
+         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 0.0));
+         #if _GLOBALTINTMULT2X
+            s.albedo0.rgb = lerp(s.albedo0.rgb, BlendMult2X(s.albedo0.rgb, tex.rgb), str * perTexGeoStr0.y);
+            s.albedo1.rgb = lerp(s.albedo1.rgb, BlendMult2X(s.albedo1.rgb, tex.rgb), str * perTexGeoStr1.y);
+            #if !_MAX2LAYER
+               s.albedo2.rgb = lerp(s.albedo2.rgb, BlendMult2X(s.albedo2.rgb, tex.rgb), str * perTexGeoStr2.y);
+            #endif
+            #if !_MAX2LAYER && !_MAX3LAYER
+               s.albedo3.rgb = lerp(s.albedo3.rgb, BlendMult2X(s.albedo3.rgb, tex.rgb), str * perTexGeoStr3.y);
+            #endif
+         #elif _GLOBALTINTOVERLAY
+            s.albedo0.rgb = lerp(s.albedo0.rgb, BlendOverlay(s.albedo0.rgb, tex.rgb), str * perTexGeoStr0.y);
+            s.albedo1.rgb = lerp(s.albedo1.rgb, BlendOverlay(s.albedo1.rgb, tex.rgb), str * perTexGeoStr1.y);
+            #if !_MAX2LAYER
+               s.albedo2.rgb = lerp(s.albedo2.rgb, BlendOverlay(s.albedo2.rgb, tex.rgb), str * perTexGeoStr2.y);
+            #endif
+            #if !_MAX2LAYER && !_MAX3LAYER
+               s.albedo3.rgb = lerp(s.albedo3.rgb, BlendOverlay(s.albedo3.rgb, tex.rgb), str * perTexGeoStr3.y);
+            #endif
+         #else // normal
+            s.albedo0.rgb = lerp(s.albedo0.rgb, tex.rgb, str * perTexGeoStr0.y);
+            s.albedo1.rgb = lerp(s.albedo1.rgb, tex.rgb, str * perTexGeoStr1.y);
+            #if !_MAX2LAYER
+               s.albedo2.rgb = lerp(s.albedo2.rgb, tex.rgb, str * perTexGeoStr2.y);
+            #endif
+            #if !_MAX2LAYER && !_MAX3LAYER
+               s.albedo3.rgb = lerp(s.albedo3.rgb, tex.rgb, str * perTexGeoStr3.y);
+            #endif
+         #endif
+      }
+
+      // no per tex is faster, just final value.
+      void GlobalTintTexture(inout half3 albedo, Config config, float camDist)
+      {
+         #if !_PERTEXGLOBALTINTSTRENGTH
+            float2 uv = (config.uv + _GlobalTintUVScale.zw) * _GlobalTintUVScale.xy;
+            half4 tex = UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalTintTex, _Diffuse, uv);
+            float str = _GlobalTextureParams.x * tex.a;
+            float fade = saturate((camDist - _GlobalTintFade.x) / max(_GlobalTintFade.y, 0.01));
+            str *= lerp(_GlobalTintFade.z, _GlobalTintFade.w, fade);
+            #if _GLOBALTINTMULT2X
+               albedo = lerp(albedo, BlendMult2X(albedo, tex.rgb), str);
+            #elif _GLOBALTINTOVERLAY
+               albedo = lerp(albedo, BlendOverlay(albedo, tex.rgb), str);
+            #else
+               albedo = lerp(albedo, tex.rgb, str);
+            #endif
+
+         #endif
+      }
+
+       // pertex needs to be applied individually
+      void GlobalNormalTexturePerTex(inout RawSamples s, Config config, float camDist)
+      {
+         #if _PERTEXGLOBALNORMALSTRENGTH
+            float2 uv = (config.uv + _GlobalNormalUVScale.zw) * _GlobalNormalUVScale.xy;
+            half3 tex = UnpackNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalNormalTex, _Diffuse, uv));
+            float str = _GlobalTextureParams.y;
+            float fade = saturate((camDist - _GlobalTintFade.x) / max(_GlobalTintFade.y, 0.01));
+            str *= lerp(_GlobalNormalFade.z, _GlobalNormalFade.w, fade);
+
+            SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 0.5, 0.0));
+
+            #if _GLOBALNORMALCROSSFADE
+               s.normSAO0.xy = lerp(s.normSAO0.xy, tex.xy, str * perTexGeoStr0.z);
+               s.normSAO1.xy = lerp(s.normSAO1.xy, tex.xy, str * perTexGeoStr1.z);
+               #if !_MAXTWOLAYER
+                  s.normSAO2.xy = lerp(s.normSAO2.xy, tex.xy, str * perTexGeoStr2.z);
+               #endif
+               #if !_MAX2LAYER && !_MAX3LAYER
+                  s.normSAO3.xy = lerp(s.normSAO3.xy, tex.xy, str * perTexGeoStr3.z);
+               #endif
+            #else
+               s.normSAO0.xy = lerp(s.normSAO0.xy, BlendNormal2(s.normSAO0.xy, tex.xy), str * perTexGeoStr0.z);
+               s.normSAO1.xy = lerp(s.normSAO1.xy, BlendNormal2(s.normSAO1.xy, tex.xy), str * perTexGeoStr1.z);
+               #if !_MAXTWOLAYER
+                  s.normSAO2.xy = lerp(s.normSAO2.xy, BlendNormal2(s.normSAO2.xy, tex.xy), str * perTexGeoStr2.z);
+               #endif
+               #if !_MAX2LAYER && !_MAX3LAYER
+                  s.normSAO3.xy = lerp(s.normSAO3.xy, BlendNormal2(s.normSAO3.xy, tex.xy), str * perTexGeoStr3.z);
+               #endif
+            #endif
+
+
+         #endif
+      }
+
+      // no per tex is faster, just final value.
+      void GlobalNormalTexture(inout half4 normSAO, Config config, float camDist)
+      {
+         #if !_PERTEXGLOBALNORMALSTRENGTH
+         float2 uv = (config.uv + _GlobalNormalUVScale.zw) * _GlobalNormalUVScale.xy;
+         half3 tex = UnpackNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalNormalTex, _Diffuse, uv));
+         float str = _GlobalTextureParams.y;
+         float fade = saturate((camDist - _GlobalTintFade.x) / max(_GlobalTintFade.y, 0.01));
+         str *= lerp(_GlobalNormalFade.z, _GlobalNormalFade.w, fade);
+
+         #if _GLOBALNORMALCROSSFADE
+            normSAO = lerp(normSAO, half4(tex.xy, 0, 1), str);
+         #else
+            normSAO.xy = lerp(normSAO.xy, BlendNormal2(normSAO.xy, tex.xy), str);
+         #endif
+         #endif
+      }

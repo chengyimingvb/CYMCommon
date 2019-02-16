@@ -18,7 +18,7 @@ namespace CYM
         Success = 0,
         Failed = 1,
     }
-    public class BaseLoaderMgr : BaseGlobalCoreMgr
+    public class BaseLoaderMgr : BaseGFlowMgr
     {
         #region Callback Val
         /// <summary>

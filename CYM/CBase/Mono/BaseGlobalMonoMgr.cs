@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
-using CYM;
 using UnityEngine;
-//using WhatA2D;
-using UnityEngine.Profiling;
 
 //**********************************************
 // Discription	：Base Core Calss .All the Mono will inherit this class
@@ -48,7 +44,7 @@ namespace CYM
         /// <param name="type"></param>
         public static void SetPauseType(MonoType type)
         {
-                PauseType = type;
+            PauseType = type;
         }
 
         public static void ActiveMono(BaseCoreMono mono)

@@ -1,0 +1,506 @@
+
+         sampler2D _StreamControl;
+      
+         half _GlobalPorosity;
+
+         #if _DYNAMICFLOWS
+            sampler2D _DynamicStreamControl;
+         #endif
+
+         #if _WETNESS
+            #if _GLOBALWETNESS
+            half2 _Global_WetnessParams;
+            #else
+            half2 _WetnessParams;
+            #endif
+
+            #if _HEIGHTWETNESS
+            float4 _HeightWetness;
+            #endif
+         #endif
+
+         #if _PUDDLES
+            half2 _PuddleParams;
+            #if _GLOBALPUDDLES
+            half _Global_PuddleParams;
+            #endif
+         #endif
+
+         #if _STREAMS
+            half _StreamBlend;
+            half4 _StreamFlowParams;
+            half2 _StreamNormalFoam;
+            UNITY_DECLARE_TEX2D_NOSAMPLER(_StreamNormal);
+            float2 _StreamUVScales;
+            #if _GLOBALSTREAMS
+               half _Global_StreamMax;
+            #else
+               half _StreamMax;
+            #endif
+
+            #if _STREAMHEIGHTFILTER
+               float4 _StreamFades;
+            #endif
+         #endif
+
+         #if _LAVA
+            sampler2D _LavaDiffuse;
+            half4 _LavaParams;
+            half4 _LavaParams2;
+            half3 _LavaEdgeColor;
+            half3 _LavaColorLow;
+            half3 _LavaColorHighlight;
+            float2 _LavaUVScale;
+            half _LavaDislacementScale;
+            #if _LAVAHEIGHTFILTER
+               float4 _LavaFades;
+            #endif
+         #endif
+
+         #if _RAINDROPS
+            sampler2D _RainDropTexture;
+            float2 _RainIntensityScale;
+            #if _GLOBALRAIN
+               float _Global_RainIntensity;
+            #endif
+         #endif
+
+         half4 SampleFXLevels(float2 uv, out half wetness, out half burnLevel)
+         {
+            half4 fxLevels = half4(0,0,0,0);
+            burnLevel = 0;
+            wetness = 0;
+            #if _WETNESS || _PUDDLES || _STREAMS || _LAVA
+            fxLevels = tex2D(_StreamControl, uv);
+               #if _DYNAMICFLOWS
+               half4 flows = tex2D(_DynamicStreamControl, uv);
+
+               wetness = flows.x;
+               burnLevel = flows.y;
+
+               flows.zw = saturate(flows.zw*3);
+               fxLevels.zw = max(fxLevels.zw, flows.zw);
+               #endif
+
+               #if _STREAMS
+                  #if _GLOBALSTREAMS
+                     fxLevels.b *= _Global_StreamMax;
+                  #else
+                     fxLevels.b *= _StreamMax;
+                  #endif
+               #endif
+
+               #if _LAVA
+                  fxLevels.a *= _LavaParams.y;
+               #endif
+
+            #endif
+            return fxLevels;
+         }
+
+
+         half4 SampleFXLevelsLOD(float2 uv)
+         {
+            half4 fxLevels = half4(0,0,0,0);
+            #if _WETNESS || _PUDDLES || _STREAMS || _LAVA
+            fxLevels = tex2Dlod(_StreamControl, float4(uv, 0, 0));
+               #if _DYNAMICFLOWS
+               half4 flows = tex2Dlod(_DynamicStreamControl, float4(uv, 0, 0));
+               flows.xy = 0;
+               fxLevels = max(fxLevels, flows);
+               #endif
+
+
+               #if _STREAMS
+                  #if _GLOBALSTREAMS
+                     fxLevels.b *= _Global_StreamMax;
+                  #else
+                     fxLevels.b *= _StreamMax;
+                  #endif
+               #endif
+
+               #if _LAVA
+                  fxLevels.a *= _LavaParams.y;
+                  fxLevels.w *= _LavaDislacementScale;
+               #endif
+
+            #endif
+            return fxLevels;
+         }
+
+
+         void WaterBRDF (inout half3 Albedo, inout half Smoothness, half metalness, half wetFactor, half surfPorosity) 
+         {
+            half porosity = saturate((( (1 - Smoothness) - 0.5)) / max(surfPorosity, 0.001));
+            half factor = lerp(1, 0.2, (1 - metalness) * porosity);
+            Albedo *= lerp(1.0, factor, wetFactor);
+            Smoothness = lerp(1.0, Smoothness, lerp(1.0, factor, wetFactor));
+         }
+
+         void Flow(float2 uv, half2 flow, half speed, float intensity, out float2 uv1, out float2 uv2, out half interp)
+         {
+            float2 flowVector = flow * intensity;
+            
+            float timeScale = _Time.y * speed;
+            float2 phase = frac(float2(timeScale, timeScale + .5));
+
+            uv1.xy = (uv.xy - flowVector * half2(phase.x, phase.x));
+            uv2.xy = (uv.xy - flowVector * half2(phase.y, phase.y));
+
+            interp = abs(0.5 - phase.x) / 0.5;
+         }
+
+
+         #if _RAINDROPS
+         half2 ComputeRipple(float2 uv, half time, half weight)
+         {
+            half4 ripple = tex2D(_RainDropTexture, uv);
+            ripple.yz = ripple.yz * 2 - 1;
+
+            half dropFrac = frac(ripple.w + time);
+            half timeFrac = dropFrac - 1.0 + ripple.x;
+            half dropFactor = saturate(0.2f + weight * 0.8 - dropFrac);
+            half finalFactor = dropFactor * ripple.x * 
+                                 sin( clamp(timeFrac * 9.0f, 0.0f, 3.0f) * 3.14159265359);
+
+            return half2(ripple.yz * finalFactor * 0.35f);
+         }
+         #endif
+
+         half2 DoRain(half2 waterNorm, float2 uv)
+         {
+         #if _RAINDROPS
+            #if _GLOBALRAIN
+               float rainIntensity = _Global_RainIntensity.x;
+            #else
+               float rainIntensity = _RainIntensityScale.x;
+            #endif
+            half dropStrength = rainIntensity;
+            const float4 timeMul = float4(1.0f, 0.85f, 0.93f, 1.13f); 
+            half4 timeAdd = float4(0.0f, 0.2f, 0.45f, 0.7f);
+            half4 times = _Time.yyyy;
+            times = frac((times * float4(1, 0.85, 0.93, 1.13) + float4(0, 0.2, 0.45, 0.7)) * 1.6);
+
+            float2 ruv1 = uv * _RainIntensityScale.yy;
+            float2 ruv2 = ruv1;
+
+            half4 weights = rainIntensity.xxxx - float4(0, 0.25, 0.5, 0.75);
+            half2 ripple1 = ComputeRipple(ruv1 + float2( 0.25f,0.0f), times.x, weights.x);
+            half2 ripple2 = ComputeRipple(ruv2 + float2(-0.55f,0.3f), times.y, weights.y);
+            half2 ripple3 = ComputeRipple(ruv1 + float2(0.6f, 0.85f), times.z, weights.z);
+            half2 ripple4 = ComputeRipple(ruv2 + float2(0.5f,-0.75f), times.w, weights.w);
+            weights = saturate(weights * 4);
+
+            half2 rippleNormal = half2( weights.x * ripple1.xy +
+                        weights.y * ripple2.xy + 
+                        weights.z * ripple3.xy + 
+                        weights.w * ripple4.xy);
+
+            waterNorm = lerp(waterNorm, BlendNormal2(rippleNormal, waterNorm), rainIntensity * dropStrength); 
+            return waterNorm;                        
+         #else
+            return waterNorm;
+         #endif
+         }
+
+
+         #if _WETNESS
+         void DoWetness(inout MicroSplatLayer o, half wetLevel, half porosity, float3 worldPos)
+         {
+            #if _GLOBALWETNESS
+               wetLevel = clamp(wetLevel, _Global_WetnessParams.x, _Global_WetnessParams.y);
+            #else
+               wetLevel = clamp(wetLevel, _WetnessParams.x, _WetnessParams.y);
+            #endif
+            #if _HEIGHTWETNESS
+               float l = _HeightWetness.x;
+               l += sin(_Time.y * _HeightWetness.z) * _HeightWetness.w;
+               half hw = saturate((l - worldPos.y) * _HeightWetness.y);
+               wetLevel = max(hw, wetLevel);
+            #endif
+            WaterBRDF(o.Albedo, o.Smoothness, o.Metallic, wetLevel, porosity);
+         }
+         #endif
+
+
+         #if _PUDDLES
+         // modity lighting terms for water..
+         float DoPuddles(inout MicroSplatLayer o, half puddleLevel, half porosity, float2 uv)
+         {
+            float2 pudParams = _PuddleParams;
+            #if _GLOBALPUDDLES
+            pudParams.y = _Global_PuddleParams;
+            #endif
+
+            puddleLevel *= pudParams.y;
+            float waterBlend = saturate((puddleLevel - o.Height) * pudParams.x);
+
+            half3 waterNorm = half3(0,0,1);
+            half3 wetAlbedo = o.Albedo;
+            half wetSmoothness = o.Smoothness;
+
+            WaterBRDF(wetAlbedo, wetSmoothness, o.Metallic, waterBlend, porosity);
+
+            #if _RAINDROPS
+            waterNorm.xy = DoRain(waterNorm.xy, uv);
+            #endif
+
+
+            o.Normal = lerp(o.Normal, waterNorm, waterBlend);
+            o.Occlusion = lerp(o.Occlusion, 1, waterBlend);
+            o.Smoothness = lerp(o.Smoothness, wetSmoothness, waterBlend);
+            o.Albedo = lerp(o.Albedo, wetAlbedo, waterBlend);
+            return waterBlend;
+         }
+         #endif
+
+         float2 FlowVecFromWNV(float3 worldNormalVertex)
+         {
+            float2 ret = lerp(worldNormalVertex.xz, normalize(worldNormalVertex.xz), max(0.1, worldNormalVertex.z));
+            #if _MICROMESH
+            ret *= -1;
+            #endif
+            return ret;
+         }
+
+         #if _STREAMS
+         half3 GetWaterNormal(float2 uv, float3 worldNormalVertex)
+         {
+            float2 flowDir = FlowVecFromWNV(worldNormalVertex);
+            float2 uv1;
+            float2 uv2;
+            half interp;
+            Flow(uv * _StreamUVScales.xy, flowDir, _StreamFlowParams.y, _StreamFlowParams.z, uv1, uv2, interp);
+
+            half3 fd = lerp(UNITY_SAMPLE_TEX2D_SAMPLER(_StreamNormal, _Diffuse, uv1), UNITY_SAMPLE_TEX2D_SAMPLER(_StreamNormal, _Diffuse, uv2), interp).xyz;
+            fd.xy = fd.xy * 2 - 1;
+            return fd;
+         }
+
+         // water normal only
+         void DoStreamRefract(inout Config config, inout TriplanarConfig tc, float3 waterNorm, half puddleLevel, half height)
+         {
+            #if _GLOBALSTREAMS
+               puddleLevel *= _Global_StreamMax;
+            #else
+               puddleLevel *= _StreamMax;
+            #endif
+
+            #if _STREAMHEIGHTFILTER
+            {
+               float shf = saturate((height - _StreamFades.x) / max(_StreamFades.y - _StreamFades.x, 0.0001));
+               shf *= 1.0 - saturate((height - _StreamFades.z) / max(_StreamFades.w - _StreamFades.z, 0.0001));
+               puddleLevel *= shf;
+            }
+            #endif
+
+            float waterBlend = saturate((puddleLevel - height) * _StreamBlend);
+            waterBlend *= waterBlend;
+
+            waterNorm.xy *= puddleLevel * waterBlend;
+            float2 offset = lerp(waterNorm.xy, waterNorm.xy * height, _StreamFlowParams.w);
+            offset *= _StreamFlowParams.x;
+            #if !_TRIPLANAR
+            config.uv0.xy += offset;
+            config.uv1.xy += offset;
+            config.uv2.xy += offset;
+            config.uv3.xy += offset;
+            #else
+            tc.uv0[0].xy += offset;
+            tc.uv0[1].xy += offset;
+            tc.uv0[2].xy += offset;
+            tc.uv1[0].xy += offset;
+            tc.uv1[1].xy += offset;
+            tc.uv1[2].xy += offset;
+            tc.uv2[0].xy += offset;
+            tc.uv2[1].xy += offset;
+            tc.uv2[2].xy += offset;
+            tc.uv3[0].xy += offset;
+            tc.uv3[1].xy += offset;
+            tc.uv3[2].xy += offset;
+            #endif
+         }  
+
+
+
+
+         float DoStream(inout MicroSplatLayer o, float2 uv, half porosity, half3 waterNormFoam, half2 flowDir, half puddleLevel, half foamStrength, half wetTrail)
+         {
+            
+            float waterBlend = saturate((puddleLevel - o.Height) * _StreamBlend);
+            if (waterBlend + wetTrail > 0)
+            {
+               half2 waterNorm = waterNormFoam.xy;
+
+               half pmh = puddleLevel - o.Height;
+               // refactor to compute flow UVs in previous step?
+               float2 foamUV0 = 0;
+               float2 foamUV1 = 0;
+               half foamInterp = 0;
+               Flow(uv * 1.75 + waterNormFoam.xy * waterNormFoam.b, flowDir, _StreamFlowParams.y/3, _StreamFlowParams.z/3, foamUV0, foamUV1, foamInterp);
+               half foam0 = UNITY_SAMPLE_TEX2D_SAMPLER(_StreamNormal, _Diffuse, foamUV0).b;
+               half foam1 = UNITY_SAMPLE_TEX2D_SAMPLER(_StreamNormal, _Diffuse, foamUV1).b;
+               half foam = lerp(foam0, foam1, foamInterp);
+               foam = foam * abs(pmh) + (foam * o.Height);
+               foam *= 1.0 - (saturate(pmh * 1.5));
+               foam *= foam;
+               foam *= _StreamNormalFoam.y * foamStrength;
+
+               half3 wetAlbedo = o.Albedo;
+               half wetSmoothness = o.Smoothness;
+
+               WaterBRDF(wetAlbedo, wetSmoothness, o.Metallic, waterBlend, porosity);
+
+               wetAlbedo += foam;
+               wetSmoothness -= foam;
+
+               o.Normal.xy = lerp(o.Normal.xy, waterNorm, waterBlend * _StreamNormalFoam.x);
+               o.Occlusion = lerp(o.Occlusion, 1, waterBlend);
+               o.Smoothness = lerp(o.Smoothness, wetSmoothness, waterBlend);
+               o.Albedo = lerp(o.Albedo, wetAlbedo, waterBlend);
+
+               #if _DYNAMICFLOWS
+                  #if _GLOBALSTREAMS
+                     float streamMax = _Global_StreamMax;
+                  #else
+                     float streamMax = _StreamMax;
+                  #endif
+                  half waterBlend2 = saturate((wetTrail * streamMax - o.Height) * _StreamBlend) * 0.85;
+                  WaterBRDF(o.Albedo, o.Smoothness, o.Metallic, waterBlend2, porosity);
+               #endif
+               return waterBlend;   
+            }
+            return 0;
+         }
+
+         #endif
+
+
+         #if _LAVA
+
+         float DoLava(inout MicroSplatLayer o, float2 uv, half lavaLevel, half2 flowDir)
+         {
+            uv *= _LavaUVScale;
+            float lvh = lavaLevel - o.Height;
+            float lavaBlend = saturate(lvh * _LavaParams.x);
+
+            float2 dx = ddx(uv);
+            float2 dy = ddy(uv);
+            UNITY_BRANCH
+            if (lavaBlend > 0)
+            {
+               half distortionSize = _LavaParams2.x;
+               half distortionRate = _LavaParams2.y;
+               half distortionScale = _LavaParams2.z;
+               half darkening = _LavaParams2.w;
+               half3 edgeColor = _LavaEdgeColor;
+               half3 lavaColorLow = _LavaColorLow;
+               half3 lavaColorHighlight = _LavaColorHighlight;
+
+
+               half lavaSpeed = _LavaParams.z;
+               half lavaInterp = _LavaParams.w;
+
+               float2 uv1 = 0;
+               float2 uv2 = 0;
+               half interp = 0;
+               half drag = lerp(0.1, 1, saturate(lvh));
+               Flow(uv, flowDir, lavaInterp, lavaSpeed * drag, uv1, uv2, interp);
+
+               float2 dist_uv1;
+               float2 dist_uv2;
+               half dist_interp;
+               Flow(uv * distortionScale, flowDir, distortionRate, distortionSize, dist_uv1, dist_uv2, dist_interp);
+
+               half4 lavaDist = lerp(tex2Dgrad(_LavaDiffuse, dist_uv1*0.51, dx, dy), tex2Dgrad(_LavaDiffuse, dist_uv2, dx, dy), dist_interp);
+               half4 dist = lavaDist * (distortionSize * 2) - distortionSize;
+
+               half4 lavaTex = lerp(tex2Dgrad(_LavaDiffuse, uv1*1.1 + dist.xy, dx, dy), tex2Dgrad(_LavaDiffuse, uv2 + dist.zw, dx, dy), interp);
+
+               // base lava color, based on heights
+               half3 lavaColor = lerp(lavaColorLow, lavaColorHighlight, lavaTex.b);
+
+               // edges
+               float lavaBlendWide = saturate((lavaLevel - o.Height) * _LavaParams.x * 0.5);
+               float edge = saturate((1 - lavaBlendWide) * 3);
+
+               // darkening
+               darkening = saturate(lavaTex.a * darkening * saturate(lvh*2));
+               lavaColor *= 1.0 - darkening;
+               // edges
+               lavaColor = lerp(lavaColor, edgeColor, edge);
+
+               o.Albedo = lerp(o.Albedo, lavaColor, lavaBlend);
+               o.Normal.xy = lerp(o.Normal.xy, lavaTex.xy * 2 - 1, lavaBlend);
+               o.Smoothness = lerp(o.Smoothness, 0.3, lavaBlend * darkening);
+
+               half3 emis = lavaColor * lavaBlend;
+               o.Emission = lerp(o.Emission, emis, lavaBlend);
+               // bleed
+               o.Emission += edgeColor * 0.3 * (saturate((lavaLevel*1.2 - o.Height) * _LavaParams.x) - lavaBlend);
+               return saturate(lavaBlend*3);
+            }
+            return 0;
+         }
+
+
+         #endif
+
+
+
+
+
+         float DoStreams(inout MicroSplatLayer o, half4 fxLevels, float2 uv, half porosity, 
+            half3 waterNormalFoam, float3 worldNormalVertex, half streamFoam, half wetLevel, half burnLevel, float3 worldPos)
+         {
+            float pud = 0;
+            #if _WETNESS
+            DoWetness(o, fxLevels.x, porosity, worldPos);
+            #endif
+
+
+            #if _PUDDLES
+            pud = DoPuddles(o, fxLevels.g, porosity, uv);
+            #endif
+
+            #if _STREAMS || _LAVA
+            float2 flowDir = FlowVecFromWNV(worldNormalVertex);
+            #endif
+
+            #if _STREAMS
+               #if _STREAMHEIGHTFILTER
+               {
+                  float shf = saturate((worldPos.y - _StreamFades.x) / max(_StreamFades.y - _StreamFades.x, 0.0001));
+                  shf *= 1.0 - saturate((worldPos.y - _StreamFades.z) / max(_StreamFades.w - _StreamFades.z, 0.0001));
+                  fxLevels.z *= shf;
+                  wetLevel *= shf;
+               }
+               #endif
+
+            half foamStr = min(length(worldNormalVertex.xz) * 18, 1) * streamFoam;
+            pud = max(pud, DoStream(o, uv, porosity, waterNormalFoam, flowDir, fxLevels.z, foamStr, wetLevel));
+            #endif
+
+
+            #if _LAVA
+               #if _LAVAHEIGHTFILTER
+               {
+                  float lhf = saturate((worldPos.y - _LavaFades.x) / max(_LavaFades.y - _LavaFades.x, 0.0001));
+                  lhf *= 1.0 - saturate((worldPos.y - _LavaFades.z) / max(_LavaFades.w - _LavaFades.z, 0.0001));
+                  fxLevels.a *= lhf;
+                  burnLevel *= lhf;
+               }
+               #endif
+
+            float burn = 1 - burnLevel * 0.85;
+            o.Albedo *= burn;
+            o.Smoothness *= burn;
+            pud = max(pud, DoLava(o, uv, fxLevels.a, flowDir));
+            #endif
+
+            #if _WETNESSMASKSNOW
+            pud = max(pud, 1-fxLevels.x);
+            #endif
+
+            return pud;
+         }

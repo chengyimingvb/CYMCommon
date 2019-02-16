@@ -13,20 +13,20 @@ using CYM.Pool;
 using System;
 namespace CYM
 {
-	public class BaseSpawnMgr<T> : BaseGlobalCoreMgr , ISpawnMgr<T> where T:BaseUnit
+	public class BaseSpawnMgr<TUnit> : BaseGFlowMgr , ISpawnMgr<TUnit> where TUnit:BaseUnit  
 	{
         #region prop
-        Dictionary<string, T> dynamicDic = new Dictionary<string, T>();
+        Dictionary<string, TUnit> dynamicDic = new Dictionary<string, TUnit>();
         GameObject TempSpawnTrans = new GameObject("TempSpawnTrans");
         #endregion
 
         #region ISpawnMgr
-        public T Gold { get; set; }
-        public List<T> Data { get; set; } = new List<T>();
-        public event Callback<T> Callback_OnAdd;
-        public event Callback<T> Callback_OnSpawnGold;
-        public event Callback<T> Callback_OnSpawn;
-        public event Callback<T> Callback_OnDespawn;
+        public TUnit Gold { get; set; }
+        public DicList<TUnit> Data { get; set; } = new DicList<TUnit>();
+        public event Callback<TUnit> Callback_OnAdd;
+        public event Callback<TUnit> Callback_OnSpawnGold;
+        public event Callback<TUnit> Callback_OnSpawn;
+        public event Callback<TUnit> Callback_OnDespawn;
         #endregion
 
         #region life
@@ -51,7 +51,7 @@ namespace CYM
                 item.GameFrameTurn(gameFramesPerSecond);
             }
         }
-        #endregion
+        #endregion 
 
         #region set
         /// <summary>
@@ -59,22 +59,31 @@ namespace CYM
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
-        public T Spawn(string id, Transform spwanPoint, int team = 0, params object[] ps)
+        public TUnit Spawn(string id, Transform spwanPoint, int team = 0, params object[] ps)
         {
             return Spawn(id, spwanPoint.position, spwanPoint.rotation,team,ps);
         }
-        public virtual T SpawGold(Vector3 spwanPoint)
+        public virtual TUnit SpawGold()
         {
-            TempSpawnTrans.transform.position = spwanPoint;
+            TempSpawnTrans.transform.position = BaseConstMgr.FarawayPos;
             Gold = Spawn(GoldID, TempSpawnTrans.transform, int.MaxValue);
             Callback_OnSpawnGold?.Invoke(Gold);
             return Gold;
         }
         /// <summary>
+        /// 执行Add操作,但是也会触发Spawn流程,适用于对已经存在的对象使用
+        /// </summary>
+        public virtual void SpawnAdd(TUnit chara,string id,int team=0)
+        {
+            OnSpawned(id, chara);
+            chara.OnSpawnInit(id, team);
+            Add(chara);
+        }
+        /// <summary>
         /// 添加
         /// </summary>
         /// <param name="chara"></param>
-        public virtual void Add(T chara)
+        public virtual void Add(TUnit chara)
         {
             Data.Add(chara);
             Callback_OnAdd?.Invoke(chara);
@@ -83,7 +92,7 @@ namespace CYM
         /// despawn
         /// </summary>
         /// <param name="chara"></param>
-        public virtual void Despawn(T chara, float delay = 0.0f)
+        public virtual void Despawn(TUnit chara, float delay = 0.0f)
         {
             Pool().Despawn(chara, delay);
             Data.Remove(chara);
@@ -97,6 +106,35 @@ namespace CYM
             Data.Clear();
             dynamicDic.Clear();
         }
+        public virtual TUnit Spawn(string id, Vector3 spwanPoint, Quaternion? quaternion = null, int team = 0, params object[] ps)
+        {
+            if (id.IsInvStr())
+                return null;
+            GameObject prefab = GetPrefab(id, ps);
+            GameObject charaGO = Pool().Spawn(prefab, spwanPoint, quaternion);
+            TUnit unitChara = BaseCoreMono.GetUnityComponet<TUnit>(charaGO);
+            OnSpawned(id, unitChara);
+            unitChara.OnSpawnInit(id, team);
+            Data.Add(unitChara);
+            Callback_OnSpawn?.Invoke(unitChara);
+            return unitChara;
+        }
+        public virtual void AddDynamic(string key, TUnit unit)
+        {
+            string key1 = BaseConstMgr.Prefix_DynamicTrans + key;
+            if (unit == null)
+                return;
+            if (dynamicDic.ContainsKey(key1))
+            {
+                dynamicDic[key1] = unit;
+                return;
+            }
+            dynamicDic.Add(key1, unit);
+        }
+        public void AddDynamic(TUnit unit)
+        {
+            AddDynamic(unit.GetTDID(), unit);
+        }
         #endregion
 
         #region virtual
@@ -109,24 +147,6 @@ namespace CYM
         {
             throw new System.NotImplementedException("此函数必须被实现");
         }
-
-        public virtual T Spawn(string id, Vector3 spwanPoint, Quaternion? quaternion = null, int team = 0, params object[] ps)
-        {
-            if (id.IsInvStr())
-                return null ;
-            GameObject prefab = GetPrefab(id, ps);
-            GameObject charaGO = Pool().Spawn(prefab, spwanPoint, quaternion);
-            T unitChara = BaseCoreMono.GetUnityComponet<T>(charaGO);
-            OnSpawned(id, unitChara);
-            unitChara.AutoInit = false;
-            unitChara.OnSpawnInit(id,team);            
-            Data.Add(unitChara);
-            Callback_OnSpawn?.Invoke(unitChara);
-            return unitChara;
-        }
-        public virtual void OnSpawned(string id,T unit)
-        {
-        }
         /// <summary>
         /// 添加动态对象
         /// </summary>
@@ -134,28 +154,19 @@ namespace CYM
         {
 
         }
-        public virtual void AddDynamic(string key,T unit)
+        public virtual void OnSpawned(string id, TUnit unit)
         {
-            string key1 = BaseConstMgr.Prefix_DynamicTrans + key;
-            if (unit == null)
-                return;
-            if (dynamicDic.ContainsKey(key1))
-            {
-                dynamicDic[key1] = unit;
-                return;
-            }
-            dynamicDic.Add(key1, unit);
         }
-        public void AddDynamic(T unit)
-        {
-            AddDynamic(unit.GetTDID(),unit);
-        }
+
+        #endregion
+
+        #region get
         /// <summary>
         /// 传入的key需要加上$符号
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public virtual T GetDynamic(string key)
+        public virtual TUnit GetDynamic(string key)
         {
             if (!dynamicDic.ContainsKey(key))
             {
@@ -171,11 +182,15 @@ namespace CYM
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public virtual T GetDynamicSafe(string key)
+        public virtual TUnit GetDynamicSafe(string key)
         {
             if (!key.StartsWith(BaseConstMgr.Prefix_DynamicTrans))
                 key = BaseConstMgr.Prefix_DynamicTrans + key;
             return GetDynamic(key);
+        }
+        public TUnit GetUnit(string id)
+        {
+            return Data.Get(id);
         }
         #endregion
 

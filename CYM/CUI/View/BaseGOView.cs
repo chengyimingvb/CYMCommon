@@ -30,15 +30,15 @@ namespace CYM.UI
             if (fadeTime != null)
                 tempFade = fadeTime.Value;
             else
-                tempFade = b ? InTime : OutTime;
+                tempFade = IsSameTime?Duration : ( b ? InTime : OutTime );
             IsShow = b;
 
             if (scaleTween != null)
                 scaleTween.Kill();
             if (IsScale)
-                scaleTween = Trans.DOScale(IsShow ? 1.0f : 0.001f, tempFade).SetEase(IsShow ? InEase : OutEase);
+                scaleTween = Trans.DOScale(IsShow ? 1.0f : 0.001f, tempFade).SetEase(IsShow ? TweenScale.InEase : TweenScale.OutEase);
             else
-                scaleTween = Trans.DOScale(IsShow ? 1.0f : 0.001f, 0).SetEase(InEase);
+                scaleTween = Trans.DOScale(IsShow ? 1.0f : 0.001f, 0).SetEase(TweenScale.InEase);
             if (IsShow)
             {
                 OnOpen(this, useGroup);

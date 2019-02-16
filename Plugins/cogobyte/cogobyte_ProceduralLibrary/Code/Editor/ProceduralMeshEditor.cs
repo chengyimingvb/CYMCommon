@@ -2,8 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
-
-namespace Cogobyte.ProceduralLibrary
+namespace Cogobyte.ProceduralLibrary 
 {
     [CustomEditor(typeof(ProceduralMesh), true)]
     public class ProceduralMeshEditor : Editor
@@ -95,6 +94,7 @@ namespace Cogobyte.ProceduralLibrary
             {
                 Handles.color = colors[i];
                 Handles.CubeCap(0, verts[i], Quaternion.identity, size * 0.05f);
+                //Handles.CubeHandleCap(0, verts[i], Quaternion.identity, size * 0.05f, EventType.Used);
             }
         }
 

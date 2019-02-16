@@ -71,11 +71,11 @@ namespace CYM.Utile
 				RefreshKeys();
 
 			//Make sure we never subscribe twice as OnEnable will be called more often then you think :)
-			EditorApplication.playmodeStateChanged -= OnPlayModeStateChanged;
-			EditorApplication.playmodeStateChanged += OnPlayModeStateChanged;
+			EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+			EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
 		}
 
-		private void OnPlayModeStateChanged()
+		private void OnPlayModeStateChanged(PlayModeStateChange state)
 		{
 			waitTillPlistHasBeenWritten = IsUnityWritingToPlist();
 

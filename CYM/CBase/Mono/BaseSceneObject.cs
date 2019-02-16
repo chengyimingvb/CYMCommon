@@ -19,6 +19,10 @@ namespace CYM
         #region inspector
         [SerializeField]
         protected Transform RootPoints;
+        [SerializeField]
+        protected GameObject[] EnableOnPlay;
+        [SerializeField]
+        protected GameObject[] DisableOnPlay;
         #endregion
 
         #region prop
@@ -26,6 +30,7 @@ namespace CYM
         public static Terrain ActiveTerrain => Terrain.activeTerrain;
         public List<Transform> Points { get; private set; } = new List<Transform>();
         protected Dictionary<string, Transform> PointsDic { get; private set; } = new Dictionary<string, Transform>();
+        BaseDBSettingsData BaseDBSettingsData => BaseGlobal.Ins.SettingsMgr.GetBaseSettings();
         #endregion
 
         #region life
@@ -33,12 +38,33 @@ namespace CYM
         {
             Ins = (BaseSceneObject)this;
             base.Awake();
+            if (Application.isPlaying)
+            {
+                if (EnableOnPlay != null)
+                {
+                    foreach (var item in EnableOnPlay)
+                    {
+                        item.SetActive(true);
+                    }
+                }
+                if (DisableOnPlay != null)
+                {
+                    foreach (var item in DisableOnPlay)
+                    {
+                        item.SetActive(false);
+                    }
+                }
+            }
             Parse();
         }
         public override void OnEnable()
         {
             base.OnEnable();
             Parse();
+            if (ActiveTerrain != null&&Application.isPlaying)
+            {
+                ActiveTerrain.heightmapPixelError = 200 - BaseDBSettingsData.TerrainAccuracy;
+            }
         }
         #endregion
 

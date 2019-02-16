@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace JBooth.MicroSplat 
 {
-   #if __MICROSPLAT__ && VEGETATION_STUDIO
+   #if __MICROSPLAT__ && (VEGETATION_STUDIO || VEGETATION_STUDIO_PRO)
    [InitializeOnLoad]
    public class MicroSplatVegetationStudio : FeatureDescriptor
    {
@@ -71,7 +71,7 @@ namespace JBooth.MicroSplat
 
       public override string GetVersion()
       {
-         return "2.1";
+         return "2.3";
       }
 
       public override void DrawFeatureGUI(Material mat)
@@ -253,7 +253,7 @@ namespace JBooth.MicroSplat
       }
 
    }   
-   #endif
+#endif
 
 
 }

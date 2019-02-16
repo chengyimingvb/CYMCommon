@@ -29,7 +29,7 @@ namespace CYM.UI
                 {
                     Bg = new BaseImageData { OnClick = OnTalkItemClick },
                     KeyTip = new BaseTextData { Name = GetKeyTip, IsTrans = false },
-                    SelectTip=new BaseTextData {Name=GetSelectTip,IsTrans=false },
+                    SelectTip=new BaseTextData { Name = GetSelectTip,IsTrans=false },
                     Option = new BaseButtonData { OnClick = OnTalkOptionClick },
                     CurSelectOptionIndex = CurSelectOptionIndex,
                 };

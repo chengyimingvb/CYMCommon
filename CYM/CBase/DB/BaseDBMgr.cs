@@ -24,7 +24,7 @@ namespace CYM
         Monthly,
         Yearly,
     }
-    public class BaseDBMgr<TGameData> : BaseGlobalCoreMgr, IBaseDBMgr where TGameData:BaseDBGameData, new()
+    public class BaseDBMgr<TGameData> : BaseGFlowMgr, IBaseDBMgr where TGameData:BaseDBGameData, new()
     {
         #region 存档
         public ArchiveMgr<TGameData> CurArchiveMgr;
@@ -32,16 +32,15 @@ namespace CYM
         public ArchiveMgr<TGameData> RemoteArchiveMgr = new ArchiveMgr<TGameData>();
         #endregion
 
+        #region prop
         /// <summary>
         /// 当前游戏存储的数据
         /// </summary>
         public TGameData CurGameData { get; set; } = new TGameData();
-
         /// <summary>
         /// 是有拥有snapshot
         /// </summary>
         public bool HasSnapshot { get; protected set; } = false;
-
         /// <summary>
         /// 开始自动存档
         /// </summary>
@@ -54,12 +53,16 @@ namespace CYM
         /// 游戏存储
         /// </summary>
         public event Callback<ArchiveFile<TGameData>> Callback_OnSaveGame;
-
         /// <summary>
         /// 玩的时间
         /// </summary>
         public int PlayTime { get; protected set; } = 0;
+        #endregion
 
+        #region mgr
+        IBaseSettingsMgr SettingsMgr => SelfBaseGlobal.SettingsMgr;
+        BasePrefsMgr PrefsMgr => SelfBaseGlobal.PrefsMgr;
+        #endregion
 
         #region 生命周期
         public override void OnEnable()
@@ -82,7 +85,8 @@ namespace CYM
                 if (e != null)
                     CLog.Error(e.ToString());
             }
-            UseRemoteArchives(false);           
+            //UseRemoteArchives(false);
+            UseRemoteArchives(!PrefsMgr.GetLastAchiveLocal());
         }
         public override void OnStart()
         {
@@ -140,7 +144,9 @@ namespace CYM
         /// <returns></returns>
         public virtual bool IsCanContinueGame()
         {
-            return false;
+            string id = PrefsMgr.GetLastAchiveID();
+            var tempAchive = GetAchieveMgr(PrefsMgr.GetLastAchiveLocal());
+            return tempAchive.IsHaveArchive(id) && tempAchive.IsArchiveValid(id);
         }
         #endregion
 
@@ -234,6 +240,14 @@ namespace CYM
         /// <returns></returns>
         public virtual TGameData SaveCurGameAs(string ID,bool isSnapshot=false ,bool isSetDirty = true,bool isHide=false,bool forceLocalArchive=false)
         {
+            //保存
+            if (ID != BaseConstMgr.DBTempSaveName)
+            {
+                PrefsMgr.SetLastAchiveID(ID);
+                PrefsMgr.SetLastAchiveLocal(IsCurArchivesLocal());
+                SettingsMgr.Save();
+            }
+
             ArchiveFile<TGameData> archiveFile;
             if (isSnapshot)
             {

@@ -7,7 +7,7 @@ using UnityEngine.Internal;
 
 namespace CYM
 {
-    public class BaseCameraMgr : BaseGlobalCoreMgr
+    public class BaseCameraMgr : BaseGFlowMgr
     {
         #region prop
         public Camera MainCamera { get; private set; }
@@ -20,6 +20,10 @@ namespace CYM
         public bool IsLowHight { get { return CameraHight <= MidHight; } }
         public bool IsMiddleHight { get { return CameraHight > MidHight && CameraHight < TopHight; } }
         public float ZoomPercent { get { return CameraHight / 400; } }
+        #endregion
+
+        #region Callback
+        public event Callback<bool> Callback_OnIsHight;
         #endregion
 
         #region mgr
@@ -47,7 +51,13 @@ namespace CYM
         public override void OnUpdate()
         {
             base.OnUpdate();
+
+            bool preIsTop = IsTopHight;
             CameraHight = MainCameraTrans.position.y;
+            if (IsTopHight != preIsTop)
+            {
+                Callback_OnIsHight?.Invoke(IsTopHight);
+            }
         }
         #endregion
 

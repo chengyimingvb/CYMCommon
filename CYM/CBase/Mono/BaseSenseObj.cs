@@ -7,11 +7,11 @@ namespace CYM
     public class BaseSenseObj : BaseMono
     {
         #region prop
-        BaseSenseMgr SenseMgr;
+        IBaseSenseMgr SenseMgr;
         #endregion
 
         #region set
-        public void Init(BaseSenseMgr sense)
+        public void Init(IBaseSenseMgr sense)
         {
             SenseMgr = sense;
         }

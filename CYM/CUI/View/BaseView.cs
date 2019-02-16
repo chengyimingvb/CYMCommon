@@ -7,7 +7,6 @@ using UnityEngine.EventSystems;
 using DG.Tweening.Core;
 using DG.Tweening.Plugins.Options;
 using Sirenix.OdinInspector;
-
 namespace CYM.UI
 {
     public enum ViewLevel
@@ -15,6 +14,17 @@ namespace CYM.UI
         Root,//根界面
         Main,//主界面
         Sub,//子界面
+    }
+    [System.Serializable]
+    public class ShowAnim
+    {
+        public Ease InEase = Ease.OutBack;
+        public Ease OutEase = Ease.InBack;
+    }
+    [System.Serializable]
+    public class ShowAnimMove: ShowAnim
+    {
+        public Vector2 StartPos = Vector2.zero;
     }
     public class BaseView : BaseCoreMono
     {
@@ -24,31 +34,36 @@ namespace CYM.UI
         #endregion
 
         #region Inspector
-        /// <summary>
-        /// 0意味着不在任何的组里面
-        /// </summary>
+        [FoldoutGroup("Prop")]// 0意味着不在任何的组里面
         public int Group = 0;
-        /// <summary>
-        /// 默认是打开还是显示
-        /// </summary>
+        [FoldoutGroup("Prop")]// 默认是打开还是显示
         public bool DefaultShow = false;
-        /// <summary>
-        /// GO 是否根据界面IsShow变量 自动Active
-        /// </summary>
+        [FoldoutGroup("Prop")]// GO 是否根据界面IsShow变量 自动Active
         public bool IsActiveByShow = true;
-        public bool IsScale = true;
+        [FoldoutGroup("Prop")]
+        public bool IsSameTime = true;
+        [FoldoutGroup("Prop")]
+        public bool IsScale = false;
+        [FoldoutGroup("Prop")]
         public bool IsMove = false;
-        [HideIf("Inspector_HideStartPos")]
-        public Vector2 StartPos = Vector2.zero;
-        public Ease InEase = Ease.OutBack;
-        public Ease OutEase = Ease.InBack;
+        [FoldoutGroup("Prop"), HideIf("Inspector_ShowTime")]
+        public float Duration = 0.3f;
+        [FoldoutGroup("Prop"),HideIf("Inspector_IsSameTime")]
         public float InTime = 0.3f;
+        [FoldoutGroup("Prop"), HideIf("Inspector_IsSameTime")]
         public float OutTime = 0.3f;
+        [FoldoutGroup("Prop"),HideIf("Inspector_HideScale")]
+        public ShowAnim TweenScale = new ShowAnim();
+        [FoldoutGroup("Prop"),HideIf("Inspector_HidePos")]
+        public ShowAnimMove TweenMove = new ShowAnimMove();
         #endregion
 
         #region 公共属性
         public bool IsShow { get; protected set; }
+        public bool IsCompleteClose { get; protected set; }
         public Canvas Canvas { get; protected set; }
+        public CanvasScaler CanvasScaler { get; protected set; }
+        public GraphicRaycaster GraphicRaycaster { get; protected set; }
         public RectTransform RectTrans { get; private set; }
         public RectTransform CanvasTrans { get; private set; }
         public Camera WorldCamera { get { return Canvas.worldCamera; }  }
@@ -64,16 +79,20 @@ namespace CYM.UI
         /// 界面所在的UI管理器
         /// </summary>
         public BaseUIMgr UIMgr { get; set; }
+        public BaseView ParentView { get; private set; }
+        public BaseView RootView { get; private set; }
+        protected BaseCoroutineMgr CommonCoroutine => SelfBaseGlobal.CommonCoroutine;
+        protected BaseCoroutineMgr MainUICoroutine => SelfBaseGlobal.MainUICoroutine;
+        protected BaseCoroutineMgr BattleCoroutine => SelfBaseGlobal.BattleCoroutine;
         #endregion
 
         #region 内部
-        public BaseView ParentView { get; private set; }
-        public BaseView RootView { get; private set; }
         protected TweenerCore<float, float, FloatOptions> alphaTween;
         protected Tweener scaleTween;
         protected Tweener moveTween;
         protected bool IsDirty { get; set; } = false;
         protected Vector3 sourceLocalPos;
+        protected float Delay = 0;
         #endregion
 
         #region life
@@ -83,6 +102,8 @@ namespace CYM.UI
             MonoType = MonoType.View;
             base.Awake();
             Canvas = GetComponentInChildren<Canvas>();
+            CanvasScaler = GetComponentInChildren<CanvasScaler>();
+            GraphicRaycaster = GetComponentInChildren<GraphicRaycaster>();
             RectTrans = GetComponent<RectTransform>();
             if (Canvas != null)
                 CanvasTrans = Canvas.transform as RectTransform;
@@ -153,6 +174,10 @@ namespace CYM.UI
         {
             IsDirty = true;
         }
+        public void SetDelay(float delay)
+        {
+            Delay = delay;
+        }
         /// <summary>
         /// 创建子界面
         /// </summary>
@@ -198,13 +223,13 @@ namespace CYM.UI
         /// <param name="b"></param>
         public virtual void Show(bool b=true, float? fadeTime = null, float delay = 0, bool useGroup = true, bool force = false)
         {
+            IsCompleteClose = false;
         }
 
         public void Toggle()
         {
             Show(!IsShow);
         }
-
         /// <summary>
         /// 刷新多语言，以及其他显示
         /// </summary>
@@ -291,6 +316,7 @@ namespace CYM.UI
             Callback_OnClose?.Invoke();
             if (IsActiveByShow)
                 GO.SetActive(false);
+            IsCompleteClose = true;
         }
         protected virtual void OnOpen(BaseView baseView, bool useGroup)
         {
@@ -318,9 +344,21 @@ namespace CYM.UI
         #endregion
 
         #region Inspector
-        bool Inspector_HideStartPos()
+        bool Inspector_HidePos()
         {
             return !IsMove;
+        }
+        bool Inspector_HideScale()
+        {
+            return !IsScale;
+        }
+        bool Inspector_IsSameTime()
+        {
+            return IsSameTime;
+        }
+        bool Inspector_ShowTime()
+        {
+            return !IsSameTime;
         }
         #endregion
 

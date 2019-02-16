@@ -22,7 +22,7 @@ public class ParticleScaler : EditorWindow {
 #if UNITY_5_1 || UNITY_5_2 || UNITY_5_3 || UNITY_5_4 || UNITY_5_5 || UNITY_5_6 || UNITY_5_7 || UNITY_5_8 || UNITY_5_9 || UNITY_2017
 		win.titleContent = new GUIContent("Simple Particle Scaler");
 #else
-			win.title = "Simple Particle Scaler";	
+			win.titleContent = new GUIContent("Simple Particle Scaler");	
 #endif
 		win.minSize = new Vector2(200.0f, 130.0f);
 		win.maxSize = new Vector2(200.0f, 130.0f);
@@ -119,7 +119,7 @@ public class ParticleScaler : EditorWindow {
 								int option = EditorUtility.DisplayDialogComplex("Are you sure?", "" + go.gameObject.name + ".prefab" + " already exists. Do you want to overwrite it?", "Yes", "No", "Cancel");
 								switch (option) {
 									case 0:
-									CreateNew(go.gameObject, p + go.gameObject.name + ".prefab");
+									//CreateNew(go.gameObject, p + go.gameObject.name + ".prefab");
 									goto case 1;
 									case 1:
 									break;
@@ -130,7 +130,8 @@ public class ParticleScaler : EditorWindow {
 									Debug.LogError("Unrecognized option.");
 									break;
 								}
-							} else CreateNew(go.gameObject, p + go.gameObject.name + ".prefab");
+							}
+                            //else CreateNew(go.gameObject, p + go.gameObject.name + ".prefab");
 						}
 					}
 				} else {
@@ -142,10 +143,10 @@ public class ParticleScaler : EditorWindow {
 		}
 	}
 
-	public static void CreateNew(GameObject obj, string localPath) {
-		Object prefab = PrefabUtility.CreateEmptyPrefab(localPath);
-		PrefabUtility.ReplacePrefab(obj, prefab, ReplacePrefabOptions.ConnectToPrefab);
-	}
+	//public static void CreateNew(GameObject obj, string localPath) {
+	//	Object prefab = PrefabUtility.CreateEmptyPrefab(localPath);
+	//	PrefabUtility.ReplacePrefab(obj, prefab, ReplacePrefabOptions.ConnectToPrefab);
+	//}
 
 	public void UpdateParticles() {
 		foreach (GameObject gameObj in Selection.gameObjects) {

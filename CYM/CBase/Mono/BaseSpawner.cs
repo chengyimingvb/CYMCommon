@@ -18,24 +18,23 @@ namespace CYM
     public class BaseSpawner<T> : BaseCoreMono where T : BaseMono
     {
         #region inspector
-        [FoldoutGroup("Base"), PreFabOverride, SerializeField, OnValueChanged("OnPropChanged", true)]
+        [FoldoutGroup("Base"), SerializeField, OnValueChanged("OnPropChanged", true)]
         protected string CustomName = "";
-        [FoldoutGroup("Base"), SerializeField, PreFabOverride, OnValueChanged("OnPropChanged", true)]
-        public string TDID, TDID1;
-        [FoldoutGroup("Base"), MinValue(0), PreFabOverride,SerializeField, OnValueChanged("OnPropChanged", true)]
+        [FoldoutGroup("Base"), SerializeField, OnValueChanged("OnPropChanged", true)]
+        public List<string> TDIDs;
+        [FoldoutGroup("Base"), MinValue(0),SerializeField, OnValueChanged("OnPropChanged", true)]
         public int Team = 1;
-        [FoldoutGroup("Base"), MinValue(0), SerializeField, PreFabOverride]
+        [FoldoutGroup("Base"), MinValue(0), SerializeField]
         protected float Delay = 0.0f;
-        [FoldoutGroup("Base"),MinValue(1),MaxValue(10), SerializeField,PreFabOverride,Tooltip("小于等于0表示不限次数")]
+        [FoldoutGroup("Base"),MinValue(1),MaxValue(10), SerializeField,Tooltip("小于等于0表示不限次数")]
         protected int MaxSpawnCount = 1;
-        [FoldoutGroup("Trigger"), SerializeField, PreFabOverride,ShowIf("Inspector_ShowIsAutoSpawn")]
+        [FoldoutGroup("Trigger"), SerializeField,ShowIf("Inspector_ShowIsAutoSpawn")]
         public bool IsAutoSpawn = false;
         #endregion
 
         #region prop
         protected CoroutineHandle coroutineHandle;
         public int SpawnedCount { get; protected set; } = 0;
-        public List<string> SpawnTDIDList { get; private set; } = new List<string>();
         /// <summary>
         /// 至少已经Spawn了一个单位,会被标记为IsActived=true
         /// </summary>
@@ -43,15 +42,6 @@ namespace CYM
         #endregion
 
         #region life
-        public override void Awake()
-        {
-            base.Awake();
-            SpawnTDIDList.Clear();
-            if (!TDID.IsInvStr())
-                SpawnTDIDList.Add(TDID);
-            if (!TDID1.IsInvStr())
-                SpawnTDIDList.Add(TDID1);
-        }
         public override void Start()
         {
             base.Start();
@@ -108,9 +98,9 @@ namespace CYM
         {
             get
             {
-                if (SpawnTDIDList == null || SpawnTDIDList.Count <= 0)
+                if (TDIDs == null || TDIDs.Count <= 0)
                     return TDID;
-                return BaseMathUtils.RandArray(SpawnTDIDList);
+                return BaseMathUtils.RandArray(TDIDs); 
             }
         }
         protected string FirstTDID
@@ -120,7 +110,7 @@ namespace CYM
                 return TDID;
             }
         }
-        public override string Name
+        public override string GOName
         {
             get
             {
@@ -197,7 +187,7 @@ namespace CYM
         [Button(ButtonSizes.Small),PropertyOrder(-10)]
         private void DuplicateName()
         {
-            BaseUtils.CopyTextToClipboard(Name);
+            BaseUtils.CopyTextToClipboard(name);
         }
         #endregion
     }

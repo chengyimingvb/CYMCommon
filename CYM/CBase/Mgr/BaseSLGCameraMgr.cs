@@ -18,6 +18,7 @@ namespace CYM
         #region prop
         RTSCamera RTSCamera;
         IBaseBattleMgr BattleMgr => SelfBaseGlobal.BattleMgr;
+        BaseDBSettingsData SettingsData => SelfBaseGlobal.SettingsMgr.GetBaseSettings();
         #endregion
 
         #region life
@@ -33,17 +34,39 @@ namespace CYM
                 return;
             if (BattleMgr.IsInBattle)
             {
-                RTSCamera.DesktopMoveDragSpeed =  (ZoomPercent* RTSCamera.desktopMoveDragSpeed);
-                RTSCamera.DesktopMoveSpeed = (ZoomPercent * RTSCamera.desktopMoveSpeed);
-                //CLog.Error("测试:"+ RTSCamera.desktopMoveDragSpeed);
+                var data = SettingsData;
+                RTSCamera.DesktopMoveDragSpeed =  (ZoomPercent* RTSCamera.desktopMoveDragSpeed) * data.CameraMoveSpeed;
+                RTSCamera.DesktopMoveSpeed = (ZoomPercent * RTSCamera.desktopMoveSpeed) * data.CameraMoveSpeed;
+                RTSCamera.DesktopScrollSpeed = (RTSCamera.desktopScrollSpeed)* data.CameraScrollSpeed;
+                if (Input.GetMouseButtonDown(2))
+                {
+                    Vector3 pos = SelfBaseGlobal.ScreenMgr.GetMouseHitPoint();
+                    RTSCamera.JumpToTargetForMain(SelfBaseGlobal.GetTransform(pos));
+                }
             }
         }
         #endregion
 
         #region set
-        public void Move(Vector3 dir, float offset)
+        public void Move(Vector3 dir)
         {
-            RTSCamera.Move(dir,offset);
+            RTSCamera.Move(dir);
+        }
+        public void Jump(Transform target,float heightPercent=0.05f)
+        {
+            RTSCamera.JumpToTargetForMain(target);
+            RTSCamera.scrollValue = heightPercent;
+        }
+        public void UnLock()
+        {
+        }
+        public void SetCameraMoveSpeed(float v)
+        {
+            SettingsData.CameraMoveSpeed = v;
+        }
+        public void SetCameraScrollSpeed(float v)
+        {
+            SettingsData.CameraScrollSpeed = v;
         }
         #endregion
     }

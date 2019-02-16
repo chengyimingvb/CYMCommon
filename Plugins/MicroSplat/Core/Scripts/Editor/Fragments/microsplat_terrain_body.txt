@@ -226,8 +226,12 @@
          #endif
 
          #if _USEGRADMIP
-            float2 dxdyuv = config.uv.xy * _UVScale.xy + _UVScale.zw;
-            albedoLOD = float4(ddx(dxdyuv), ddy(dxdyuv));
+            #if _TRIPLANAR
+               float2 cuv0 = tc.uv0[0].xy;
+            #else
+               float2 cuv0 = config.uv0.xy;
+            #endif
+            albedoLOD = float4(ddx(cuv0.xy), ddy(cuv0.xy));
             normalLOD = albedoLOD;
             #if _USEEMISSIVEMETAL
                emisLOD = albedoLOD;
@@ -324,7 +328,7 @@
          #endif
 
          #if _DISTANCERESAMPLE
-         DistanceResample(samples, config, tc, camDist, i.viewDir, fxLevels, resampleLOD);
+         DistanceResample(samples, config, tc, camDist, i.viewDir, fxLevels, resampleLOD, i.worldPos);
          #endif
 
          // PerTexture sampling goes here, passing the samples structure
@@ -424,15 +428,19 @@
          #endif
 
          #if ((_DETAILNOISE && _PERTEXDETAILNOISESTRENGTH) || (_DISTANCENOISE && _PERTEXDISTANCENOISESTRENGTH)) || (_NORMALNOISE && _PERTEXNORMALNOISESTRENGTH)
-         ApplyDetailDistanceNoisePerTex(samples, config, camDist);
+         ApplyDetailDistanceNoisePerTex(samples, config, camDist, i.worldPos, worldNormalVertex);
          #endif
 
          #if _ANTITILEARRAYDETAIL || _ANTITILEARRAYDISTANCE || _ANTITILEARRAYNORMAL
-         ApplyAntiTilePerTex(samples, config, camDist);
+         ApplyAntiTilePerTex(samples, config, camDist, i.worldPos, worldNormalVertex);
          #endif
 
          #if _GEOMAP && _PERTEXGEO
          GeoTexturePerTex(samples, i.worldPos, config);
+         #endif
+         
+         #if _PLANETALBEDO || _PLANETNORMAL || _PLANETALBEDO2 || _PLANETNORMAL2
+         ApplyPlanet(albedo.rgb, normSAO, config, camDist, i.worldPos, worldNormalVertex);
          #endif
 
          #if _GLOBALTINT && _PERTEXGLOBALTINTSTRENGTH
@@ -459,7 +467,8 @@
          half4 emisMetal = BlendWeights(samples.emisMetal0, samples.emisMetal1, samples.emisMetal2, samples.emisMetal3, heightWeights);
          #endif
 
-		   // ADVANCEDTERRAIN_ENTRYPOINT	
+
+	// ADVANCEDTERRAIN_ENTRYPOINT	
 
          #if _MESHOVERLAYSPLATS || _MESHCOMBINED
             o.Alpha = 1.0;
@@ -480,7 +489,7 @@
 
 
          #if ((_DETAILNOISE && !_PERTEXDETAILNOISESTRENGTH) || (_DISTANCENOISE && !_PERTEXDISTANCENOISESTRENGTH) || (_NORMALNOISE && !_PERTEXNORMALNOISESTRENGTH))
-         ApplyDetailDistanceNoise(albedo.rgb, normSAO, config, camDist);
+         ApplyDetailDistanceNoise(albedo.rgb, normSAO, config, camDist, i.worldPos, worldNormalVertex);
          #endif
 
          #if _GEOMAP && !_PERTEXGEO
@@ -566,13 +575,22 @@
          #else
          float2 origUV = i.uv_Control0;
          #endif
-
+         
          #if _MICROMESH
          origUV -= _UVMeshRange.zw;
          origUV *= _UVMeshRange.xy;
          origUV += _UVMeshRange.zw / _UVMeshRange.xy;
          #endif
-
+         
+         #if _SPHEREUVS
+         {
+            float3 d = normalize(worldNormalVertex);
+            float u = atan2(d.x, d.z) / (2.0 * 3.14159265359) + 0.5;
+            float v = asin(d.y) / 3.14159265359 + 0.5f;
+            origUV = float2(u, v);
+         }
+         #endif
+         
          half4 weights;
 
          Config config = (Config)0;
@@ -644,15 +662,15 @@
          
          
 
-         Setup(weights, i.uv_Control0, config, w0, w1, w2, w3, w4, w5, w6, w7, i.worldPos);
+         Setup(weights, origUV, config, w0, w1, w2, w3, w4, w5, w6, w7, i.worldPos);
 
          #if _TEXTURECLUSTER2 || _TEXTURECLUSTER3
-         PrepClusters(i.uv_Control0, config);
+            PrepClusters(origUV, config, i.worldPos, worldNormalVertex);
          #endif
 
 
-         #if _ALPHAHOLE
-         ClipAlphaHole(config.uv0.z);
+         #if _ALPHAHOLE || _ALPHAHOLETEXTURE
+         ClipAlphaHole(config.uv0.z, config.uv);
          #endif
 
 

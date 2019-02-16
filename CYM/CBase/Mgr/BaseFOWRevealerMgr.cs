@@ -18,29 +18,60 @@ namespace CYM
     {
         #region prop
         FogOfWarUnit FOWRevealer { get; set; }
-        public bool IsVisible { get; private set; }
+        protected BaseUnit BaseLocalPlayer => SelfBaseGlobal.ScreenMgr.BaseLocalPlayer;
+        protected BaseFOWMgr BaseFOWMgr => SelfBaseGlobal.FOWMgr;
+        public bool IsVisible { get; protected set; } = true;
         public bool IsInFog { get; private set; }
         #endregion
 
         #region life
+        protected override void OnSetNeedFlag()
+        {
+            base.OnSetNeedFlag();
+            NeedFixedUpdate = true;
+        }
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            BaseFOWMgr.FOWRevealerList.Add(this);
+        }
+        public override void OnDisable()
+        {
+            base.OnDisable();
+            BaseFOWMgr.FOWRevealerList.Remove(this);
+        }
         public override void OnBeAdded(IMono mono)
         {
             base.OnBeAdded(mono);
-            FOWRevealer = Mono.GetComponent<FogOfWarUnit>();
+            FOWRevealer = Mono.SetupMonoBehaviour<FogOfWarUnit>();
+        }
+        public override void OnFixedUpdate()
+        {
+            base.OnFixedUpdate();
+        }
+        public override void Refresh()
+        {
+            base.Refresh();
+            bool isEnableView = IsEnableView();
+            FOWRevealer.team = isEnableView ? 0 : 1;
+            FOWRevealer.circleRadius = isEnableView?Radius:0;
+            //FOWRevealer.cellBased = false;
+            IsInFog = IsInFogRange();
+            IsVisible = !IsInFog;
+        }
+        protected virtual bool IsEnableView()
+        {
+            return true;
         }
         #endregion
 
         #region set
-        public virtual void RefreshVisible()
+        protected virtual float Radius
         {
-            throw new System.Exception("此函数必须被实现");
-        }
-        public override void Enable(bool b)
-        {
-            base.Enable(b);
-            if (FOWRevealer == null)
-                return;
-            FOWRevealer.enabled = b;
+            get
+            {
+                throw new System.NotImplementedException();
+            }
         }
         #endregion
 

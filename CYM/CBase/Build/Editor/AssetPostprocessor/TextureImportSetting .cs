@@ -21,6 +21,11 @@ namespace CYM
         /// </summary>
         void OnPreprocessTexture()
         {
+            if (assetImporter.name.EndsWith("_splat_control"))
+            {
+                return;
+            }
+
             TextureImporter importer = (TextureImporter)assetImporter;
             //importer.textureType = TextureImporterType.Sprite; // 设置为Sprite类型
             //importer.mipmapEnabled = false; // 禁用mipmap

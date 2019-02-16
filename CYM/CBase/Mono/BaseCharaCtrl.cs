@@ -27,7 +27,7 @@ namespace CYM
         public float StableMovementSharpness = 15; // Sharpness of the acceleration when stable on ground
         public float OrientationSharpness = 10; // Sharpness of rotations when stable on ground
 
-        [Header("Air Movement")]
+        [Header("Air Movement")] 
         public float MaxAirMoveSpeed = 10f; // Max speed for air movement
         public float AirAccelerationSpeed = 5f; // Acceleration when in air
         public float Drag = 0.1f; // Air drag

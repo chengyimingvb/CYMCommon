@@ -44,7 +44,7 @@ namespace CYM
     }
     #endregion
 
-    public class BasePlatSDKMgr : BaseGlobalCoreMgr
+    public class BasePlatSDKMgr : BaseGFlowMgr
     {
         #region prop
         protected uint fileAppId;

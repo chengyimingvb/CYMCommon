@@ -1,19 +1,20 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 namespace CYM
 {
-    public class BaseSenseMgr : BaseCoreMgr
+    public class BaseSenseMgr<TUnit> : BaseCoreMgr, IBaseSenseMgr where TUnit : BaseUnit
     {
         #region prop
-        public float Radius { get; private set; } = 4;
         protected GameObject SenseGameObj;
         protected SphereCollider SphereCollider;
         protected BaseSenseObj SenseObject;
-        protected Timer Timer = new Timer(3.0f);
+        protected Timer Timer = new Timer();
         protected Collider[] ColliderResults;
         protected virtual LayerData CheckLayer { get { throw new NotImplementedException("必须重载"); } }
+        protected virtual float UpdateTimer => float.MaxValue;
+        protected virtual float Radius => 4;
+        public List<TUnit> SenseUnits { get; private set; } = new List<TUnit>();
         #endregion
 
         #region life
@@ -25,6 +26,7 @@ namespace CYM
         public override void OnBeAdded(IMono mono)
         {
             base.OnBeAdded(mono);
+            Timer = new Timer(UpdateTimer);
             SenseGameObj = new GameObject("SenseObj");
             SenseGameObj.layer = (int)BaseConstMgr.Layer_Sense;
             SenseGameObj.transform.SetParent(Mono.Trans);
@@ -43,12 +45,9 @@ namespace CYM
             if (Timer.CheckOver())
             {
                 int count = Physics.OverlapSphereNonAlloc(SelfBaseUnit.Pos, Radius, ColliderResults, (LayerMask)CheckLayer, QueryTriggerInteraction.Ignore);
-                if (count > 0)
+                foreach (var item in ColliderResults)
                 {
-                    foreach (var item in ColliderResults)
-                    {
-                        OnTriggerEnter(item);
-                    }
+                    OnTriggerEnter(item);
                 }
             }
         }
@@ -62,6 +61,24 @@ namespace CYM
         public virtual void OnTriggerExit(Collider col)
         {
 
+        }
+        #endregion
+
+        #region utile
+        protected void CustomCollect()
+        {
+            SenseUnits.Clear();
+            int count = Physics.OverlapSphereNonAlloc(SelfBaseUnit.Pos, Radius, ColliderResults, (LayerMask)CheckLayer, QueryTriggerInteraction.Ignore);
+            {
+                foreach (var item in ColliderResults)
+                {
+                    TUnit unit = item.GetComponent<TUnit>();
+                    if (unit != null)
+                    {
+                        SenseUnits.Add(unit);
+                    }
+                }
+            }
         }
         #endregion
     }

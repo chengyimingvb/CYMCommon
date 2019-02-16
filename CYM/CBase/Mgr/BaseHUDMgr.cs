@@ -16,9 +16,18 @@ namespace CYM
 { 
 	public class BaseHUDMgr : BaseCoreMgr
 	{
+        #region text
+        protected virtual string ChatBubble => "BaseTextBubble";
+        protected virtual string DamageText => "BaseDamageJumpFont";
+        protected virtual string TreatmentText => "BaseTreatmentJumpFont";
+        protected virtual string StateJumpText => "BaseStateJumpText";
+        protected virtual string BarItemPrefab => BaseConstMgr.STR_Inv;
+        #endregion
+
         #region prop
         protected float NextInterval = 0.0f;
         public bool IsCanJumpText { get; set; } = true;
+        public BaseHUDItem BaseHUDBarItem { get; protected set; }
         #endregion
 
         #region Life
@@ -26,6 +35,22 @@ namespace CYM
         {
             base.OnSetNeedFlag();
             NeedUpdate = true;
+        }
+        public override void OnEnable()
+        {
+            base.OnEnable();
+            if (!BarItemPrefab.IsInvStr())
+            {
+                BaseHUDBarItem = Spawn(BarItemPrefab);
+            }
+        }
+        public override void OnDisable()
+        {
+            base.OnDisable();
+            if (BaseHUDBarItem != null)
+            {
+                BaseHUDBarItem.DoDestroy();
+            }
         }
         public override void Init()
         {
@@ -44,7 +69,6 @@ namespace CYM
         {
             public string text;
             public string prefabNamne;
-            //public float interval;
         }
         protected List<JumpFontData> jumpList = new List<JumpFontData>();
         protected Timer jumpFontTimer = new Timer();
@@ -53,7 +77,6 @@ namespace CYM
             JumpFontData tempData = new JumpFontData();
             tempData.text = text;
             tempData.prefabNamne = prefabName;
-            //tempData.interval = interval;
             jumpList.Add(tempData);
         }
         private void jumpFont(JumpFontData data)
@@ -61,7 +84,7 @@ namespace CYM
             GameObject tempGO = SelfBaseGlobal.GRMgr.GetUI(data.prefabNamne);
             if (tempGO != null)
             {
-                var temp = HUDView.Jump(data.text, tempGO);
+                var temp = HUDView.Jump(data.text, tempGO, SelfBaseUnit);
                 temp.SetFollowObj(GetNode(temp.NodeType));
             }
         }
@@ -73,7 +96,7 @@ namespace CYM
                 if (jumpList.Count > 0)
                 {
                     jumpFont(jumpList[0]);
-                    NextInterval = 0.4f; //jumpList[0].interval;
+                    NextInterval = 0.4f;
                     jumpList.RemoveAt(0);
                 }
             }
@@ -130,7 +153,7 @@ namespace CYM
             GameObject tempGO = SelfBaseGlobal.GRMgr.GetUI(ChatBubble);
             if (tempGO != null)
             {
-                CurChatBubble = HUDView.Jump(str, tempGO);
+                CurChatBubble = HUDView.Jump(str ,tempGO, SelfBaseUnit);
                 if (CurChatBubble == null) return null;
                 CurChatBubble.SetFollowObj(GetNode(CurChatBubble.NodeType));
                 return CurChatBubble;
@@ -145,11 +168,18 @@ namespace CYM
         }
         #endregion
 
-        #region text
-        protected virtual string ChatBubble=> "TextBubble";
-        protected virtual string DamageText=> "DamageJumpFont";
-        protected virtual string TreatmentText=>"TreatmentJumpFont";
-        protected virtual string StateJumpText=> "StateJumpText";
+        #region set
+        protected BaseHUDItem Spawn(string prefabName)
+        {
+            GameObject tempGO = SelfBaseGlobal.GRMgr.GetUI(prefabName);
+            if (tempGO != null)
+            {
+                var temp = HUDView.Jump(null ,tempGO, SelfBaseUnit);
+                temp.SetFollowObj(GetNode(temp.NodeType));
+                return temp;
+            }
+            return null;
+        }
         #endregion
 
         #region must Override

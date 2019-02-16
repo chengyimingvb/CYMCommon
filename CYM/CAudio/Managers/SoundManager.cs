@@ -36,12 +36,12 @@ namespace CYM.Audio
         /// <param name='level'>
         /// Level.
         /// </param>
-        public void OnLevelLoaded(int level)
-        {
-            if (Instance == this)
-                if (!ignoreLevelLoad)
-                    HandleLevel(level);
-        }
+        //public void OnLevelLoaded(int level)
+        //{
+        //    if (Instance == this)
+        //        if (!ignoreLevelLoad)
+        //            HandleLevel(level);
+        //}
 
         // Handle app focus
         private void OnApplicationPause(bool pause)

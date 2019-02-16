@@ -55,6 +55,7 @@ namespace CYM.DLC
                 Native.AddBuildData("Material", BuildRuleType.Directroy, internalRootPath);
                 Native.AddBuildData("Prefab", BuildRuleType.Directroy, internalRootPath);
                 Native.AddBuildData("System", BuildRuleType.Directroy, internalRootPath);
+                Native.AddBuildData("UI",BuildRuleType.Directroy, internalRootPath);
                 Native.LoadConfig(Data, CopyDirectory);
 
                 //初始化扩展DLC

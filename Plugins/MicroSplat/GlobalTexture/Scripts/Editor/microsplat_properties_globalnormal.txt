@@ -1,0 +1,4 @@
+
+      _GlobalNormalTex("Global Normal", 2D) = "bump" {}
+      _GlobalNormalFade("Global Normmal Fade", Vector) = (50, 150, 1, 1)
+      _GlobalNormalUVScale("UV Scale", Vector) = (1, 1, 0, 0)

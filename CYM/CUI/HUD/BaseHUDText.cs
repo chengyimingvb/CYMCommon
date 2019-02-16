@@ -18,15 +18,15 @@ namespace CYM.UI
         #endregion
 
         #region methon
-        public override void Init(object text,Transform followObj)
+        public override void Init(object text,BaseUnit unit,Transform followObj)
         {
-            base.Init(text, followObj);
+            base.Init(text, unit, followObj);
             if(Text != null)
                 Text.text = (string)text;
         }
-        protected override void Update()
+        public override void OnUpdate()
         {
-            base.Update();
+            base.OnUpdate();
             if(Text!=null)
                 Text.color = Color;
         }

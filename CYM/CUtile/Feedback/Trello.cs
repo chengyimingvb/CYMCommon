@@ -351,13 +351,13 @@ namespace CYM.Utile
             string requestUrl = string.Format("{0}/members/me?key={1}&token={2}", API_URI, APP_KEY, token);
 
             // make request
-            WWW request = new WWW(requestUrl);
+            UnityWebRequest request = new UnityWebRequest(requestUrl);
             while (!request.isDone)
             {
                 // wait until request is finished
 #if UNITY_EDITOR
                 if (!silent)
-                    UnityEditor.EditorUtility.DisplayProgressBar("Testing token", "", request.progress);
+                    UnityEditor.EditorUtility.DisplayProgressBar("Testing token", "", request.downloadProgress);
 #endif
             }
 

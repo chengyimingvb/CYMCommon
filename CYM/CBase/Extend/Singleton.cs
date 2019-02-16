@@ -16,7 +16,7 @@ namespace CYM
     {
         static readonly object padlock = new object();
         private static T singleton;
-        public static T Instance
+        public static T Ins
         {
             get
             {

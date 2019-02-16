@@ -13,12 +13,17 @@ using System.Runtime.InteropServices;
 using DG.Tweening;
 using KinematicCharacterController;
 using UnityEngine;
+using UnityEngine.Experimental.Input;
+
 namespace CYM
 {
     [RequireComponent(typeof(BaseGlobalMonoMgr))]
     public class BaseGlobal : BaseCoreMono
     {
+        #region Inspector
         public List<GameObject> InstantiateObjs;
+        public InputActionAssetReference InputAssetReference;
+        #endregion
 
         #region need New :这里的对象必须在基类里面手动赋值
         public static BaseGlobal Ins { get; protected set; }
@@ -47,6 +52,9 @@ namespace CYM
         public IBasePlotMgr PlotMgr { get; protected set; }
         public IBaseDBMgr DBMgr { get; protected set; }
         public IBaseDifficultMgr DiffMgr { get; protected set; }
+        public IBaseScreenMgr ScreenMgr { get; protected set; }
+        public IBaseTalkMgr TalkMgr { get; protected set; }
+        public IBaseNarrationMgr NarrationMgr { get; protected set; }
         public BaseAnalyticsMgr AnalyticsMgr { get; protected set; }
         public BaseFeedbackMgr FeedbackMgr { get; protected set; }
         public BasePrefsMgr PrefsMgr { get; protected set; }
@@ -54,6 +62,7 @@ namespace CYM
         public BaseDateTimeMgr DateTimeMgr { get; protected set; }
         public BaseLogicTurnMgr LogicTurnMgr { get; protected set; }
         public BaseLogoMgr LogoMgr { get; protected set; }
+        public BaseExcelMgr ExcelMgr { get; protected set; }
         #endregion
 
         #region 非必要组件
@@ -62,17 +71,25 @@ namespace CYM
         #endregion
 
         #region prop
+        public static GameObject TempGO { get; private set; }
+        public static Transform TempTrans => TempGO.transform;
         public BaseCoroutineMgr CommonCoroutine { get; protected set; }
         public BaseCoroutineMgr MainUICoroutine { get; protected set; }
         public BaseCoroutineMgr BattleCoroutine { get; protected set; }
         #endregion
 
         #region methon
+        public override LayerData LayerData =>BaseConstMgr.Layer_System;
         public override void Awake()
         {
             if (InstantiateObjs != null)
                 foreach (var item in InstantiateObjs)
                     GameObject.Instantiate(item);
+            if (TempGO == null)
+            {
+                TempGO = new GameObject("TempGO");
+                TempGO.hideFlags = HideFlags.HideInHierarchy;
+            }
             Application.wantsToQuit += OnWantsToQuit;
             Ins = this;
             MonoType = MonoType.Global;
@@ -89,7 +106,6 @@ namespace CYM
 
             //CALLBACK
             LuaMgr.Callback_OnLuaParseEnd += OnLuaParsed;
-            //StartCoroutine(HideWindowBorder());
         }
         public override void OnSetNeedFlag()
         {
@@ -146,11 +162,6 @@ namespace CYM
         }
         public void OnApplicationQuit()
         {
-            //if (!Application.isEditor)
-            //{
-            //    System.Diagnostics.Process.GetCurrentProcess().Kill();
-            //    System.Environment.Exit(0);
-            //}
         }
         #endregion
 
@@ -227,6 +238,14 @@ namespace CYM
                 BattleCoroutine.Resume();
                 KinematicCharacterSystem.AutoSimulation = true;
             }
+        }
+        #endregion
+
+        #region get
+        public Transform GetTransform(Vector3 pos)
+        {
+            TempTrans.position = pos;
+            return TempTrans;
         }
         #endregion
 

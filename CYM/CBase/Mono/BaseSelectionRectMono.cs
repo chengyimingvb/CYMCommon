@@ -1,5 +1,4 @@
-﻿/* Copyright © 2014 Apex Software. All rights reserved. */
-namespace CYM
+﻿namespace CYM
 {
     using UnityEngine;
     public class BaseSelectionRectMono : BaseCoreMono

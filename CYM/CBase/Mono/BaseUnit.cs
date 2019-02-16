@@ -37,19 +37,20 @@ namespace CYM
         /// 单位的ID
         /// </summary>
         [FoldoutGroup("Base"), SerializeField, Tooltip("单位的TDID")]
-        protected string TDID = "";
+        protected new string TDID = "";
         /// <summary>
         /// 队伍
         /// </summary>
         [FoldoutGroup("Base"), MinValue(0), SerializeField, Tooltip("单位的队伍")]
         public int Team = 0;
-        #endregion
-
-        #region prop
         /// <summary>
         /// 是否自动初始化数据,通过Spawn创建的AutoInit = false
         /// </summary>
-        public bool AutoInit { get; set; } = true;
+        [FoldoutGroup("Base"), SerializeField, Tooltip("自动初始化")]
+        protected bool AutoInit = true;
+        #endregion
+
+        #region pub
         /// <summary>
         /// 是否死亡
         /// </summary>
@@ -66,6 +67,19 @@ namespace CYM
         /// 上一帧被渲染
         /// </summary>
         public bool IsLastRendered { get; private set; } = false;
+        #endregion
+
+        #region prop
+        protected IBaseScreenMgr ScreenMgr => SelfBaseGlobal.ScreenMgr;
+        #endregion
+
+        #region Callback
+        public event Callback Callback_OnMouseDown;
+        public event Callback Callback_OnMouseUp;
+        public event Callback Callback_OnMouseEnter;
+        public event Callback Callback_OnMouseExit;
+        public event Callback Callback_OnBeSelected;
+        public event Callback Callback_OnUnBeSelected;
         #endregion
 
         #region life
@@ -102,9 +116,14 @@ namespace CYM
         /// <param name="team"></param>
         public virtual void OnSpawnInit(string id,int team)
         {
+            AutoInit = false;
             SetTDID(id);
             SetTeam(team);
             Init();
+            foreach (var item in componets)
+            {
+                item.OnSpawnInit(id,team);
+            }
         }
         public override void Birth()
         {
@@ -167,11 +186,11 @@ namespace CYM
         {
             if (tdid.IsInvStr())
             {
-                TDID = gameObject.name;
+                base.TDID = TDID = gameObject.name;
             }
             else
             {
-                TDID = tdid;
+                base.TDID = TDID = tdid;
             }
         }
         #endregion
@@ -190,7 +209,7 @@ namespace CYM
         /// <returns></returns>
         public virtual bool IsLocalPlayer()
         {
-            return true;
+            return ScreenMgr.BaseLocalPlayer == this;
         }
         /// <summary>
         /// 是否为其他玩家
@@ -198,7 +217,7 @@ namespace CYM
         /// <returns></returns>
         public virtual bool IsPlayerCtrl()
         {
-            return true;
+            return IsLocalPlayer();
         }
         /// <summary>
         /// 是否是敌人
@@ -206,9 +225,23 @@ namespace CYM
         /// <returns></returns>
         public virtual bool IsEnemy(BaseUnit other)
         {
-            if (other == null)
-                return false;
             return other.Team != Team;
+        }
+        /// <summary>
+        /// 是否是友军
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool IsFriend(BaseUnit other)
+        {
+            return other.Team == Team;
+        }
+        /// <summary>
+        /// Self or Friend
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool IsSOF(BaseUnit other)
+        {
+            return IsFriend(other) || IsSelf(other);
         }
         /// <summary>
         /// 是否为本地玩家的对立面
@@ -256,6 +289,32 @@ namespace CYM
         protected virtual void OnBeUnRender()
         {
 
+        }
+        protected virtual void OnMouseDown()
+        {
+            Callback_OnMouseDown?.Invoke();
+        }
+
+        protected virtual void OnMouseEnter()
+        {
+            Callback_OnMouseEnter?.Invoke();
+        }
+
+        protected virtual void OnMouseExit()
+        {
+            Callback_OnMouseExit?.Invoke();
+        }
+        protected virtual void OnMouseUp()
+        {
+            Callback_OnMouseUp?.Invoke();
+        }
+        public virtual void OnBeSelected()
+        {
+            Callback_OnBeSelected?.Invoke();
+        }
+        public virtual void OnUnBeSelected()
+        {
+            Callback_OnUnBeSelected?.Invoke();
         }
         #endregion
     }

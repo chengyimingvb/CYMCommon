@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using CYM;
 using UnityEngine;
-//using WhatA2D;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
@@ -21,6 +20,7 @@ namespace CYM
 {
     public class BaseMono : MonoBehaviour
     {
+        #region base
         private Transform _cacheTransform;
         public Transform Trans
         {
@@ -53,8 +53,10 @@ namespace CYM
         public Renderer[] Renderers { get { return _cacheRenderers ?? (_cacheRenderers = GO.GetComponentsInChildren<Renderer>()); } }
         private Transform[] _cacheTransforms;
         public Transform[] Transforms { get { return _cacheTransforms ?? (_cacheTransforms = GO.GetComponentsInChildren<Transform>()); } }
+        public virtual string GOName {get{return gameObject.name;} set{gameObject.name=value;}}
+        #endregion
 
-        #region
+        #region regular data
         public Vector3 Forward
         {
             get
@@ -140,7 +142,7 @@ namespace CYM
         }
         #endregion
 
-        #region methon
+        #region life
         public virtual void OnBeSetup()
         {
 
@@ -164,7 +166,7 @@ namespace CYM
 
         }
 
-        public virtual T SetupMonoComponet<T>() where T : BaseMono
+        public virtual T SetupMonoComponent<T>() where T : BaseMono
         {
             var temp = GO.GetComponentInChildren<T>();
             if(temp==null)
@@ -174,7 +176,16 @@ namespace CYM
             temp.OnBeSetup();
             return temp;
         }
-        public virtual T SetupUnityComponet<T>() where T : MonoBehaviour
+        public virtual T SetupMonoBehaviour<T>() where T : MonoBehaviour
+        {
+            var temp = GO.GetComponentInChildren<T>();
+            if (temp == null)
+            {
+                temp = EnsureComponet<T>();
+            }
+            return temp;
+        }
+        public T SetupComponent<T>() where T:Component
         {
             var temp = GO.GetComponentInChildren<T>();
             if (temp == null)
@@ -291,15 +302,7 @@ namespace CYM
         {
             SetLayer((int)layer,allChild);
         }
-
-        /// <summary>
-        /// 名称
-        /// </summary>
-        public virtual string Name => name;
         #endregion
-
-
-
     }
 
 }

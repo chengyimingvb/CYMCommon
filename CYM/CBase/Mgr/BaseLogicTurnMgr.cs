@@ -12,7 +12,7 @@ using CYM.UI;
 using CYM.AI;
 namespace CYM
 {
-    public class BaseLogicTurnMgr : BaseGlobalCoreMgr
+    public class BaseLogicTurnMgr : BaseGFlowMgr
     {
         #region set
         public void NextTurn()

@@ -30,7 +30,8 @@ namespace CYM
     /// </summary>
     /// <typeparam name="TTable"></typeparam>
     /// <typeparam name="TData"></typeparam>
-    public class BaseBattleMgr<TData> : BaseGlobalCoreMgr, IBaseBattleMgr, ITableDataMgr<TData> where TData : TDBaseBattleData, new()
+    public class BaseBattleMgr<TData> : BaseGFlowMgr, IBaseBattleMgr, ITableDataMgr<TData> 
+        where TData : TDBaseBattleData, new()
     {
         #region Callback
         public event Callback Callback_OnStartNewGame;
@@ -327,6 +328,7 @@ namespace CYM
         /// <summary>
         /// 加载战场
         /// </summary>
+        /// readData:是否读取数据
         /// <returns></returns>
         IEnumerator<float> _LoadBattle(bool readData = true)
         {
@@ -359,8 +361,8 @@ namespace CYM
             //这里必须延迟一帧,等待UI创建,注册事件
             yield return Timing.WaitForOneFrame;
             //读取数据前,资源加载
-            yield return Timing.WaitUntilDone(BattleCoroutine.Run(BeforeLoadResources()));
-            Callback_OnLoadingProgressChanged?.Invoke("BeforeLoadResources", 0.9f);
+            yield return Timing.WaitUntilDone(BattleCoroutine.Run(BeforeReadData()));
+            Callback_OnLoadingProgressChanged?.Invoke("BeforeReadData", 0.9f);
             if (readData)
             {
                 //读取战场数据
@@ -370,13 +372,14 @@ namespace CYM
             }
             else
             {
+                //不读取数据,适用于闯关
                 yield return Timing.WaitForSeconds(0.1f);
             }
             //增加加载战场次数
             LoadBattleCount++;
             //读取数据后资源加载
-            yield return Timing.WaitUntilDone(BattleCoroutine.Run(AffterLoadResources()));
-            Callback_OnLoadingProgressChanged?.Invoke("AffterLoadResources", 0.95f);
+            yield return Timing.WaitUntilDone(BattleCoroutine.Run(AffterReadData()));
+            Callback_OnLoadingProgressChanged?.Invoke("AffterReadData", 0.95f);
             //卸载未使用的资源
             SelfBaseGlobal.DLCMgr.UnLoadBattleAssetBundle();
             GC.Collect();
@@ -437,7 +440,7 @@ namespace CYM
         /// 读取数据前加载资源
         /// </summary>
         /// <returns></returns>
-        protected virtual IEnumerator<float> BeforeLoadResources()
+        protected virtual IEnumerator<float> BeforeReadData()
         {
             yield return Timing.WaitForOneFrame;
         }
@@ -445,7 +448,7 @@ namespace CYM
         /// 读取数据后加载资源
         /// </summary>
         /// <returns></returns>
-        protected virtual IEnumerator<float> AffterLoadResources()
+        protected virtual IEnumerator<float> AffterReadData()
         {
             yield return Timing.WaitForOneFrame;
         }

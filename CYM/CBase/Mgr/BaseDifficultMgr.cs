@@ -29,7 +29,7 @@ namespace CYM
         public bool IsAnalytics = false;
         public bool IsHavePlot = true;
     }
-    public class BaseDifficultMgr<T> : BaseGlobalCoreMgr, IBaseDifficultMgr where T: BaseGameDiffData,new()
+    public class BaseDifficultMgr<T> : BaseGFlowMgr, IBaseDifficultMgr where T: BaseGameDiffData,new()
     {
         #region prop
         public T Setting { get; protected set; } = new T();

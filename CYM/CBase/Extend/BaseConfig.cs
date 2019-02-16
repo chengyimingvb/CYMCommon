@@ -33,6 +33,7 @@ namespace CYM
         protected object[] AddedObjs { get; private set; }
 
         #region prop
+        public bool IsSystem { get; set; } = false;
         public CloneType CloneType { get; set; } = CloneType.Memberwise;
         public string Icon { get; set; } = "";
         public string Desc { get; set; } = "";

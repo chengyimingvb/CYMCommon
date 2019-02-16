@@ -17,12 +17,23 @@ namespace CYM.UI
         /// 是否自动翻译
         /// </summary>
         public bool IsTrans = true;
-        public Func<string> Name = () => { return "None"; };
+        public Func<string> Name = null;
+        public string NameStr = BaseConstMgr.STR_Inv;
         public string GetName()
         {
-            if (IsTrans)
-                return BaseLanguageMgr.Get(Name.Invoke());
-            return Name.Invoke();
+            string str = NameStr;
+            if (Name != null)
+            {
+                str = Name.Invoke();
+            }
+            return GetTransStr(str);
+        }
+
+        public string GetTransStr(string str)
+        {
+            if(IsTrans)
+                return BaseLanguageMgr.Get(str);
+            return str;
         }
     }
    
@@ -33,7 +44,7 @@ namespace CYM.UI
         [SerializeField]
         bool IsAnim = false;
         [SerializeField]
-        protected Text Text;
+        public Text Text;
         #endregion
 
         #region prop

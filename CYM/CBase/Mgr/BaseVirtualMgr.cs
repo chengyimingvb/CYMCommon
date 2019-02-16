@@ -14,11 +14,11 @@ using System.Collections.Generic;
 
 namespace CYM
 {
-    public class BaseVirtualMgr<T> : BaseGlobalCoreMgr, ISpawnMgr<T> where T : BaseVirtual,new()
+    public class BaseVirtualMgr<T> : BaseGFlowMgr, ISpawnMgr<T> where T : BaseVirtual,new()
     {
         #region ISpawnMgr
         public T Gold { get; set; }
-        public List<T> Data { get; set; } = new List<T>();
+        public DicList<T> Data { get; set; } = new DicList<T>();
         public event Callback<T> Callback_OnAdd;
         public event Callback<T> Callback_OnSpawnGold;
         public event Callback<T> Callback_OnSpawn;

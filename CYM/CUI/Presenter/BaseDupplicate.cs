@@ -223,6 +223,11 @@ namespace CYM.UI
             {
                 Transform temp = Trans.GetChild(i);
                 GOs.Add(temp.gameObject);
+                temp.gameObject.SetActive(false);
+            }
+            if (Prefab == null && GOs.Count>0)
+            {
+                Prefab = GOs[0];
             }
             if (Prefab == null)
             {
@@ -235,16 +240,22 @@ namespace CYM.UI
                 CLog.Error($"不能使用基础UI Prefab 初始化:{Prefab.name}");
 
             //差值
-            int subCount = BaseMathUtils.Clamp0(count - GOs.Count);
+            int subCount = count - GOs.Count;
 
-            //生成剩余的游戏对象
-            for (int i = 0; i < subCount; ++i)
+            if (subCount > 0)
             {
-                GameObject temp = GameObject.Instantiate(Prefab, this.RectTrans.position, this.RectTrans.rotation) as GameObject;
-                (temp.transform as RectTransform).SetParent(this.RectTrans);
-                (temp.transform as RectTransform).localScale = Vector3.one;
-                GOs.Add(temp);
+                //生成剩余的游戏对象
+                for (int i = 0; i < subCount; ++i)
+                {
+                    GameObject temp = GameObject.Instantiate(Prefab, this.RectTrans.position, this.RectTrans.rotation) as GameObject;
+                    (temp.transform as RectTransform).SetParent(this.RectTrans);
+                    (temp.transform as RectTransform).localScale = Vector3.one;
+                    GOs.Add(temp);
+                }
             }
+
+            for(int i=0;i< count;++i)
+                GOs[i].SetActive(true);
 
             //设置数量
             Count = GOs.Count;

@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-
+using CYM;
 /// <summary>
 /// ISRTS Camera
 /// Created by SPINACH.
@@ -19,6 +19,8 @@ namespace CYM.Cam
 
         public float DesktopMoveDragSpeed { get; set; } = 10.0f;
         public float DesktopMoveSpeed { get;  set; } = 300;
+        public float DesktopKeyMoveSpeed { get; set; } = 2;
+        public float DesktopScrollSpeed { get; set; } = 1;
 
         public CamScrollAnimationType scrollAnimationType;
         public AnimationCurve scrollXAngle = AnimationCurve.Linear(0, 0, 1, 1);
@@ -64,10 +66,11 @@ namespace CYM.Cam
         public bool mouseRotateControl;
         public bool screenEdgeMovementControl;
         public bool mouseDragControl;
+        public bool keyBoardControl;
         public bool mouseScrollControl;
         public bool allowFollow;
 
-        public bool controlDisabled = false;
+        public BoolState ControlDisabled { get; private set; } = new BoolState();
 
         static private RTSCamera self;
 
@@ -95,7 +98,7 @@ namespace CYM.Cam
         #endregion
 
         #region static_methods
-        static public void LockFixedPointForMain(Transform pos)
+        public void LockFixedPointForMain(Transform pos)
         {
             if (self.allowFollow)
             {
@@ -108,18 +111,18 @@ namespace CYM.Cam
             }
         }
 
-        static public void UnlockFixedPointForMain()
+        public void UnlockFixedPointForMain()
         {
             self.fixedPoint = null;
         }
 
-        static public void JumpToTargetForMain(Transform target)
+        public void JumpToTargetForMain(Transform target)
         {
             self.objectPos.x = target.position.x;
             self.objectPos.z = target.position.z;
         }
 
-        static public void FollowForMain(Transform target)
+        public void FollowForMain(Transform target)
         {
             if (self.allowFollow)
             {
@@ -128,13 +131,13 @@ namespace CYM.Cam
             }
         }
 
-        static public void CancelFollowForMain()
+        public void CancelFollowForMain()
         {
             self.followingTarget = null;
         }
 
-        static public Transform GetFollowingTarget() { return self.followingTarget; }
-        static public Transform GetFixedPoint() { return self.fixedPoint; }
+        public Transform GetFollowingTarget() { return self.followingTarget; }
+        public Transform GetFixedPoint() { return self.fixedPoint; }
         #endregion
 
         public void LockFixedPoint(Transform pos)
@@ -214,15 +217,15 @@ namespace CYM.Cam
 
             if (screenEdgeMovementControl)
             {
-                if (Input.mousePosition.y >= Screen.height - 1f) Move(selfT.forward, DesktopMoveSpeed * Time.deltaTime);
-                if (Input.mousePosition.y <= 1) Move(-selfT.forward, DesktopMoveSpeed * Time.deltaTime);
-                if (Input.mousePosition.x <= 1) Move(-selfT.right, DesktopMoveSpeed * Time.deltaTime);
-                if (Input.mousePosition.x >= Screen.width - 1f) Move(selfT.right, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.y >= Screen.height - 1f) _Move(selfT.forward, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.y <= 1) _Move(-selfT.forward, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.x <= 1) _Move(-selfT.right, DesktopMoveSpeed * Time.deltaTime);
+                if (Input.mousePosition.x >= Screen.width - 1f) _Move(selfT.right, DesktopMoveSpeed * Time.deltaTime);
             }
 
             if (mouseScrollControl)
             {
-                Scroll(Input.GetAxis("Mouse ScrollWheel") * -desktopScrollSpeed);
+                Scroll(Input.GetAxis("Mouse ScrollWheel") * -DesktopScrollSpeed);
             }
 
             if (mouseDragControl)
@@ -239,19 +242,24 @@ namespace CYM.Cam
 
                     Vector3 modifyRight = -Vector3.right;
                     //modifyRight = -selfT.right
-                    NormalizedMove(modifyRight * mouseX, DesktopMoveDragSpeed * Time.deltaTime);
+                    _NormalizedMove(modifyRight * mouseX, DesktopMoveDragSpeed * Time.deltaTime);
                     Vector3 modifyForward = Vector3.forward;
                     //modifyForward = -(selfT.forward + selfT.up * 0.5f).normalized ;
-                    NormalizedMove(-modifyForward * mouseY, DesktopMoveDragSpeed * Time.deltaTime);
+                    _NormalizedMove(-modifyForward * mouseY, DesktopMoveDragSpeed * Time.deltaTime);
                 }
             }
 
             UpdateTransform();
         }
 
-        public void Move(Vector3 dir, float offset)
+        public void Move(Vector3 dir)
         {
-            if (controlDisabled) return;
+            _Move(dir, DesktopMoveSpeed * Time.deltaTime);
+        }
+
+        void _Move(Vector3 dir, float offset)
+        {
+            if (ControlDisabled.IsIn()) return;
 
             dir.y = 0;
             dir.Normalize();
@@ -267,9 +275,9 @@ namespace CYM.Cam
             objectPos.z = Mathf.Clamp(objectPos.z, bound.yMin, bound.yMax);
         }
 
-        public void NormalizedMove(Vector3 dir, float offset)
+        void _NormalizedMove(Vector3 dir, float offset)
         {
-            if (controlDisabled) return;
+            if (ControlDisabled.IsIn()) return;
 
             dir.y = 0;
             dir *= offset;
@@ -286,7 +294,7 @@ namespace CYM.Cam
 
         public void Rotate(float dir)
         {
-            if (controlDisabled) return;
+            if (ControlDisabled.IsIn()) return;
 
             wantYAngle += dir;
             BaseMathUtils.WrapAngle(wantYAngle);
@@ -294,7 +302,7 @@ namespace CYM.Cam
 
         public void Scroll(float value)
         {
-            if (controlDisabled) return;
+            if (ControlDisabled.IsIn()) return;
 
             scrollValue += value;
             scrollValue = Mathf.Clamp01(scrollValue);

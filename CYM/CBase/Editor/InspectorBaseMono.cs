@@ -27,9 +27,6 @@ namespace CYM
             base.OnInspectorGUI();
             if (preFabOverride == null)
                 return;
-            //this.DrawDefaultInspector ();
-
-            PreFabOverride.MakeFieldsOverride(preFabOverride);
 
         }
     }

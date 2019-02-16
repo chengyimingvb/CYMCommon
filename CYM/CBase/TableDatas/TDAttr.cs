@@ -150,6 +150,7 @@ namespace CYM
     public class TDAttr<T> : LuaTDMgr<TDAttrData> where T:struct
     {
         public static Dictionary<Type, List<TDAttrData>> AttrDataList = new Dictionary<Type, List<TDAttrData>>();
+        public static Dictionary<Type, Dictionary<string,TDAttrData>> AttrDataDic = new Dictionary<Type, Dictionary<string,TDAttrData>>();
         public TDAttr() : base()
         {
 
@@ -165,6 +166,7 @@ namespace CYM
             //添加到全局属性表
             Type type = typeof(T);
             List<TDAttrData> data = new List<TDAttrData>();
+            Dictionary<string, TDAttrData> dataDic = new Dictionary<string, TDAttrData>();
             string[] names = Enum.GetNames(type);
             foreach (var item in names)
             {
@@ -175,8 +177,10 @@ namespace CYM
                     continue;
                 }
                 data.Add(val);
+                dataDic.Add(item,val);
             }
             AttrDataList.Add(type, data);
+            AttrDataDic.Add(type, dataDic);
         }
     }
 

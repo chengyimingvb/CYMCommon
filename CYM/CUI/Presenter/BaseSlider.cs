@@ -9,7 +9,7 @@ namespace CYM.UI
     public class BaseSliderData : BaseButtonData
     {
         public Callback<float> OnValueChanged;
-        public Func<float,string> ValueText=(x)=> { return BaseUIUtils.OptionalTwoDigit(x); };
+        public Func<float,string> ValueText=(x)=> { return BaseUIUtils.Percent(x); };
         public Func<float> Value = () => 0;
         public float MaxVal = 1.0f;
         public float MinVal = 0.0f;
@@ -30,15 +30,16 @@ namespace CYM.UI
         {
             base.Awake();
         }
-        public override void Init(BaseSliderData data)//, bool isAutoRefresh = true
+        public override void Init(BaseSliderData data)
         {
-            base.Init(data);//, isAutoRefresh
+            base.Init(data);
             if (Slider != null)
             {
 
                 Slider.onValueChanged.AddListener(OnValueChanged);
                 Slider.maxValue = data.MaxVal;
                 Slider.minValue = data.MinVal;
+                Slider.value = data.Value.Invoke();
             }
         }
         public override void Cleanup()

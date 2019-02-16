@@ -14,19 +14,12 @@ namespace CYM
 {
     public class BaseSimpleMoveCtrl : BaseMono 
     {
-        [PreFabOverride]
         public Vector3 TargetPos = Vector3.zero;
-        [PreFabOverride]
         public float TranslationSpeed = 1;
-        [PreFabOverride]
         public Vector3 RotationAxis = Vector3.up;
-        [PreFabOverride]
         public float RotSpeed = 10;
-        [PreFabOverride]
         public Vector3 OscillationAxis = Vector3.zero;
-        [PreFabOverride]
         public float OscillationPeriod = 10;
-        [PreFabOverride]
         public float OscillationSpeed = 10;
 
         private Vector3 _originalPosition;

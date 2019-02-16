@@ -18,6 +18,8 @@ public partial class MicroSplatTerrainEditor : Editor
    static GUIContent geoTexOverride = new GUIContent("Geo Texture Override", "If you want each terrain object to have it's own geo texture instead of the one defined in the material, add it here");
    static GUIContent geoTintOverride = new GUIContent("Tint Texture Override", "If you want each terrain object to have it's own global tint instead of the one defined in the material, add it here");
    static GUIContent geoNormalOverride = new GUIContent("Global Normal Override", "If you want each terrain object to have it's own global normal instead of the one defined in the material, add it here");
+   static GUIContent clipMapOverride = new GUIContent("Clip Map Override", "Provide a unique clip map for each terrain");
+
    static GUIContent CTemplateMaterial = new GUIContent("Template Material", "Material to use for this terrain");
 
    static GUIContent CVSGrassMap = new GUIContent("Grass Map", "Grass Map from Vegetation Studio");
@@ -138,7 +140,6 @@ public partial class MicroSplatTerrainEditor : Editor
       // but I think this will be most of the cases?
 
       MicroSplatUtilities.DrawTextureField(t, CCustomSplat0, ref t.customControl0, "_CUSTOMSPLATTEXTURES");
-      
       MicroSplatUtilities.DrawTextureField(t, CCustomSplat1, ref t.customControl1, "_CUSTOMSPLATTEXTURES");
       MicroSplatUtilities.DrawTextureField(t, CCustomSplat2, ref t.customControl2, "_CUSTOMSPLATTEXTURES");
       MicroSplatUtilities.DrawTextureField(t, CCustomSplat3, ref t.customControl3, "_CUSTOMSPLATTEXTURES");
@@ -152,6 +153,7 @@ public partial class MicroSplatTerrainEditor : Editor
       MicroSplatUtilities.DrawTextureField(t, geoTintOverride, ref t.tintMapOverride, "_GLOBALTINT");
 
       MicroSplatUtilities.DrawTextureField(t, geoNormalOverride, ref t.globalNormalOverride, "_GLOBALNORMALS");
+      MicroSplatUtilities.DrawTextureField(t, clipMapOverride, ref t.clipMap, "_ALPHAHOLETEXTURE");
 
 #if __MICROSPLAT_ADVANCED_DETAIL__
       DrawAdvancedModuleDetailGUI(t);      

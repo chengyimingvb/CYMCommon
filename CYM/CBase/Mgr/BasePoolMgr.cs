@@ -14,7 +14,7 @@ using UnityEngine;
 
 namespace CYM
 {
-    public class BasePoolMgr : BaseGlobalCoreMgr
+    public class BasePoolMgr : BaseGFlowMgr
     {
         #region member variable
         public SpawnPool Common { get;private set;}

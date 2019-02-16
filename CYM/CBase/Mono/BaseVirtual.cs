@@ -16,6 +16,7 @@ namespace CYM
     public class BaseVirtual : ICYMBase, IDBDataConvert, IUnit
     {
         public int ID { get; set; }
+        public string TDID { get; set; }
 
         #region unit
         public virtual void Birth()

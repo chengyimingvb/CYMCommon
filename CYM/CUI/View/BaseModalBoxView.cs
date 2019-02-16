@@ -11,7 +11,7 @@ using CYM;
 using UnityEngine.EventSystems;
 namespace CYM.UI
 {
-    public class BaseModalBoxView : BaseUIView
+    public class BaseModalBoxView : BaseStaticUIView<BaseModalBoxView>
     {
         [SerializeField]
         BaseText Desc;
@@ -38,9 +38,9 @@ namespace CYM.UI
             base.OnCreatedView();
             Title.Data.IsTrans = false;
             Desc.Init(new BaseTextData() { Name = () => InputDesc, IsTrans = false });
-            Bnt1.Init(new BaseButtonData() { OnClick = OnClickBnt1, Name = () => InputBntStr1, IsTrans = false });
-            Bnt2.Init(new BaseButtonData() { OnClick = OnClickBnt2, Name = () => InputBntStr2, IsTrans = false });
-            Bnt3.Init(new BaseButtonData() { OnClick = OnClickBnt3, Name = () => InputBntStr3, IsTrans = false });
+            Bnt1?.Init(new BaseButtonData() { OnClick = OnClickBnt1, Name = () => InputBntStr1, IsTrans = false });
+            Bnt2?.Init(new BaseButtonData() { OnClick = OnClickBnt2, Name = () => InputBntStr2, IsTrans = false });
+            Bnt3?.Init(new BaseButtonData() { OnClick = OnClickBnt3, Name = () => InputBntStr3, IsTrans = false });
         }
         #endregion
 
@@ -53,7 +53,7 @@ namespace CYM.UI
         /// <param name="descKey"></param>
         /// <param name="BntOK"></param>
         /// <param name="paras"></param>
-        public void ShowOK(string key,string descKey,Callback BntOK,params object[] paras)
+        public new void ShowOK(string key,string descKey,Callback BntOK,params object[] paras)
         {
             Show(GetStr(key),GetStr(descKey,paras),GetStr("Bnt_确认"),BntOK,null,null,null,null,true);
         }
@@ -63,7 +63,7 @@ namespace CYM.UI
         /// <param name="descKey"></param>
         /// <param name="BntOK"></param>
         /// <param name="paras"></param>
-        public void ShowOK(string descKey, Callback BntOK, params object[] paras)
+        public new void ShowOK(string descKey, Callback BntOK, params object[] paras)
         {
             Show("Information", GetStr(descKey, paras), GetStr("Bnt_确认"), BntOK, null, null, null, null, true);
         }
@@ -75,7 +75,7 @@ namespace CYM.UI
         /// <param name="BntOK"></param>
         /// <param name="BntCancle"></param>
         /// <param name="paras"></param>
-        public void ShowOKCancle(string key, string descKey, Callback BntOK, Callback BntCancle, params object[] paras)
+        public new void ShowOKCancle(string key, string descKey, Callback BntOK, Callback BntCancle, params object[] paras)
         {
             Show(GetStr(key), GetStr(descKey, paras), GetStr("Bnt_确认"), BntOK, GetStr("Bnt_取消"), BntCancle, null, null, true);
         }
@@ -107,9 +107,9 @@ namespace CYM.UI
             Callback_Bnt1 = Bnt1;
             Callback_Bnt2 = Bnt2;
             Callback_Bnt3 = Bnt3;
-            this.Bnt1.Show(!BntStr1.IsInvStr());
-            this.Bnt2.Show(!BntStr2.IsInvStr());
-            this.Bnt3.Show(!BntStr3.IsInvStr());
+            this.Bnt1?.Show(!BntStr1.IsInvStr());
+            this.Bnt2?.Show(!BntStr2.IsInvStr());
+            this.Bnt3?.Show(!BntStr3.IsInvStr());
             BntClose.Show(isCanClose);
 
         }

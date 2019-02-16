@@ -1,0 +1,11 @@
+
+      _ClusterNoise("Cluster Noise", 2D) = "white" {}
+      _ClusterParams("Cluster Params", Vector) = (6, 6, 0, 0)
+      [NoScaleOffset]_ClusterDiffuse2 ("Diffuse Array", 2DArray) = "white" {}
+      [NoScaleOffset]_ClusterNormal2 ("Normal Array", 2DArray) = "bump" {}
+      _ClusterContrast("Cluster Contrast", Range(0.001, 1)) = 0.8
+      _ClusterScaleVar("Cluster Scale Variation", Range(0.0, 0.2)) = 0.05
+      _ClusterBoost("Cluster Boost", Range(0.5, 3.0)) = 1
+
+
+

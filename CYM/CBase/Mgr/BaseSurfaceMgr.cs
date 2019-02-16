@@ -22,6 +22,9 @@ namespace CYM
         public GameObject Model { get; protected set; }//模型自身的渲染器的跟节点
         private Highlighter highlighter;
         public bool IsEnableRenders { get; private set; }
+        protected virtual bool IsNeedHighlighter { get; } //禁用高亮效果,这样可以使用GPUInstance
+        protected virtual bool IsUseSurfaceMaterial { get; } //禁用材质效果,这样可以使用GPUInstance
+        protected BaseGRMgr GRMgr => SelfBaseGlobal.GRMgr;
         #endregion
 
         #region property
@@ -67,20 +70,24 @@ namespace CYM
                     }
                 }
             }
-            highlighter = Mono.EnsureComponet<Highlighter>();
             IsEnableRenders = true;
-            Surface_Source.Init(this);
+            if(IsUseSurfaceMaterial)
+                Surface_Source.Init(this);
+            if (IsNeedHighlighter)
+                highlighter = Mono.EnsureComponet<Highlighter>();
         }
         public override void Birth()
         {
             base.Birth();
-            Surface_Source.Use();
+            if(IsUseSurfaceMaterial)
+                Surface_Source.Use();
             Off();
         }
         public override void OnUpdate()
         {
             base.OnUpdate();
-            CurSurface?.Update();
+            if (IsUseSurfaceMaterial)
+                CurSurface?.Update();
         }
         protected virtual void AssianModel()
         {
@@ -122,43 +129,49 @@ namespace CYM
         #region highlight
         public void ConstantOn(Color col, float time = 0.25f,float duration=1.0f)
         {
-            //if (CoroutineHandle_Constant != null)
             SelfBaseGlobal.BattleCoroutine.Kill(CoroutineHandle_Constant);
             CoroutineHandle_Constant = SelfBaseGlobal.BattleCoroutine.Run(_Constant(col, time, duration));
         }
         public void ConstantOff(float time = 0.25f)
         {
-            highlighter.ConstantOff(time);
+            if(highlighter)
+                highlighter.ConstantOff(time);
         }
         public void FlashingOn(Color color1, Color color2, float freq,float duration=1.0f)
         {
-            //if (CoroutineHandle_Flash != null)
             SelfBaseGlobal.BattleCoroutine.Kill(CoroutineHandle_Flash);
             CoroutineHandle_Flash =SelfBaseGlobal.BattleCoroutine.Run(_Flash(color1,  color2,  freq,  duration ));
         }
         public void FlashingOn(float freq)
         {
-            highlighter.FlashingOn(freq);
+            if (highlighter)
+                highlighter.FlashingOn(freq);
         }
         public void FlashingOff()
         {
-            highlighter.FlashingOff();
+            if (highlighter)
+                highlighter.FlashingOff();
         }
         public void Off()
         {
-            highlighter.Off();
+            if (highlighter)
+                highlighter.Off();
         }
         #endregion
 
         #region
         IEnumerator<float> _Flash(Color color1, Color color2, float freq, float duration = 1.0f)
         {
+            if (highlighter == null)
+                yield break;
             highlighter.FlashingOn(color1, color2, freq);
             yield return Timing.WaitForSeconds(duration);
             highlighter.FlashingOff();
         }
         IEnumerator<float> _Constant(Color color1, float time, float duration = 1.0f)
         {
+            if (highlighter == null)
+                yield break;
             highlighter.ConstantOn(color1, time);
             yield return Timing.WaitForSeconds(duration);
             highlighter.ConstantOff(time);

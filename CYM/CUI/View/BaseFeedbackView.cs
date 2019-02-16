@@ -31,7 +31,7 @@ namespace CYM
         {
             base.OnCreatedView();
             BntClose.Data.IsInteractable = IsSubmitInteractable;
-            BntSubmit.Init(new BaseButtonData {OnClick = OnSubmit ,IsInteractable = IsSubmitInteractable ,Name=()=>"Submit",IsTrans=false});
+            BntSubmit.Init(new BaseButtonData {OnClick = OnSubmit ,IsInteractable = IsSubmitInteractable ,NameStr="Submit",IsTrans=false});
             InputTitle.Init(new BaseInputFieldData { OnEndEdit = OnInputTitleEndEdit, IsInteractable = IsSubmitInteractable });
             InputDesc.Init(new BaseInputFieldData { OnEndEdit = OnInputDescEndEdit, IsInteractable = IsSubmitInteractable });
 

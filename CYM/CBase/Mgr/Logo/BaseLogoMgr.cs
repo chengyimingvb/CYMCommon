@@ -18,7 +18,7 @@ using System;
 
 namespace CYM
 {
-    public class BaseLogoMgr : BaseGlobalCoreMgr, ILoader
+    public class BaseLogoMgr : BaseGFlowMgr, ILoader
     {
         Tweener tweener;
         UIConfig LogoConfig => UIConfig.Ins;

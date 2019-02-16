@@ -1,0 +1,137 @@
+
+         #if _ANTITILEARRAYNORMAL || _ANTITILEARRAYDISTANCE || _ANTITILEARRAYDETAIL
+         UNITY_DECLARE_TEX2DARRAY(_AntiTileArray);
+         float4 _AntiTileArray_TexelSize;
+         half3 _AntiTileDetailNoiseScaleFadeStr;
+         half4 _AntiTileDistanceNoiseScaleFadeStr;
+         half2 _AntiTileNormalNoiseScaleStr;
+         #endif
+
+
+         void ApplyAntiTilePerTex(inout RawSamples o, Config config, float camDist, float3 worldPos, float3 worldNormalVertex)
+         {
+            #if _ANTITILEPERTEX
+               SAMPLE_PER_TEX(strs, 14.5, config, half4(1.0, 1.0, 1.0, 1.0));
+            #else
+               half4 strs0 = half4(1,1,1,1);
+               half4 strs1 = half4(1,1,1,1);
+               half4 strs2 = half4(1,1,1,1);
+               half4 strs3 = half4(1,1,1,1);
+            #endif
+
+            #if _ANTITILEARRAYDETAIL
+            {
+               float2 uv = config.uv * _UVScale.xy * _AntiTileDetailNoiseScaleFadeStr.x;
+
+               if (camDist < _AntiTileDetailNoiseScaleFadeStr.y)
+               {
+                  
+                  half fade = 1.0 - ((_AntiTileDetailNoiseScaleFadeStr.y - camDist) / _AntiTileDetailNoiseScaleFadeStr.y);
+                  fade = 1.0 - (fade*fade);
+                  fade *= _AntiTileDetailNoiseScaleFadeStr.z;
+
+                  MIPFORMAT mipLevel = 0;
+                  #if _USELODMIP
+                     mipLevel = ComputeMipLevel(uv, _AntiTileArray_TexelSize.zw);
+                  #endif
+
+                  #if _USEGRADMIP
+                     mipLevel = float4(ddx(uv), ddy(uv));
+                  #endif
+
+                  half noise0 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv0.z), mipLevel).r;
+                  half noise1 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv1.z), mipLevel).r;
+                  #if !_MAX2LAYER
+                  half noise2 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv2.z), mipLevel).r;
+                  #endif
+                  #if !_MAX2LAYER && !_MAX3LAYER
+                  half noise3 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv3.z), mipLevel).r;
+                  #endif
+
+                  o.albedo0.rgb = lerp(o.albedo0.rgb, BlendMult2X(o.albedo0.rgb, noise0.xxx), fade * strs0.y);
+                  o.albedo1.rgb = lerp(o.albedo1.rgb, BlendMult2X(o.albedo1.rgb, noise1.xxx), fade * strs1.y);
+                  #if !_MAX2LAYER
+                  o.albedo2.rgb = lerp(o.albedo2.rgb, BlendMult2X(o.albedo2.rgb, noise2.xxx), fade * strs2.y);
+                  #endif
+                  #if !_MAX2LAYER && !_MAX3LAYER
+                  o.albedo3.rgb = lerp(o.albedo3.rgb, BlendMult2X(o.albedo3.rgb, noise3.xxx), fade * strs3.y);
+                  #endif
+               }
+            }
+            #endif
+            #if _ANTITILEARRAYDISTANCE
+            {
+               float2 uv = config.uv * _AntiTileDistanceNoiseScaleFadeStr.x;
+
+               if (camDist > _AntiTileDistanceNoiseScaleFadeStr.y)
+               {
+                  float fade = saturate ((camDist - _AntiTileDistanceNoiseScaleFadeStr.y) / _AntiTileDistanceNoiseScaleFadeStr.z);
+                  fade *= _AntiTileDistanceNoiseScaleFadeStr.w;
+
+                  MIPFORMAT mipLevel = 0;
+                  #if _USELODMIP
+                     mipLevel = ComputeMipLevel(uv, _AntiTileArray_TexelSize.zw);
+                  #endif
+
+                  #if _USEGRADMIP
+                     mipLevel = float4(ddx(uv), ddy(uv));
+                  #endif
+
+                  half noise0 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv0.z), mipLevel).b;
+                  half noise1 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv1.z), mipLevel).b;
+                  #if !_MAX2LAYER
+                  half noise2 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv2.z), mipLevel).b;
+                  #endif
+                  #if !_MAX2LAYER && !_MAX3LAYER
+                  half noise3 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv3.z), mipLevel).b;
+                  #endif
+
+                  o.albedo0.rgb = lerp(o.albedo0.rgb, BlendMult2X(o.albedo0.rgb, noise0.xxx), fade * strs0.z);
+                  o.albedo1.rgb = lerp(o.albedo1.rgb, BlendMult2X(o.albedo1.rgb, noise1.xxx), fade * strs1.z);
+                  #if !_MAX2LAYER
+                  o.albedo2.rgb = lerp(o.albedo2.rgb, BlendMult2X(o.albedo2.rgb, noise2.xxx), fade * strs2.z);
+                  #endif
+                  #if !_MAX2LAYER && !_MAX3LAYER
+                  o.albedo3.rgb = lerp(o.albedo3.rgb, BlendMult2X(o.albedo3.rgb, noise3.xxx), fade * strs3.z);
+                  #endif
+               }
+            }
+            #endif
+
+
+            #if _ANTITILEARRAYNORMAL
+            {
+               float2 uv = config.uv * _AntiTileNormalNoiseScaleStr.x;
+
+               MIPFORMAT mipLevel = 0;
+               #if _USELODMIP
+                  mipLevel = ComputeMipLevel(uv, _AntiTileArray_TexelSize.zw);
+               #endif
+
+               #if _USEGRADMIP
+                  mipLevel = float4(ddx(uv), ddy(uv));
+               #endif
+
+               half2 noise0 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv0.z), mipLevel));
+               half2 noise1 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv1.z), mipLevel));
+               #if !_MAX2LAYER
+               half2 noise2 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv2.z), mipLevel));
+               #endif
+               #if !_MAX2LAYER && !_MAX3LAYER
+               half2 noise3 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv3.z), mipLevel));
+               #endif
+
+               o.normSAO0.xy = lerp(o.normSAO0.xy, BlendNormal2(o.normSAO0.xy, noise0.xy), _AntiTileNormalNoiseScaleStr.y * strs0.x);
+               o.normSAO1.xy = lerp(o.normSAO1.xy, BlendNormal2(o.normSAO1.xy, noise1.xy), _AntiTileNormalNoiseScaleStr.y * strs1.x);
+               #if !_MAX2LAYER
+               o.normSAO2.xy = lerp(o.normSAO2.xy, BlendNormal2(o.normSAO2.xy, noise2.xy), _AntiTileNormalNoiseScaleStr.y * strs2.x);
+               #endif
+               #if !_MAX2LAYER && !_MAX3LAYER
+               o.normSAO3.xy = lerp(o.normSAO3.xy, BlendNormal2(o.normSAO3.xy, noise3.xy), _AntiTileNormalNoiseScaleStr.y * strs3.x);
+               #endif
+            }
+            #endif
+
+
+         }
+

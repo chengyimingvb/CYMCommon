@@ -5,20 +5,20 @@ using UnityEngine.UI;
 using DG.Tweening;
 using UnityEngine.EventSystems;
 using DG.Tweening.Core;
+using Sirenix.OdinInspector;
+
 namespace CYM.UI
 {
     public class BaseUIView : BaseView
     {
         #region Inspector
-        [SerializeField]
+        [FoldoutGroup("Base"),SerializeField]
         protected BaseButton BntClose;
-        [SerializeField]
+        [FoldoutGroup("Base"), SerializeField]
         protected BaseText Title;
         #endregion
 
         #region 公共属性
-        public GraphicRaycaster GraphicRaycaster { get; protected set; }
-        public CanvasScaler CanvasScaler { get; protected set; }
         #endregion
 
         #region 内部
@@ -74,9 +74,7 @@ namespace CYM.UI
         #region life
         public override void Awake()
         {
-            base.Awake();
-            GraphicRaycaster = GetComponent<GraphicRaycaster>();
-            CanvasScaler = GetComponent<CanvasScaler>();
+            base.Awake(); 
             graphics = GetComponentsInChildren<Graphic>();
             canvasGroup = GetComponent<CanvasGroup>();
             if (canvasGroup == null && RectTrans != null)
@@ -197,12 +195,16 @@ namespace CYM.UI
         {
             if (IsShow == b && !force)
                 return;
-            float tempFade = 0.0f;
+            if (Delay == 0)
+                Delay = delay;
+
+            base.Show(b, fadeTime, delay, useGroup, force);
+            float mainShowTime = 0.0f;
             IsShow = b;
 
             //设置时长
-            if (fadeTime != null)tempFade = fadeTime.Value;
-            else tempFade = b ? InTime : OutTime;
+            if (fadeTime != null)mainShowTime = fadeTime.Value;
+            else mainShowTime = IsSameTime? Duration : ( b ? InTime : OutTime );
 
             //停止之前的tween
             if (alphaTween != null)alphaTween.Kill();
@@ -210,18 +212,22 @@ namespace CYM.UI
             if (moveTween != null) moveTween.Kill();
 
             //Alpha效果
-            alphaTween = DOTween.To(() => canvasGroup.alpha, x => canvasGroup.alpha = x, b ? 1.0f : 0.0f, tempFade);
+            alphaTween = DOTween.To(
+                () => canvasGroup.alpha, 
+                x => canvasGroup.alpha = x, 
+                b ? 1.0f : 0.0f, 
+                mainShowTime);
             if (IsShow)
             {
                 OnOpen(this,useGroup);
                 alphaTween.OnStart(OnFadeIn);
-                alphaTween.SetDelay(delay);
+                alphaTween.SetDelay(Delay);
             }
             else
             {
                 OnClose();
                 alphaTween.OnComplete(OnFadeOut);
-                alphaTween.SetDelay(delay);
+                alphaTween.SetDelay(Delay);
             }
             //缩放效果
             if (IsScale)
@@ -229,18 +235,21 @@ namespace CYM.UI
                 Vector3 minScale= sourceLocalScale * 0.001f;
                 if (IsShow)                
                     Trans.localScale = minScale;
-                scaleTween = Trans.DOScale(IsShow ? sourceLocalScale : minScale, tempFade)
-                    .SetEase(IsShow ? InEase : OutEase)
-                    .SetDelay(delay);
+                    scaleTween = Trans.DOScale(IsShow ? sourceLocalScale : minScale,
+                    mainShowTime)
+                    .SetEase(IsShow ? TweenScale.InEase : TweenScale.OutEase)
+                    .SetDelay(Delay);
             }
             //位移效果
             if (IsMove)
             {
-                if (IsShow)                
-                    RectTrans.anchoredPosition = StartPos;
-                moveTween = DOTween.To(() => RectTrans.anchoredPosition, (x) => RectTrans.anchoredPosition = x, b ? sourceAnchoredPosition : StartPos, tempFade)
-                    .SetEase(IsShow ? InEase : OutEase)
-                    .SetDelay(delay);
+                if (IsShow)RectTrans.anchoredPosition = TweenMove.StartPos;
+                moveTween = DOTween.To(
+                    () => RectTrans.anchoredPosition, 
+                    (x) => RectTrans.anchoredPosition = x, b ? sourceAnchoredPosition : TweenMove.StartPos,
+                    mainShowTime)
+                    .SetEase(IsShow ? TweenMove.InEase : TweenMove.OutEase)
+                    .SetDelay(Delay);
             }
 
             //屏蔽/取消屏蔽 UI点击
@@ -282,6 +291,7 @@ namespace CYM.UI
             }
 
             OnShow();
+            Delay = 0;//重置Delay
         }
 
         /// <summary>
@@ -316,20 +326,38 @@ namespace CYM.UI
             if (canvasGroup != null)
                 canvasGroup.interactable = b;
         }
-        public virtual void ShowTip(string key,params string[] ps)
+        #endregion
+
+        #region 工具函数包装
+        protected static void ShowTip(string key, params string[] ps)
         {
-            throw new System.NotImplementedException();
+            BaseTooltipView.Default.Show(key, ps);
         }
-        public virtual void ShowTipStr(string str)
+        protected static void ShowTipStr(string str)
         {
-            throw new System.NotImplementedException();
+            BaseTooltipView.Default.ShowStr(str);
+        }
+        protected static void ShowOKCancle(string key, string descKey, Callback BntOK, Callback BntCancle, params object[] paras)
+        {
+            BaseModalBoxView.Default.ShowOKCancle(key, descKey, BntOK, BntCancle, paras);
+        }
+        protected static void ShowOK(string key, string descKey, Callback BntOK, params object[] paras)
+        {
+            BaseModalBoxView.Default.ShowOK(key, descKey, BntOK, paras);
+        }
+        protected static void ShowOK(string descKey, Callback BntOK, params object[] paras)
+        {
+            BaseModalBoxView.Default.ShowOK(descKey, BntOK, paras);
         }
         #endregion
 
         #region get
+        protected virtual string TitleKey => BaseConstMgr.STR_Inv;
         protected virtual string GetTitle()
         {
-            return "None";
+            if (TitleKey.IsInvStr())
+                return "None";
+            return GetStr(TitleKey);
         }
 
         #endregion

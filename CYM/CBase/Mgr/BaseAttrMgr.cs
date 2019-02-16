@@ -22,6 +22,7 @@ namespace CYM
 
         }
         public int ID { get; set; }
+        public string TDID { get; set; }
         public T Type { get; set; }
         public AttrOpType AddType { get; set; } = AttrOpType.DirectAdd;
         public AttrFactionType FactionType { get; set; } = AttrFactionType.Percent;
@@ -203,13 +204,13 @@ namespace CYM
         #endregion
 
         #region prop
-        protected List<TDAttrData> attrData = new List<TDAttrData>();
+        protected List<TDAttrData> attrDataList = new List<TDAttrData>();
+        protected Dictionary<string, TDAttrData> attrDataDic = new Dictionary<string, TDAttrData>();
         protected List<AttrConvertData<T>> _attrConvertData = new List<AttrConvertData<T>>();
         protected readonly List<AttrAdditon<T>> _data = new List<AttrAdditon<T>>();
         protected readonly List<AttrAdditon<T>> _percentData = new List<AttrAdditon<T>>();
         protected float[] _baseDataPool;
         protected float[] _curDataPool;
-        private bool isDirty = false;
         T defaultType = default(T);
         #endregion
 
@@ -225,17 +226,8 @@ namespace CYM
             var tempArray = Enum.GetValues(typeof(T));
             _curDataPool = new float[tempArray.Length];
             _baseDataPool = new float[tempArray.Length];
-            attrData = GetAttrData();
-        }
-
-        public override void OnFixedUpdate()
-        {
-            base.OnFixedUpdate();
-            if (isDirty)
-            {
-                Refresh();
-                isDirty = false;
-            }
+            attrDataList = GetAttrDataList();
+            attrDataDic = GetAttrDataDic();
         }
         /// <summary>
         /// 初始化所有属性
@@ -248,12 +240,13 @@ namespace CYM
 
             BaseUtils.ForeachEnum<T>((x) =>
             {
-                var tempAttrData = attrData[(int)(object)x];
-                if (tempAttrData == null)
+                int index = (int)(object)x;
+                if (attrDataList.Count< index)
                 {
-                    CLog.Error("没有这个Attr Data ={0}", x.ToString());
+                    CLog.Error("没有这个属性:{0}",x);
                     return;
                 }
+                var tempAttrData = attrDataList[index];
                 float obj = tempAttrData.Default;
                 if (attrs.ContainsKey(x))
                 {
@@ -304,7 +297,7 @@ namespace CYM
                 if (array[i] != null)
                 {
                     var index = BoxAvoidance<T>.ToInt(array[i].Type);
-                    var tempAttrData = attrData[index];
+                    var tempAttrData = attrDataList[index];
 
                     //固定值,持续变化
                     if (tempAttrData.Type == AttrType.Fixed)
@@ -356,7 +349,7 @@ namespace CYM
             {
                 if (array[i] != null)
                 {
-                    array[i].AttrData = attrData;
+                    array[i].AttrData = attrDataList;
                     _attrConvertData.Add(array[i]);
                 }
             }
@@ -375,22 +368,18 @@ namespace CYM
             }
             SetDirty();
         }
-        public void SetDirty()
-        {
-            isDirty = true;
-        }
         protected virtual void AddAttrVal(T type, float val)
         {
             var index = BoxAvoidance<T>.ToInt(type);
-            if (attrData != null)
+            if (attrDataList != null)
             {
                 TDAttrData tempAttrData = null;
-                if (index >= attrData.Count)
+                if (index >= attrDataList.Count)
                 {
                     CLog.Error("SetAttrVal:" + type.ToString() + ":没有配置属性表");
                     return;
                 }
-                tempAttrData = attrData[index];
+                tempAttrData = attrDataList[index];
                 if (tempAttrData == null)
                 {
                     _curDataPool[index] += val;
@@ -409,15 +398,15 @@ namespace CYM
         public virtual void InitAttr(T type, float val)
         {
             var index = BoxAvoidance<T>.ToInt(type);
-            if (attrData != null)
+            if (attrDataList != null)
             {
                 TDAttrData tempAttrData = null;
-                if (index >= attrData.Count)
+                if (index >= attrDataList.Count)
                 {
                     CLog.Error("InitAttr:" + type.ToString() + ":没有配置属性表");
                     return;
                 }
-                tempAttrData = attrData[index];
+                tempAttrData = attrDataList[index];
                 if (tempAttrData == null)
                 {
                     _curDataPool[index] = val;
@@ -436,8 +425,9 @@ namespace CYM
             }
             SetDirty();
         }
-        protected virtual void Refresh()
+        public override void Refresh()
         {
+            base.Refresh();
             //重置当前值
             for (int i = 0; i < _baseDataPool.Length; ++i)
             {
@@ -555,9 +545,9 @@ namespace CYM
         }
         public virtual Sprite GetIcon(T type)
         {
-            if (attrData == null)
+            if (attrDataList == null)
                 return null;
-            return SelfBaseGlobal.GRMgr.GetIcon(attrData[BoxAvoidance<T>.ToInt(type)].Icon);
+            return SelfBaseGlobal.GRMgr.GetIcon(attrDataList[BoxAvoidance<T>.ToInt(type)].Icon);
         }
         /// <summary>
         /// 获得额外的加成
@@ -566,7 +556,7 @@ namespace CYM
         {
             if (data == null) return 0;
             int fromIndex = BoxAvoidance<T>.ToInt(data.From);
-            TDAttrData tempData = attrData[fromIndex];
+            TDAttrData tempData = attrDataList[fromIndex];
             var fromVal = _curDataPool[fromIndex];
             if (customVal.HasValue)
                 fromVal = customVal.Value;
@@ -621,11 +611,11 @@ namespace CYM
         /// <returns></returns>
         public string GetAttrDesc(T type)
         {
-            if (attrData == null) return "attrData is null:" + type.ToString();
+            if (attrDataList == null) return "attrData is null:" + type.ToString();
             var index = BoxAvoidance<T>.ToInt(type);
-            if (index >= attrData.Count)
+            if (index >= attrDataList.Count)
                 return "out of index:" + type.ToString();
-            return attrData[index].GetDesc();
+            return attrDataList[index].GetDesc();
         }
         #endregion
 
@@ -638,7 +628,7 @@ namespace CYM
         /// <returns></returns>
         public static string GetAttrStr(T Type, float Val, bool? isPercent = null, bool isIgnoreName = false, bool isColor = true)
         {
-            List<TDAttrData> tempAttrData = GetAttrData();
+            List<TDAttrData> tempAttrData = GetAttrDataList();
             var tempData = tempAttrData[BoxAvoidance<T>.ToInt(Type)];
             string color = GetAttrColor(Type, Val);
             bool tempPercent = false;
@@ -710,7 +700,7 @@ namespace CYM
         /// </summary>
         /// <param name="Type"></param>
         /// <returns></returns>
-        public static List<TDAttrData> GetAttrData()
+        public static List<TDAttrData> GetAttrDataList()
         {
             List<TDAttrData> tempAttrData = new List<TDAttrData>();
             if (TDAttr<T>.AttrDataList == null)
@@ -721,12 +711,26 @@ namespace CYM
             return tempAttrData;
         }
         /// <summary>
+        /// 获得属性配置数据Dic
+        /// </summary>
+        /// <returns></returns>
+        public static Dictionary<string, TDAttrData> GetAttrDataDic()
+        {
+            Dictionary<string, TDAttrData> tempAttrData = new Dictionary<string, TDAttrData>();
+            if (TDAttr<T>.AttrDataDic == null)
+                return tempAttrData;
+            Type tempType = typeof(T);
+            if (TDAttr<T>.AttrDataList.ContainsKey(tempType))
+                return TDAttr<T>.AttrDataDic[tempType];
+            return tempAttrData;
+        }
+        /// <summary>
         /// 获得转换后的属性字符窜,比如百分比,KGM
         /// </summary>
         /// <returns></returns>
         public static string GetAttrNumber(T Type, float Val)
         {
-            List<TDAttrData> tempAttrData = GetAttrData();
+            List<TDAttrData> tempAttrData = GetAttrDataList();
             if (tempAttrData != null)
             {
                 var tempData = tempAttrData[BoxAvoidance<T>.ToInt(Type)];
@@ -760,7 +764,7 @@ namespace CYM
         public static string GetAttrColor(T Type, float Val, bool isReverse = false)
         {
             string color = "<color=yellow>";
-            List<TDAttrData> tempAttrData = GetAttrData();
+            List<TDAttrData> tempAttrData = GetAttrDataList();
             if (tempAttrData != null)
             {
                 var tempData = tempAttrData[BoxAvoidance<T>.ToInt(Type)];
@@ -800,7 +804,7 @@ namespace CYM
         public static bool IsPositive(T Type, float Val)
         {
             bool ret = true;
-            List<TDAttrData> tempAttrData = GetAttrData();
+            List<TDAttrData> tempAttrData = GetAttrDataList();
             if (tempAttrData != null)
             {
                 var tempData = tempAttrData[BoxAvoidance<T>.ToInt(Type)];

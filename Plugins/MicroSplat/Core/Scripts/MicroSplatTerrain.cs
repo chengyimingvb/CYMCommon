@@ -98,6 +98,7 @@ public class MicroSplatTerrain : MicroSplatObject
       {
          DestroyImmediate(matInstance);
          terrain.materialTemplate = null;
+         terrain.materialType = Terrain.MaterialType.BuiltInStandard;
       }
       #if UNITY_EDITOR
       terrain.basemapDistance = oldBaseMapDistance;
@@ -214,9 +215,9 @@ public class MicroSplatTerrain : MicroSplatObject
    {
       return terrain.terrainData.bounds;
    }
-      
-   #if UNITY_EDITOR
-  
+
+#if UNITY_EDITOR
+
 
    void RestorePrototypes()
    {
@@ -242,9 +243,15 @@ public class MicroSplatTerrain : MicroSplatObject
                {
                   for (int i = 0; i < protos.Length; ++i)
                   {
-                     if (protos[i].diffuseTexture != cfg.sourceTextures[i].diffuse)
+                     if (protos[i] == null)
                      {
                         needsRefresh = true;
+                        break;
+                     }
+                     if (protos[i] != null && cfg.sourceTextures[i] != null && protos[i].diffuseTexture != cfg.sourceTextures[i].diffuse)
+                     {
+                        needsRefresh = true;
+                        break;
                      }
                   }
                }
@@ -258,7 +265,19 @@ public class MicroSplatTerrain : MicroSplatObject
                   protos = new TerrainLayer[count];
                   for (int i = 0; i < count; ++i)
                   {
-                     TerrainLayer sp = new TerrainLayer();
+                     string path = UnityEditor.AssetDatabase.GetAssetPath(cfg);
+                     path = path.Replace("\\", "/");
+                     path = path.Substring(0, path.LastIndexOf("/"));
+                     path += "/microsplat_layer_";
+                     TerrainLayer sp = UnityEditor.AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
+                     if (sp != null)
+                     {
+                        if (sp.diffuseTexture == cfg.sourceTextures[i].diffuse)
+                           continue;
+                     }
+
+                     sp = new TerrainLayer();
+
                      sp.diffuseTexture = cfg.sourceTextures[i].diffuse;
                      sp.tileSize = uvScales;
                      if (cfg.sourceTextures[i].normal != null)
@@ -267,11 +286,20 @@ public class MicroSplatTerrain : MicroSplatObject
                      }
                      
                      protos[i] = sp;
+
+                     if (sp.diffuseTexture != null)
+                     {
+                        path += sp.diffuseTexture.name;
+                     }
+                     path += "_" + i;
+                     path += ".terrainlayer";
+                     UnityEditor.AssetDatabase.CreateAsset(sp, path);
                   }
 
                   terrain.terrainData.terrainLayers = protos;
                   UnityEditor.EditorUtility.SetDirty(terrain);
                   UnityEditor.EditorUtility.SetDirty(terrain.terrainData);
+
                }
 #else
 
@@ -317,13 +345,13 @@ public class MicroSplatTerrain : MicroSplatObject
                   UnityEditor.EditorUtility.SetDirty(terrain.terrainData);
                }
 #endif
-   
+
             }
          }
 
       }
    }
-   #endif
+#endif
 
    public static void SyncAll()
    {

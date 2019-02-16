@@ -17,6 +17,8 @@ namespace CYM.UI
         #region inspector
         [SerializeField]
         Text Text;
+        [SerializeField]
+        Image ActiveImage;
         #endregion
 
         #region prop
@@ -31,6 +33,7 @@ namespace CYM.UI
             if (Text != null)
                 Text.text = Data.GetName();
             IsPreOn=IsOn = Data.IsOn.Invoke();
+            RefreshActive();
         }
         public override void OnPointerClick(PointerEventData eventData)
         {
@@ -40,6 +43,21 @@ namespace CYM.UI
             {
                 IsPreOn = IsOn;
                 Data.OnValueChanged?.Invoke(IsOn);
+            }
+            RefreshActive();
+        }
+        void RefreshActive()
+        {
+            if (ActiveImage != null)
+            {
+                if (IsOn)
+                {
+                    ActiveImage.CrossFadeAlpha(1.0f, 0.1f, true);
+                }
+                else
+                {
+                    ActiveImage.CrossFadeAlpha(0.0f, 0.1f, true);
+                }
             }
         }
         #endregion

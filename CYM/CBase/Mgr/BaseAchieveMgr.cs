@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 namespace CYM
 {
-    public class BaseAchieveMgr<TData> : BaseGlobalCoreMgr, ITableDataMgr<TData> where TData : TDBaseAchieveData, new()
+    public class BaseAchieveMgr<TData> : BaseGFlowMgr, ITableDataMgr<TData> where TData : TDBaseAchieveData, new()
     {
         #region override
         public LuaTDMgr<TData> Table { get { throw new System.NotImplementedException();}}

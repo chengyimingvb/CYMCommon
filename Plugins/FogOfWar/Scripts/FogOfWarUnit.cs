@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using CYM;
 
 namespace FoW
 {
@@ -44,9 +45,7 @@ namespace FoW
         bool[] _visibleCells = null;
 
         Transform _transform;
-
-        static List<FogOfWarUnit> _registeredUnits = new List<FogOfWarUnit>();
-        public static List<FogOfWarUnit> registeredUnits { get { return _registeredUnits; } }
+        public static HashList<FogOfWarUnit> registeredUnits { get; } = new HashList<FogOfWarUnit>();
 
         void Awake()
         {

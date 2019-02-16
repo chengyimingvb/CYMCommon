@@ -15,7 +15,7 @@ using MoonSharp.Interpreter;
 using CYM.DLC;
 namespace CYM
 {
-    public class BaseLuaMgr : BaseGlobalCoreMgr, ILoader
+    public class BaseLuaMgr : BaseGFlowMgr, ILoader
     {
         #region callback val
         public event Callback Callback_OnLuaParseEnd;

@@ -19,7 +19,7 @@ namespace CYM
         AD,
         BC,
     }
-    public class BaseDateTimeMgr : BaseGlobalCoreMgr
+    public class BaseDateTimeMgr : BaseGFlowMgr
     {
         #region prop
         readonly string DateStrFormat = "{0} {1}.{2}.{3}";

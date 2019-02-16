@@ -429,6 +429,7 @@ namespace JBooth.MicroSplat
       public override void OnInspectorGUI()
       {
          var cfg = target as TextureArrayConfig;
+         serializedObject.Update();
          MatchArrayLength(cfg);
          EditorGUI.BeginChangeCheck();
          cfg.textureMode = (TextureArrayConfig.TextureMode)EditorGUILayout.EnumPopup(CTextureMode, cfg.textureMode);
@@ -492,7 +493,7 @@ namespace JBooth.MicroSplat
          }
 
          DrawOverrideGUI(cfg);
-         serializedObject.ApplyModifiedProperties();
+
 
          if (MicroSplatUtilities.DrawRollup("Textures", true))
          {
@@ -572,6 +573,7 @@ namespace JBooth.MicroSplat
          {
             EditorUtility.SetDirty(cfg);
          }
+         serializedObject.ApplyModifiedProperties();
       }
 
       static bool IsLinear(TextureImporter ti)
@@ -1042,6 +1044,8 @@ namespace JBooth.MicroSplat
          int diffuseHeight =  (int)settings.diffuseSettings.textureSize;
          int normalWidth =    (int)settings.normalSettings.textureSize;
          int normalHeight =   (int)settings.normalSettings.textureSize;
+         int smoothWidth =    (int)settings.smoothSettings.textureSize;
+         int smoothHeight =   (int)settings.smoothSettings.textureSize;
          int antiTileWidth =  (int)settings.antiTileSettings.textureSize;
          int antiTileHeight = (int)settings.antiTileSettings.textureSize;
          int emisWidth =      (int)settings.emissiveSettings.textureSize;
@@ -1248,17 +1252,17 @@ namespace JBooth.MicroSplat
                   {
                      if (e.height == null)
                      {
-                        smoothAOTex = RenderMissingTexture(diffuse, "Hidden/MicroSplat/NormalSAOFromDiffuse", normalWidth, normalHeight);
+                        smoothAOTex = RenderMissingTexture(diffuse, "Hidden/MicroSplat/NormalSAOFromDiffuse", smoothWidth, smoothHeight);
                      }
                      else
                      {
-                        smoothAOTex = RenderMissingTexture(e.height, "Hidden/MicroSplat/NormalSAOFromHeight", normalWidth, normalHeight, heightChannel);
+                        smoothAOTex = RenderMissingTexture(e.height, "Hidden/MicroSplat/NormalSAOFromHeight", smoothWidth, smoothHeight, heightChannel);
                      }
                   }
                   else
                   {
                      // copy, but go ahead and generate other channels in case they aren't provided later.
-                     smoothAOTex = RenderMissingTexture(e.normal, "Hidden/MicroSplat/NormalSAOFromNormal", normalWidth, normalHeight);
+                     smoothAOTex = RenderMissingTexture(e.normal, "Hidden/MicroSplat/NormalSAOFromNormal", smoothWidth, smoothHeight);
                   }
 
                   // now clear normal data, and swizzle channels into G/A

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace CYM
 {
-    public class BaseNarrationMgr<TData> : BaseGlobalCoreMgr, ITableDataMgr<TData>  where TData : TDBaseNarrationData, new()
+    public class BaseNarrationMgr<TData> : BaseGFlowMgr, IBaseNarrationMgr, ITableDataMgr<TData>  where TData : TDBaseNarrationData, new()
     {
         #region Callback val
         /// <summary>

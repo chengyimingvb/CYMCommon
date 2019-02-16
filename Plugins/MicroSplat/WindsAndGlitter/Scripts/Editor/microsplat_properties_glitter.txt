@@ -1,0 +1,9 @@
+
+      
+      _GlitterGraininess ("Graininess", Range(0, 2)) = 0.5
+      _GlitterShininess ("Shininess", Range(1, 90)) = 30
+      _GlitterViewDep("View Dependency", Range(0, 1)) = 0.5
+      _GlitterUVScale("UVScale", Vector) = (300, 300, 0, 0)
+      _GlitterStrength("Strength", Range(0, 1)) = 1
+      _GlitterThreshold("Threshold", Range(0, 1)) = 1
+      _GlitterDistFade("Distance Fade", Vector) = (10, 100, 1, 1)

@@ -89,12 +89,7 @@ namespace CYM
             AsyncOperation op = null;
             try
             {
-#if UNITY_2017_3
                 op = Request.SendWebRequest();
-#else
-                op = Request.Send();
-#endif
-
             }
             catch (Exception e)
             {

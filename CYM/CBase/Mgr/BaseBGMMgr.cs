@@ -5,7 +5,7 @@ using System;
 using CYM.Audio;
 namespace CYM
 {
-    public class BaseBGMMgr : BaseGlobalCoreMgr
+    public class BaseBGMMgr : BaseGFlowMgr
     {
         protected SoundConnection StartSoundConnection;
         protected SoundConnection BattleSoundConnection;

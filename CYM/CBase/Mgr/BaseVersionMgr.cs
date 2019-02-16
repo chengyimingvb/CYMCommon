@@ -15,7 +15,7 @@ using System.Collections.Generic;
 
 namespace CYM
 {
-    public class BaseVersionMgr : BaseGlobalCoreMgr
+    public class BaseVersionMgr : BaseGFlowMgr
     {
 
 

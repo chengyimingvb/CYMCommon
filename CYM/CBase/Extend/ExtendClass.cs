@@ -221,7 +221,7 @@ namespace CYM
         {
             Reset(time);
         }
-        public override void Update(float step)
+        public override void Update(float step=1)
         {
             CurCount -= step;
             CurCount = Mathf.Clamp(CurCount, 0, TotalCout);

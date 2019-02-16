@@ -1,18 +1,21 @@
 ﻿using System.Collections;
 using System.IO;
+#if UNITY_EDITOR
+using UnityEditor.SceneManagement;
+#endif
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace CYM.DLC
 {
-    public enum LoadStateType
+    public enum LoadStateType 
     {
         None,
         Loading,
         Succ,
         Fail,
     }
-    public class Asset : IEnumerator
+    public class Asset : IEnumerator 
     {
         #region IEnumerator implementation
 
@@ -36,7 +39,7 @@ namespace CYM.DLC
         #endregion
 
         public int references { get; private set; }
-
+         
         public string assetName { get; protected set; }
         public string bundleName { get; protected set; }
         public string assetFullPath { get; private set; }
@@ -284,7 +287,8 @@ namespace CYM.DLC
 #if UNITY_EDITOR
             if (DLCConfig.Ins.IsEditorMode)
             {
-                asyncOperation = UnityEditor.EditorApplication.LoadLevelAdditiveAsyncInPlayMode(assetFullPath);
+                asyncOperation = EditorSceneManager.LoadSceneAsyncInPlayMode(assetFullPath, new LoadSceneParameters( LoadSceneMode.Additive, LocalPhysicsMode.None));
+                // UnityEditor.EditorApplication.LoadLevelAdditiveAsyncInPlayMode(assetFullPath);
                 loadState = LoadStateType.Loading;
                 loadCount = 0;
                 return;

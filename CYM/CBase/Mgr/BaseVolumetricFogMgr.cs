@@ -14,7 +14,7 @@ using VolumetricFogAndMist;
 
 namespace CYM
 {
-    public class BaseVolumetricFogMgr : BaseGlobalCoreMgr
+    public class BaseVolumetricFogMgr : BaseGFlowMgr
     {
         #region prop
         VolumetricFog VolumetricFog;

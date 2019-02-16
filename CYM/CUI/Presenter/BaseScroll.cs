@@ -1578,7 +1578,7 @@ namespace CYM.UI
         {
             for (var i = 0; i < _recycledCellViews.Count; i++)
             {
-                if (_recycledCellViews[i].Name == cellPrefab.Name)
+                if (_recycledCellViews[i].GOName == cellPrefab.GOName)
                 {
                     // the cell view was found, so we use this recycled one.
                     // we also remove it from the recycled list

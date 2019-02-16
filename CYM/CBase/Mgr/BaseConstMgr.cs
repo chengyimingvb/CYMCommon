@@ -76,7 +76,7 @@ namespace CYM
         }
     }
 
-    public class BaseConstMgr : BaseGlobalCoreMgr
+    public class BaseConstMgr : BaseGFlowMgr
     {
         #region member variable
         public static readonly int InvInt = int.MinValue;
@@ -100,6 +100,7 @@ namespace CYM
         public static readonly LayerData Layer_IgnoreRaycast = "Ignore Raycast";
         public static readonly LayerData Layer_Sense = "Sense";
         public static readonly LayerData Layer_Perform="Perform";
+        public static readonly LayerData Layer_Terrain = "Terrain";
         #endregion
 
         #region STR
@@ -317,6 +318,10 @@ namespace CYM
         /// </summary>
         public static readonly string Path_Settings = Path.Combine(Application.persistentDataPath, "Settings.json");
         /// <summary>
+        /// 快捷键
+        /// </summary>
+        public static readonly string Path_Shortcuts = Path.Combine(Application.persistentDataPath, "Shortcuts.json");
+        /// <summary>
         /// CYMMonobehaviour
         /// </summary>
         public static readonly string Path_XTempCYMMonobehaviour = Path.Combine(Path_Common, "CYM/CUtile/Template/XenoTemplateFiles/CYMMonobehaviour.asset");
@@ -335,7 +340,7 @@ namespace CYM
         /// <summary>
         /// 内部bundle
         /// </summary>
-        public static readonly string Path_InternalBundle = Path.Combine(Path_Common, "CYM/_Bundle");
+        public static readonly string Path_InternalBundle = Path.Combine(Path_Common, "_Bundle");
         #endregion
 
         #region color

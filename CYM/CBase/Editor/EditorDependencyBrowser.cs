@@ -25,7 +25,7 @@ namespace CYM
         public static void Init()
         {
             EditorWindow window = EditorWindow.GetWindow(typeof(EditorDependencyBrowser));
-            window.title = "Dependencies";
+            window.titleContent =new GUIContent( "Dependencies"); 
         }
 
         private StringComparer comparer = new StringComparer();

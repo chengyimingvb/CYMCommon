@@ -1,0 +1,23 @@
+
+      float2 _AlphaData;
+      
+      #if _ALPHAHOLETEXTURE
+         UNITY_DECLARE_TEX2D_NOSAMPLER(_AlphaHoleTexture);
+      #endif
+
+      void ClipWaterLevel(float3 worldPos)
+      {
+         clip(worldPos.y - _AlphaData.y);
+      }
+
+      void ClipAlphaHole(float i, float2 uv)
+      {
+      #if _ALPHAHOLETEXTURE
+         clip(UNITY_SAMPLE_TEX2D_SAMPLER(_AlphaHoleTexture, _Diffuse, uv).r - 0.5);
+      #else
+         if ((int)round(i) == (int)round(_AlphaData.x))
+         {
+            clip(-1);
+         }
+      #endif
+      }

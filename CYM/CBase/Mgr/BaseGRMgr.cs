@@ -21,7 +21,7 @@ namespace CYM
     /// <summary>
     /// $LocalPlayer表示动态ID
     /// </summary>
-    public class BaseGRMgr : BaseGlobalCoreMgr, ILoader 
+    public class BaseGRMgr : BaseGFlowMgr, ILoader 
     {
         #region member variable
         public ObjectRegister<Material> Materials = new ObjectRegister<Material>();

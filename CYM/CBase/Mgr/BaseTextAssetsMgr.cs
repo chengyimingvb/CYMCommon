@@ -6,7 +6,7 @@ using System.IO;
 
 namespace CYM
 {
-    public class BaseTextAssetsMgr : BaseGlobalCoreMgr, ILoader
+    public class BaseTextAssetsMgr : BaseGFlowMgr, ILoader
     {
         public Dictionary<string, string> Data { get;protected set; } = new Dictionary<string, string>();
         #region loader

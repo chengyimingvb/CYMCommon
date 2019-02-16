@@ -1,0 +1,6 @@
+      // geotexture
+      _GeoTex("Gradient", 2D) = "white" {}
+      _GeoParams("Blend/World Scale/Offset", Vector) = (1, 0.01, 0.0, 0.0)
+      _GeoRange("Blend fade params", Vector) = (0, 0, 0, 0) 
+      _GeoCurveParams("Geo Curve Scale/Offset/Rotation", Vector) = (512, 0, 0, 0)
+      _GeoCurve("Geo Curve", 2D) = "white" {}

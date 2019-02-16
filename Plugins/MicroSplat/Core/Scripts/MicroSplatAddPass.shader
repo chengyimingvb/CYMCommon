@@ -1,4 +1,4 @@
-﻿Shader "Hidden/MicroSpat/AddPass" 
+﻿Shader "Hidden/MicroSplat/AddPass" 
 {
    Properties {
       [HideInInspector] _Control0 ("Control (RGBA)", 2D) = "red" {}
@@ -25,6 +25,10 @@
       UNITY_DECLARE_TEX2D_NOSAMPLER(_Control1);
       UNITY_DECLARE_TEX2D_NOSAMPLER(_Control2);
       UNITY_DECLARE_TEX2D_NOSAMPLER(_Control3);
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_Control4);
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_Control5);
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_Control6);
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_Control7);
       sampler2D _PerTexProps;
 
       float4 _UVScale; // scale and offset
@@ -38,8 +42,13 @@
          float foo;
       };
 
-      #pragma surface surf Lambert noforwardadd noshadow nometa nofog nolightmap novertexlights noambient noshadow
+      #pragma surface surf Lambert vertex:vert noforwardadd noshadow nometa nofog nolightmap novertexlights noambient noshadow
       #define TERRAIN_SPLAT_ADDPASS
+      
+      
+      void vert (inout appdata_full v) {
+          v.vertex = float4(0,0,0,0);
+      }
 
       void surf(Input IN, inout SurfaceOutput o)
       {

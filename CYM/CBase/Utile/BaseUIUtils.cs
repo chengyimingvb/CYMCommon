@@ -4,6 +4,7 @@ using CYM.UI;
 using System;
 using UnityEngine.UI;
 using System.Globalization;
+using UnityEngine.EventSystems;
 //**********************************************
 // Class Name	: CYMBaseScreenController
 // Discription	：None
@@ -121,15 +122,15 @@ namespace CYM
             return DecorateStr(number.ToString(), number, true, reverseColor);
         }
 
-        public static string Color(int number, bool reverseColor = false)
-        {
-            return DecorateStr(number.ToString(), number, false, reverseColor);
-        }
+        //public static string Color(int number, bool reverseColor = false)
+        //{
+        //    return DecorateStr(number.ToString(), number, false, reverseColor);
+        //}
 
-        public static string Color(float number, bool reverseColor = false)
-        {
-            return DecorateStr(number.ToString(), number, false, reverseColor);
-        }
+        //public static string Color(float number, bool reverseColor = false)
+        //{
+        //    return DecorateStr(number.ToString(), number, false, reverseColor);
+        //}
 
         /// <summary>
         /// 小于1的时候显示1位小数,否则返回整数
@@ -600,6 +601,16 @@ namespace CYM
             }
 
             return comp;
+        }
+        /// <summary>
+        /// 检测鼠标是否悬在在ui上
+        /// </summary>
+        /// <returns></returns>
+        public static bool CheckGuiObjects()
+        {
+            if (EventSystem.current == null)
+                return false;
+            return EventSystem.current.IsPointerOverGameObject();
         }
         #endregion
 

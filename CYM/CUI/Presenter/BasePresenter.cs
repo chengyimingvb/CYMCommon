@@ -76,7 +76,7 @@ namespace CYM.UI
         public RectTransform RectTrans { get; protected set; }
         public GameObject GO { get;protected set; }
         public BaseUIView BaseUIView { get; set; }
-        public virtual string Name { get; }
+        public virtual string GOName { get; }
     }
 
     public class PresenterData
@@ -105,6 +105,7 @@ namespace CYM.UI
         public string HoverClip { get; set; } = "";
         public string OpenClip { get; set; } = "";
         public string CloseClip { get; set; } = "";
+        public string TipStr { get; set; } = BaseConstMgr.STR_Inv;
 
         //默认为null
         public Func<int, bool> IsCanClick;
@@ -470,7 +471,7 @@ namespace CYM.UI
         /// <summary>
         /// 名称
         /// </summary>
-        public override string Name
+        public override string GOName
         {
             get
             {
@@ -518,7 +519,13 @@ namespace CYM.UI
         /// <param name="eventData"></param>
         public virtual void OnPointerEnter(PointerEventData eventData)
         {
-            Data?.OnEnter?.Invoke(this);
+            if (Data != null)
+            {
+                if (Data.OnEnter != null)
+                    Data.OnEnter.Invoke(this);
+                else if (!Data.TipStr.IsInvStr())
+                    BaseTooltipView.Default?.Show(Data.TipStr);
+            }
 
             if (!GetIsCanClick())
                 return;
@@ -534,10 +541,7 @@ namespace CYM.UI
 		public virtual void OnPointerExit(PointerEventData eventData)
         {
             Data?.OnExit?.Invoke(this);
-            if (Data != null && Data.OnEnter != null)
-            {
-                BaseTooltipView.CloseAllTip();
-            }
+            BaseTooltipView.Default?.Show(false);
         }
         /// <summary>
         /// 鼠标点击

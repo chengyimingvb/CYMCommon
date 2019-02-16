@@ -61,6 +61,7 @@ namespace JBooth.MicroSplat
          _FORCEMODEL46,
          _FORCEMODEL50,
          _PACKINGHQ,
+         _SPHEREUVS,
          _DEBUG_OUTPUT_ALBEDO,
          _DEBUG_OUTPUT_HEIGHT,
          _DEBUG_OUTPUT_NORMAL,
@@ -85,6 +86,7 @@ namespace JBooth.MicroSplat
          ThirtyTwo = 32,
       }
 
+
       public enum TexturePackMode
       {
          Fastest = 0,
@@ -101,7 +103,8 @@ namespace JBooth.MicroSplat
       public enum UVMode
       {
          UV, 
-         WorldSpace
+         WorldSpace,
+         //SphereUVs
       }
 
       public enum LightingMode
@@ -410,6 +413,12 @@ namespace JBooth.MicroSplat
          {
             features.Add(GetFeatureName(DefineFeature._WORLDUV));
          }
+         /*
+         else if (uvMode == UVMode.SphereUVs)
+         {
+            features.Add(GetFeatureName(DefineFeature._SPHEREUVS));
+         }
+         */
 
          if (perTexInterpContrast)
          {
@@ -520,6 +529,12 @@ namespace JBooth.MicroSplat
          }
 
          uvMode = HasFeature(keywords, DefineFeature._WORLDUV) ? UVMode.WorldSpace : UVMode.UV;
+         /*
+         if (HasFeature(keywords, DefineFeature._SPHEREUVS))
+         {
+            uvMode = UVMode.SphereUVs;
+         }
+         */
 
          perTexHeightOffset = HasFeature(keywords, DefineFeature._PERTEXHEIGHTOFFSET);
          perTexHeightContrast = HasFeature(keywords, DefineFeature._PERTEXHEIGHTCONTRAST);

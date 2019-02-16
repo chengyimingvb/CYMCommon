@@ -16,6 +16,7 @@ namespace CYM.Cam
         private bool boundSetting;
         private bool followSetting;
         private bool mouseSetting;
+        private bool keyboardSetting;
         private Vector3 op;
 
         void Awake()

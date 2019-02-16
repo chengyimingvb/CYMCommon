@@ -21,6 +21,32 @@ namespace CYM
     {
 
         #region normal
+        public static void SaveFile(string path, string content)
+        {
+            File.WriteAllText(path, content);
+        }
+
+        public static void SaveFile(Stream stream, string content)
+        {
+            StreamWriter writer = new StreamWriter(stream, Encoding.UTF8);
+            writer.Write(content);
+            writer.Close();
+        }
+
+        public static string LoadFile(Stream stream)
+        {
+            using (StreamReader sr = new StreamReader(stream, Encoding.UTF8))
+            {
+                return sr.ReadToEnd();
+            }
+        }
+
+        public static string LoadFile(string path)
+        {
+            if(File.Exists(path))
+                return File.ReadAllText(path);
+            return null;
+        }
         /// <summary>
         /// 拷贝文件
         /// </summary>
@@ -329,31 +355,6 @@ namespace CYM
         #endregion
 
         #region json
-        static void SaveFile(string path, string content)
-        {
-            File.WriteAllText(path, content);
-        }
-
-        static void SaveFile(Stream stream, string content)
-        {
-            StreamWriter writer = new StreamWriter(stream, Encoding.UTF8);
-            writer.Write(content);
-            writer.Close();
-        }
-
-        static string LoadFile(Stream stream)
-        {
-            using (StreamReader sr = new StreamReader(stream, Encoding.UTF8))
-            {
-                return sr.ReadToEnd();
-            }
-        }
-
-        static string LoadFile(string path)
-        {
-            return File.ReadAllText(path);
-        }
-
         public static void SaveJson(string path, object obj, bool prettyPrint = true)
         {
             string dir = Path.GetDirectoryName(path);

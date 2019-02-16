@@ -1,0 +1,4 @@
+
+      _GlobalTintTex("Global Tint", 2D) = "white" {}
+      _GlobalTintFade("Global Normmal Fade", Vector) = (50, 150, 1, 1)
+      _GlobalTintUVScale("UV Scale", Vector) = (1, 1, 0, 0)

@@ -26,9 +26,9 @@ namespace CYM.UI
             Group = BaseMono.GetUnityComponet<CanvasGroup>(GO);
         }
 
-        protected override void Update()
+        public override void OnUpdate()
         {
-            base.Update();
+            base.OnUpdate();
             Group.alpha = Color.a;
         }
     }

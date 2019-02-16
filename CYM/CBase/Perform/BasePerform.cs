@@ -66,6 +66,8 @@ namespace CYM
         #region Inspector
         [FoldoutGroup("Base"), SerializeField, Tooltip("播放的音效")]
         public AudioClip AudioClip;
+        [FoldoutGroup("Base"), SerializeField, Tooltip("是否是2D音效"), ShowIf("Inspector_ShowAudioClip")]
+        public bool Is2DClip = false;
         [FoldoutGroup("Base"), SerializeField,Tooltip("是否循环音效"),ShowIf("Inspector_ShowAudioClip")]
         public bool IsLoopAudioClip = false;
         [FoldoutGroup("Base"), SerializeField,Tooltip("是否缓存音效,缓存后在同一帧的时候不会播放相同的音效"), ShowIf("Inspector_ShowAudioClip")]
@@ -121,6 +123,7 @@ namespace CYM
         protected FlickerEffect flickerEffect;
         protected Vector3 MinScale = Vector3.one * 0.0001f;
         protected Tweener ScaleTweener;
+        protected BaseAudioMgr AudioMgr => SelfBaseGlobal.AudioMgr;
         #endregion
 
         #region const
@@ -271,7 +274,16 @@ namespace CYM
         protected virtual void OnPlaySFX()
         {
             if (AudioClip != null)
-                AudioSource = SelfBaseGlobal.AudioMgr.PlaySFX(AudioClip, Pos, IsLoopAudioClip, IsCacheAudioClip);
+            {
+                if (Is2DClip)
+                {
+                    AudioSource = AudioMgr.PlayUI(AudioClip, IsLoopAudioClip);
+                }
+                else
+                {
+                    AudioSource = AudioMgr.PlaySFX(AudioClip, Pos, IsLoopAudioClip, IsCacheAudioClip);
+                }
+            }
         }
         protected virtual void OnStopSFX()
         {
@@ -319,7 +331,10 @@ namespace CYM
             if (_particleSystems != null)
             {
                 for (int i = 0; i < _particleSystems.Length; ++i)
-                    _particleSystems[i].startSize *= size;
+                {
+                    ParticleSystem.MainModule main = _particleSystems[i].main;
+                    main.startSizeMultiplier = size;
+                }
             }
             return this;
         }
@@ -568,11 +583,11 @@ namespace CYM
         }
         protected virtual Vector3 GetBonePos(NodeType type)
         {
-            throw new System.NotImplementedException("这个必须手动实现的函数");
+            return GetBone(type).position;
         }
         protected virtual float GetSize()
         {
-            throw new System.NotImplementedException("这个必须手动实现的函数");
+            return 1;
 
         }
         #endregion

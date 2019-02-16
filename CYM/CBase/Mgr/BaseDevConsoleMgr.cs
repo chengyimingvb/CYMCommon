@@ -12,7 +12,7 @@ using UnityEngine;
 using SickDev.CommandSystem;
 namespace CYM
 {
-	public class BaseDevConsoleMgr : BaseGlobalCoreMgr
+	public class BaseDevConsoleMgr : BaseGFlowMgr
     {
         static BaseDevConsoleMgr Ins;
         protected override void OnSetNeedFlag()

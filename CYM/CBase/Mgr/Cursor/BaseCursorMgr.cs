@@ -14,7 +14,7 @@ using System.Collections.Generic;
 
 namespace CYM
 {
-    public class BaseCursorMgr : BaseGlobalCoreMgr
+    public class BaseCursorMgr : BaseGFlowMgr
     {
         #region prop
         List<Texture2D> currentCursor;

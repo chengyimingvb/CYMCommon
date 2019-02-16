@@ -14,27 +14,55 @@ using UnityEngine;
 
 namespace CYM.UI
 {
-    public class BaseUIMgr : BaseGlobalCoreMgr
+    public class BaseUIMgr : BaseGFlowMgr
     {
 
         #region prop
         public static int NextSortOrder = 0;
         protected int SortOrder = 0;
+        /// <summary>
+        /// 主界面互斥组
+        /// </summary>
+        public List<BaseView> MainViewGroup = new List<BaseView>();
+        /// <summary>
+        /// 根界面:画布
+        /// </summary>
+        public BaseView RootView { get; private set; }
+        protected virtual string RootViewPrefab => "BaseRootView";
         #endregion
 
         #region Callback Val
         public event Callback Callback_OnCreatedUIViews;
         #endregion
 
-        /// <summary>
-        /// 主界面互斥组
-        /// </summary>
-        public List<BaseView> MainViewGroup = new List<BaseView>();
+        #region life
+        protected override void OnSetNeedFlag()
+        {
+            base.OnSetNeedFlag();
+            NeedUpdate = true;
+        }
+        public override void OnCreate()
+        {
+            base.OnCreate();
+            SortOrder = NextSortOrder;
+            NextSortOrder++;
+        }
+        protected virtual void OnCreateUIView(string viewName="RootView")
+        {
+            RootView = CreateView<BaseUIView>("BaseRootView");
+            RootView.GO.name = viewName;
+        }
+        private void OnCreateInterUIView()
+        {
 
-        /// <summary>
-        /// 根界面:画布
-        /// </summary>
-        public BaseView RootView { get;private set; }
+        }
+        public override void OnDestroy()
+        {
+            DestroyView();
+            base.OnDestroy();
+
+        }
+        #endregion
 
         #region 创建
         protected GameObject CreateGO(string path)
@@ -52,10 +80,6 @@ namespace CYM.UI
         }
         protected T CreateView<T>(string path) where T:BaseView
         {
-            if (path.StartsWith(BaseConstMgr.STR_Base))
-            {
-                CLog.Error($"不能使用BasePrefab创建UI,错误:{path}");
-            }
             var tempGo = CreateGO(path);
             T tempUI = null;
             if (tempGo != null)
@@ -95,10 +119,11 @@ namespace CYM.UI
         protected void CreateView()
         {
             OnCreateUIView();
+            OnCreateInterUIView();
             Callback_OnCreatedUIViews?.Invoke();
         }
         /// <summary>
-        /// 手动刁勇:销毁UI
+        /// 手动调用:销毁UI
         /// </summary>
         protected void DestroyView()
         {
@@ -107,25 +132,6 @@ namespace CYM.UI
             foreach (var item in MainViewGroup)
                 item.Destroy();
             MainViewGroup.Clear();
-        }
-        #endregion
-
-        #region life
-        public override void OnCreate()
-        {
-            base.OnCreate();
-            SortOrder = NextSortOrder;
-            NextSortOrder++;
-        }
-        protected virtual void OnCreateUIView()
-        {
-
-        }
-        public override void OnDestroy()
-        {
-            DestroyView();
-            base.OnDestroy();
-
         }
         #endregion
 

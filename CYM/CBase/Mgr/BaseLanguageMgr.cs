@@ -40,7 +40,7 @@ namespace CYM
         public string Classical { get; set; }
     }
 
-    public class BaseLanguageMgr : BaseGlobalCoreMgr, ILoader
+    public class BaseLanguageMgr : BaseGFlowMgr, ILoader
     {
         #region Callback Val
         /// <summary>
@@ -50,7 +50,7 @@ namespace CYM
         #endregion
 
         #region Prop
-        static public LanguageType LanguageType { get; set; }
+        static public LanguageType LanguageType { get;private set; }
         static Dictionary<LanguageType, Dictionary<string, string>> data = new Dictionary<LanguageType, Dictionary<string, string>>();
         static Dictionary<string, string> curDic = new Dictionary<string, string>();
         static Dictionary<string, Func<string>> dynamicDic = new Dictionary<string, Func<string>>();
@@ -102,6 +102,8 @@ namespace CYM
         /// <returns></returns>
         public static string Get(string key)
         {
+            if (key == null)
+                return "";
             if (curDic == null)
                 return BaseConstMgr.STR_Unkown + key;
             if (curDic.Count == 0)
@@ -248,7 +250,7 @@ namespace CYM
 
         void LoadLanguageData(string item)
         {
-            HSSFWorkbook dataSet = BaseExcelUtils.ReadExcelNPOI(item);
+            HSSFWorkbook dataSet = BaseExcelMgr.ReadExcelNPOI(item);
             if (dataSet == null)
             {
                 CLog.Error("无法读取下面文件{0}:", item);

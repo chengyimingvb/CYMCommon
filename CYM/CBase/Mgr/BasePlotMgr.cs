@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace CYM
 {
-    public class BasePlotMgr<TData> : BaseGlobalCoreMgr, IBasePlotMgr, ITableDataMgr<TData> where TData : TDBasePlotData, new()
+    public class BasePlotMgr<TData> : BaseGFlowMgr, IBasePlotMgr, ITableDataMgr<TData> where TData : TDBasePlotData, new()
     {
         #region Callback value
         public event Callback<bool,bool,int> Callback_OnPlotMode;

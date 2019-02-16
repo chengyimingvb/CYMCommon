@@ -4,15 +4,16 @@
 #endif
 
 
-
+#if UNITY_VERSION >= 201830 && !_TERRAINBLENDABLESHADER && !_MICROMESH
 #if defined(UNITY_INSTANCING_ENABLED) && !defined(SHADER_API_D3D11_9X)
     sampler2D _TerrainHeightmapTexture;
     sampler2D _TerrainNormalmapTexture;
     float4    _TerrainHeightmapRecipSize;   // float4(1.0f/width, 1.0f/height, 1.0f/(width-1), 1.0f/(height-1))
     float4    _TerrainHeightmapScale;       // float4(hmScale.x, hmScale.y / (float)(kMaxHeight), hmScale.z, 0.0f)
 #endif
+#endif
 
-#if UNITY_VERSION >= 201830
+#if UNITY_VERSION >= 201830 && !_TERRAINBLENDABLESHADER && !_MICROMESH
 UNITY_INSTANCING_BUFFER_START(Terrain)
     UNITY_DEFINE_INSTANCED_PROP(float4, _TerrainPatchInstanceData) // float4(xBase, yBase, skipScale, ~)
 UNITY_INSTANCING_BUFFER_END(Terrain)
@@ -25,7 +26,7 @@ UNITY_INSTANCING_BUFFER_END(Terrain)
       // and live with only the magic keywords..
       void vert (inout appdata i) 
       {
-         #if UNITY_VERSION >= 201830
+         #if UNITY_VERSION >= 201830 && !_TERRAINBLENDABLESHADER && !_MICROMESH
             #if defined(UNITY_INSTANCING_ENABLED) && !defined(SHADER_API_D3D11_9X)
                float2 patchVertex = i.vertex.xy;
                float4 instanceData = UNITY_ACCESS_INSTANCED_PROP(Terrain, _TerrainPatchInstanceData);
@@ -43,13 +44,9 @@ UNITY_INSTANCING_BUFFER_END(Terrain)
                i.texcoord.xy = (patchVertex.xy * uvscale.zw + uvoffset.zw);
                i.texcoord2 = i.texcoord1 = i.texcoord;
 
-               #ifdef TERRAIN_INSTANCED_PERPIXEL_NORMAL
-                 i.normal = float3(0, 1, 0); // TODO: reconstruct the tangent space in the pixel shader. Seems to be hard with surface shader especially when other attributes are packed together with tSpace.
-                 iata.tc.zw = sampleCoords;
-               #else
-                 float3 nor = tex2Dlod(_TerrainNormalmapTexture, float4(sampleCoords, 0, 0)).xyz;
-                 i.normal = 2.0f * nor - 1.0f;
-               #endif
+               float3 nor = tex2Dlod(_TerrainNormalmapTexture, float4(sampleCoords, 0, 0)).xyz;
+               i.normal = 2.0f * nor - 1.0f;
+               
             #endif
          #endif
 

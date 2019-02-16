@@ -14,7 +14,7 @@ using System;
 
 namespace CYM
 {
-    public class BaseTalkMgr<TData> : BaseGlobalCoreMgr, ITableDataMgr<TData> where TData : TDBaseTalkData, new()
+    public class BaseTalkMgr<TData> : BaseGFlowMgr, IBaseTalkMgr, ITableDataMgr<TData> where TData : TDBaseTalkData, new()
     {
         #region Callback val
         /// <summary>

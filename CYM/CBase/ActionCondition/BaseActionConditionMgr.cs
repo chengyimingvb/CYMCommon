@@ -17,7 +17,7 @@ namespace CYM
     /// <summary>
     /// 基类条件管理器
     /// </summary>
-    public class BaseActionConditionMgr : BaseGlobalCoreMgr
+    public class BaseActionConditionMgr : BaseGFlowMgr
     {
         #region prop
         private List<SimpleActionCondition> andSimpleConditions;

@@ -7,8 +7,11 @@
 // Copyright ©1995 [CYMCmmon] Powered By [CYM] Version 1.0.0 
 //**********************************************
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Experimental.Input;
+using static UnityEngine.Experimental.Input.InputAction;
 
 namespace CYM
 {
@@ -28,61 +31,88 @@ namespace CYM
         DoubleClick,
     }
 
-    public class BaseInputMgr : BaseGlobalCoreMgr
+    public class BaseInputMgr : BaseGFlowMgr
     {
         #region Callback
         public event Callback Callback_OnInputMapChanged;
         #endregion
 
         #region prop
-        public static readonly string UISubmit = "UISubmit";
-        public static readonly string UICancel = "UICancel";
-        public static readonly string UIPgUp = "UIPgUp";
-        public static readonly string UIPgDn = "UIPgDn";
-
         protected BoolState IsDisablePlayerInput { get; set; } = new BoolState();
+        protected InputActionAssetReference InputAssetReference => SelfBaseGlobal.InputAssetReference;
+        protected InputActionAsset InputAsset => InputAssetReference.asset;
+        public InputActionMap GamePlayMap { get; protected set; }
+        public InputActionMap MenuMap { get; protected set; }
         #endregion
 
         #region life
-        public override void OnCreate()
+        protected override void OnSetNeedFlag()
         {
-            base.OnCreate();
+            base.OnSetNeedFlag();
+            NeedUpdate = true;
         }
-
-        public override void OnEnable()
+        public override void OnBeAdded(IMono mono)
         {
-            base.OnEnable();
+            base.OnBeAdded(mono);
+            if (InputAssetReference == null || InputAsset == null)
+            {
+                CLog.Error("没有配置InputConfig");
+            }
+            else
+            {
+                GamePlayMap = TryGetActionMap("GamePlay");
+                MenuMap = TryGetActionMap("Menu");
+            }
         }
-        public override void OnDisable()
+        public override void OnStart()
         {
-            base.OnDisable();
+            base.OnStart();
+            Load();
         }
         public override void OnUpdate()
         {
             base.OnUpdate();
-            if (IsCanInput())
+            UpdateMapEnable(GamePlayMap, IsCanGamePlayInput);
+        }
+        void UpdateMapEnable(InputActionMap map , Func<bool> DoIsEnable)
+        {
+            if (map != null && DoIsEnable != null)
             {
-                UpdateInput();
+                bool temp = DoIsEnable();
+                if (map.enabled != temp)
+                {
+                    if (temp)
+                        map.Enable();
+                    else
+                        map.Disable();
+                }
             }
         }
-        protected virtual void UpdateInput()
-        {
+        #endregion
 
-        }
-        public override void OnDestroy()
+        #region get
+        protected InputActionMap TryGetActionMap(string id)
         {
-            base.OnDestroy();
+            return InputAsset.TryGetActionMap(id);
+        }
+        protected InputAction GetGamePlayAction(string id)
+        {
+            return GamePlayMap.TryGetAction(id);
+        }
+        protected InputAction GetMenuAction(string id)
+        {
+            return MenuMap.TryGetAction(id);
         }
         #endregion
 
         #region set
-        public bool GetBnt(string key, InputBntType type = InputBntType.Down)
+        protected InputAction RegisterGameplay(string id, Action<CallbackContext> action)
         {
-            return false;
-        }
-        public bool IsAnyKey()
-        {
-            return Input.anyKey;
+            var item = GetGamePlayAction(id);
+            if (item == null)
+                return null;
+            item.performed += action;
+            return item;
         }
         public virtual void EnablePlayerInput(bool b)
         {
@@ -91,6 +121,57 @@ namespace CYM
         public virtual void ResumePlayerInput()
         {
             IsDisablePlayerInput.Reset();
+        }
+        public void Save()
+        {
+            BaseFileUtils.SaveJson(BaseConstMgr.Path_Shortcuts,InputAsset.ToJson());
+        }
+        public void Load()
+        {
+            string data = BaseFileUtils.LoadFile(BaseConstMgr.Path_Shortcuts);
+            if (data == null)
+                return;
+            InputAsset.LoadFromJson(data);
+        }
+        #endregion
+
+        #region is
+        public virtual bool IsCanInput()
+        {
+            if (SelfBaseGlobal == null)
+                return false;
+            if (SelfBaseGlobal.DevConsoleMgr.IsShow())
+                return false;
+            return true;
+        }
+        public virtual bool IsCanGamePlayInput()
+        {
+            if (SelfBaseGlobal == null)
+                return false;
+            if (BattleMgr == null)
+                return false;
+            if (!BattleMgr.IsInBattle)
+                return false;
+            if (!IsCanInput())
+                return false;
+            if (IsDisablePlayerInput.IsIn())
+                return false;
+            if (SelfBaseGlobal.DevConsoleMgr.IsShow())
+                return false;
+            if (SelfBaseGlobal.IsPause)
+                return false;
+            return true;
+        }
+        #endregion
+
+        #region OldInput
+        public bool GetBnt(string key, InputBntType type = InputBntType.Down)
+        {
+            return false;
+        }
+        public bool IsAnyKey()
+        {
+            return Input.anyKey;
         }
         public bool GetMouseDown(int index)
         {
@@ -118,48 +199,18 @@ namespace CYM
         }
         #endregion
 
-        #region is
-        public virtual bool IsCanInput()
+        #region Callback
+        protected override void OnBattleLoad()
         {
-            if (SelfBaseGlobal == null)
-                return false;
-            if (SelfBaseGlobal.DevConsoleMgr.IsShow())
-                return false;
-            return true;
+            base.OnBattleLoad();
         }
-        public virtual bool IsCanPlayerInput()
+        protected override void OnBattleUnLoad()
         {
-            if (SelfBaseGlobal == null)
-                return false;
-            if (IsDisablePlayerInput.IsIn())
-                return false;
-            if (SelfBaseGlobal.DevConsoleMgr.IsShow())
-                return false;
-            if (SelfBaseGlobal.IsPause)
-                return false;
-            return true;
+            base.OnBattleUnLoad();
         }
         #endregion
 
-        #region UI
-        protected bool GetUICancle(InputBntType type = InputBntType.Down)
-        {
-            return GetBnt(UICancel, type);
-        }
 
-        protected bool GetUISubmit(InputBntType type = InputBntType.Down)
-        {
-            return GetBnt(UISubmit, type);
-        }
-        protected bool GetUIPgUp(InputBntType type = InputBntType.Down)
-        {
-            return GetBnt(UIPgUp, type);
-        }
-        protected bool GetUIPgDn(InputBntType type = InputBntType.Down)
-        {
-            return GetBnt(UIPgDn, type);
-        }
-        #endregion
 
     }
 

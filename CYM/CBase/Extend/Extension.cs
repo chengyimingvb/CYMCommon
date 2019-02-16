@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using UnityEngine;
+using UnityEngine.Experimental.Input;
+
 namespace CYM
 {
     public static class CYMExtension
@@ -191,8 +193,22 @@ namespace CYM
         #endregion
 
         #region vector3
-        
+        public static Vec3S ToVec3S(this Vector3 vector)
+        {
+            Vec3S vec3S = new Vec3S();
+            vec3S.Fill(vector);
+            return vec3S;
+        }
         #endregion
+
+        public static string DisplayName(this InputAction action, int index = 0)
+        {
+            if (action == null)
+                return BaseConstMgr.STR_Inv;
+            if (action.controls.Count <= index)
+                return BaseConstMgr.STR_Inv;
+            return action.controls[index].displayName;
+        }
     }
 
 }

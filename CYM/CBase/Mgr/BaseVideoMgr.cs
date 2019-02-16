@@ -17,7 +17,7 @@ using DG.Tweening;
 
 namespace CYM
 {
-    public class BaseVideoMgr : BaseGlobalCoreMgr
+    public class BaseVideoMgr : BaseGFlowMgr
     {
         public VideoPlayer VideoPlayer { get; set; }
         GameObject VideoPlayerGO;
@@ -36,8 +36,8 @@ namespace CYM
         {
             if (VideoPlayer != null)
             {
+                VideoPlayer.targetCamera = Camera.main;
                 VideoPlayer.clip = SelfBaseGlobal.GRMgr.GetVideo(videoName);
-                VideoPlayer?.gameObject.SetActive(true);
                 VideoPlayer?.Play();
                 VideoPlayer.targetCameraAlpha = startAlpha;
                 DOTween.To(() => VideoPlayer.targetCameraAlpha, x => VideoPlayer.targetCameraAlpha = x, 1.0f, duration).SetDelay(delay).OnComplete(OnTweenPlay);
@@ -48,8 +48,9 @@ namespace CYM
         {
             if (VideoPlayer != null)
             {
+                VideoPlayer.targetCameraAlpha = 0.0f;
+                VideoPlayer.targetCamera = null;
                 VideoPlayer?.Stop();
-                VideoPlayer?.gameObject.SetActive(false);
             }
         }
         #endregion

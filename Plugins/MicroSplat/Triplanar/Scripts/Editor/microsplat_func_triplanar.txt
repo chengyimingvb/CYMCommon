@@ -1,0 +1,105 @@
+
+      float _TriplanarContrast;
+      float4 _TriplanarUVScale;
+
+      void PrepTriplanar(float3 n, float3 worldPos, Config c, inout TriplanarConfig tc, half4 weights)
+      {
+         #if _TRIPLANARLOCALSPACE
+            worldPos = mul(float4(worldPos, 1), unity_WorldToObject);
+            n = mul(float4(n, 1),unity_WorldToObject);
+         #endif
+         
+      
+         tc.pN = pow(abs(n), _TriplanarContrast);
+         tc.pN = tc.pN / (tc.pN.x + tc.pN.y + tc.pN.z);
+         
+
+         // Get the sign (-1 or 1) of the surface normal
+         half3 axisSign = sign(n);
+         tc.uv0 = float3x3(c.uv0, c.uv0, c.uv0);
+         tc.uv1 = float3x3(c.uv1, c.uv1, c.uv1);
+         tc.uv2 = float3x3(c.uv2, c.uv2, c.uv2);
+         tc.uv3 = float3x3(c.uv3, c.uv3, c.uv3);
+         tc.pN0 = tc.pN;
+         tc.pN1 = tc.pN;
+         tc.pN2 = tc.pN;
+         tc.pN3 = tc.pN;
+
+
+
+         float2 uscale = 0.1 * _TriplanarUVScale.xy; // closer values to terrain scales..
+         
+         tc.uv0[0].xy = (worldPos.zy * uscale + _TriplanarUVScale.zw) * axisSign.x;
+         tc.uv0[1].xy = (worldPos.xz * uscale + _TriplanarUVScale.zw) * axisSign.y;
+         tc.uv0[2].xy = (worldPos.xy * uscale + _TriplanarUVScale.zw) * axisSign.z;
+
+
+         tc.uv1[0].xy = tc.uv0[0].xy;
+         tc.uv1[1].xy = tc.uv0[1].xy;
+         tc.uv1[2].xy = tc.uv0[2].xy;
+
+         tc.uv2[0].xy = tc.uv0[0].xy;
+         tc.uv2[1].xy = tc.uv0[1].xy;
+         tc.uv2[2].xy = tc.uv0[2].xy;
+
+         tc.uv3[0].xy = tc.uv0[0].xy;
+         tc.uv3[1].xy = tc.uv0[1].xy;
+         tc.uv3[2].xy = tc.uv0[2].xy;
+
+
+         #if _PERTEXTRIPLANAR
+            SAMPLE_PER_TEX(pttri, 9.5, c, half4(0,0,0,0));
+            if (pttri0.x > 0.5)
+            {
+               tc.uv0[0].xy = tc.uv0[1].xy;
+               tc.uv0[1].xy = tc.uv0[1].xy;
+               tc.uv0[2].xy = tc.uv0[1].xy;
+            }
+            if (pttri1.x > 0.5)
+            {
+               tc.uv1[0].xy = tc.uv1[1].xy;
+               tc.uv1[1].xy = tc.uv1[1].xy;
+               tc.uv1[2].xy = tc.uv1[1].xy;
+            }
+            #if !_MAX2LAYER
+            if (pttri2.x > 0.5)
+            {
+               tc.uv2[0].xy = tc.uv2[1].xy;
+               tc.uv2[1].xy = tc.uv2[1].xy;
+               tc.uv2[2].xy = tc.uv2[1].xy;
+            }
+            #endif
+            #if !_MAX3LAYER || !_MAX2LAYER
+            if (pttri3.x > 0.5)
+            {
+               tc.uv3[0].xy = tc.uv3[1].xy;
+               tc.uv3[1].xy = tc.uv3[1].xy;
+               tc.uv3[2].xy = tc.uv3[1].xy;
+            }
+            #endif
+         #endif
+
+         #if _PERTEXUVSCALEOFFSET
+            SAMPLE_PER_TEX(ptUVScale, 0.5, c, half4(1,1,0,0));
+            tc.uv0[0].xy = tc.uv0[0].xy * ptUVScale0.xy + ptUVScale0.zw;
+            tc.uv0[1].xy = tc.uv0[1].xy * ptUVScale0.xy + ptUVScale0.zw;
+            tc.uv0[2].xy = tc.uv0[2].xy * ptUVScale0.xy + ptUVScale0.zw;
+
+            tc.uv1[0].xy = tc.uv1[0].xy * ptUVScale1.xy + ptUVScale1.zw;
+            tc.uv1[1].xy = tc.uv1[1].xy * ptUVScale1.xy + ptUVScale1.zw;
+            tc.uv1[2].xy = tc.uv1[2].xy * ptUVScale1.xy + ptUVScale1.zw;
+
+            #if !_MAX2LAYER
+               tc.uv2[0].xy = tc.uv2[0].xy * ptUVScale2.xy + ptUVScale2.zw;
+               tc.uv2[1].xy = tc.uv2[1].xy * ptUVScale2.xy + ptUVScale2.zw;
+               tc.uv2[2].xy = tc.uv2[2].xy * ptUVScale2.xy + ptUVScale2.zw;
+            #endif
+            #if !_MAX3LAYER || !_MAX2LAYER
+               tc.uv3[0].xy = tc.uv3[0].xy * ptUVScale3.xy + ptUVScale3.zw;
+               tc.uv3[1].xy = tc.uv3[1].xy * ptUVScale3.xy + ptUVScale3.zw;
+               tc.uv3[2].xy = tc.uv3[2].xy * ptUVScale3.xy + ptUVScale3.zw;
+            #endif
+         #endif
+
+      }
+         

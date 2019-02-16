@@ -14,7 +14,7 @@ using System;
 
 namespace CYM
 {
-    public class BaseDataParseMgr : BaseGlobalCoreMgr
+    public class BaseDataParseMgr : BaseGFlowMgr
     {
         /// <summary>
         /// lua管理器列表类

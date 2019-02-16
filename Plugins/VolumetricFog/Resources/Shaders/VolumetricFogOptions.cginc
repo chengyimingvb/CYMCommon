@@ -5,7 +5,7 @@
 //#define FOG_DEBUG
 
 // Uncomment to enable screen-space mask based on mesh volumes
-//#define FOG_MASK
+#define FOG_MASK
 
 // Uncomment to enable screen-space mask based on mesh volumes
 //#define FOG_INVERTED_MASK

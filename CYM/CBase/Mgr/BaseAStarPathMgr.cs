@@ -14,7 +14,7 @@ using Pathfinding;
 
 namespace CYM
 {
-    public class BaseAStarPathMgr : BaseGlobalCoreMgr
+    public class BaseAStarPathMgr : BaseGFlowMgr
     {
         #region prop
         AstarPath Ins => AstarPath.active;

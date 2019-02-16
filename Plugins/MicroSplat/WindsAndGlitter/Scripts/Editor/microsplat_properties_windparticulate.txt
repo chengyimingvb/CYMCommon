@@ -1,0 +1,22 @@
+
+      _WindParticulateRotation("Rotation", Float) = 0
+
+      _WindParticulateStrength("Strength", Range(0, 3)) = 1
+      _WindParticulateParams("Speed/Power/UVScale", Vector) = (1, 1, 1, 0.25)
+      _WindParticulateColor("Color, strength", Color) = (1, 1, 1, 1)
+      _WindParticulateStretch("Stretch", Float) = 0.3
+      _WindParticulateShadow("Shadow Offset/Strength/Boost", Vector) = (0.01, 1, 0, 0)
+      _WindParticulateShadowColor("Shadow Color", Color) = (0.0, 0.0, 0.0, 1.0)
+      _WindParticulateHeightMask("Wind Height Mask", Vector) = (0, 0, 99999, 99999)
+      _WindParticulateAngleMask("Wind Angle Mask", Vector) = (-1, -1, 1, 1)
+
+      _SnowParticulateParams("Speed/Power/UVScale", Vector) = (1, 1, 1, 0.25)
+      _SnowParticulateColor("Color, strength", Color) = (1, 1, 1, 1)
+      _SnowParticulateStrength("Strength", Range(0, 3)) = 1
+      _SnowParticulateStretch("Stetch", Float) = 0.3
+      _SnowParticulateShadow("Shadow Offset/Strength/Boost", Vector) = (0.01, 1, 0, 0)
+      _SnowParticulateShadowColor("Shadow Color", Color) = (0.0, 0.0, 0.0, 1.0)
+      _SnowParticulateHeightMask("Snow Height Mask", Vector) = (0, 0, 99999, 99999)
+      _SnowParticulateAngleMask("Snow Angle Mask", Vector) = (-1, -1, 1, 1)
+
+      _WindEmissive("Wind Emissive", Vector) = (0,0,0,0)

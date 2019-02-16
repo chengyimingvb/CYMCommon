@@ -40,6 +40,8 @@ public class MicroSplatObject : MonoBehaviour
    public Texture2D vsShadowMap;
    [HideInInspector]
    public Texture2D advDetailControl;
+   [HideInInspector]
+   public Texture2D clipMap;
 
    [HideInInspector]
    public Texture2D customControl0;
@@ -71,6 +73,10 @@ public class MicroSplatObject : MonoBehaviour
       if (m.IsKeywordEnabled("_GEOCURVE") && propData != null)
       {
          m.SetTexture("_GeoCurve", propData.GetGeoCurve());
+      }
+      if (m.IsKeywordEnabled("_ALPHAHOLETEXTURE") && clipMap != null)
+      {
+         m.SetTexture("_AlphaHoleTexture", clipMap);
       }
 
       if (m.IsKeywordEnabled("_GLOBALTINT") && tintMapOverride != null)

@@ -7,10 +7,10 @@ using UnityEditor;
 #if UNITY_5_5_OR_NEWER
 using UnityEngine.Profiling;
 #endif
-using MEC = CYM;
+
 // /////////////////////////////////////////////////////////////////////////////////////////
 //                              More Effective Coroutines Pro
-//                                        v3.05.1
+//                                        v3.06.2
 // 
 // This is an improved implementation of coroutines that boasts zero per-frame memory allocations,
 // runs about twice as fast as Unity's built in coroutines, and has a range of extra features.
@@ -22,7 +22,7 @@ using MEC = CYM;
 // All rights preserved
 // trinaryllc@gmail.com
 // /////////////////////////////////////////////////////////////////////////////////////////
-
+using MEC = CYM;
 namespace CYM
 {
     public class Timing : MonoBehaviour
@@ -122,13 +122,30 @@ namespace CYM
         public static event System.Action OnPreExecute;
         /// <summary>
         /// You can use "yield return Timing.WaitForOneFrame;" inside a coroutine function to go to the next frame. 
-        /// This is equalivant to "yield return 0f;"
         /// </summary>
-        public const float WaitForOneFrame = 0f;
+        public const float WaitForOneFrame = float.NegativeInfinity;
         /// <summary>
         /// The main thread that (almost) everything in unity runs in.
         /// </summary>
         public static System.Threading.Thread MainThread { get; private set; }
+        /// <summary>
+        /// The handle of the current coroutine that is running.
+        /// </summary>
+        public static CoroutineHandle CurrentCoroutine
+        {
+            get
+            {
+                for (int i = 1; i < 16; i++)
+                    if (ActiveInstances[i] != null && ActiveInstances[i]._currentCoroutine.IsValid)
+                        return ActiveInstances[i]._currentCoroutine;
+                return default(CoroutineHandle);
+            }
+        }
+        /// <summary>
+        /// The handle of the current coroutine that is running.
+        /// </summary>
+        public CoroutineHandle currentCoroutine { get { return _currentCoroutine; } }
+        private CoroutineHandle _currentCoroutine;
 
 
         private static object _tmpRef;
@@ -179,6 +196,7 @@ namespace CYM
         private float _lastManualTimeframeDeltaTime;
         private ushort _framesSinceUpdate;
         private ushort _expansions = 1;
+        [SerializeField, HideInInspector]
         private byte _instanceID;
         private bool _EOFPumpRan;
 
@@ -213,6 +231,16 @@ namespace CYM
         private bool[] EndOfFramePaused = new bool[InitialBufferSizeSmall];
         private bool[] ManualTimeframePaused = new bool[InitialBufferSizeSmall];
 
+        private bool[] UpdateHeld = new bool[InitialBufferSizeLarge];
+        private bool[] LateUpdateHeld = new bool[InitialBufferSizeSmall];
+        private bool[] FixedUpdateHeld = new bool[InitialBufferSizeMedium];
+        private bool[] SlowUpdateHeld = new bool[InitialBufferSizeMedium];
+        private bool[] RealtimeUpdateHeld = new bool[InitialBufferSizeSmall];
+        private bool[] EditorUpdateHeld = new bool[InitialBufferSizeSmall];
+        private bool[] EditorSlowUpdateHeld = new bool[InitialBufferSizeSmall];
+        private bool[] EndOfFrameHeld = new bool[InitialBufferSizeSmall];
+        private bool[] ManualTimeframeHeld = new bool[InitialBufferSizeSmall];
+
         private CoroutineHandle _eofWatcherHandle;
         private const ushort FramesUntilMaintenance = 64;
         private const int ProcessArrayChunkSize = 64;
@@ -220,7 +248,8 @@ namespace CYM
         private const int InitialBufferSizeMedium = 64;
         private const int InitialBufferSizeSmall = 8;
 
-        private static readonly Dictionary<byte, Timing> ActiveInstances = new Dictionary<byte, Timing>();
+
+        private static Timing[] ActiveInstances = new Timing[16];
         private static Timing _instance;
         public static Timing Instance
         {
@@ -240,13 +269,11 @@ namespace CYM
 #else
                         DontDestroyOnLoad(instanceHome);
 #endif
+                    }
 
-                        _instance = instanceHome.GetComponent<Timing>() ?? instanceHome.AddComponent<Timing>();
-                    }
-                    else
-                    {
-                        _instance = instanceHome.GetComponent<Timing>() ?? instanceHome.AddComponent<Timing>();
-                    }
+                    _instance = instanceHome.GetComponent<Timing>() ?? instanceHome.AddComponent<Timing>();
+
+                    _instance.InitializeInstanceID();
                 }
 
                 return _instance;
@@ -262,18 +289,6 @@ namespace CYM
             else
                 deltaTime = _instance.deltaTime;
 
-            _instanceID = 0x01;
-            while(ActiveInstances.ContainsKey(_instanceID))
-                _instanceID++;
-
-            if (_instanceID == 0x10)
-            {
-                GameObject.Destroy(gameObject);
-                throw new System.OverflowException("You are only allowed 15 instances of MEC at one time.");
-            }
-
-            ActiveInstances.Add(_instanceID, this);
-
             if (MainThread == null)
                 MainThread = System.Threading.Thread.CurrentThread;
         }
@@ -282,8 +297,6 @@ namespace CYM
         {
             if (_instance == this)
                 _instance = null;
-
-            ActiveInstances.Remove(_instanceID);
         }
 
         void OnEnable()
@@ -291,8 +304,40 @@ namespace CYM
             if(_nextEditorUpdateProcessSlot > 0 || _nextEditorSlowUpdateProcessSlot > 0)
                 OnEditorStart();
 
-            if(_nextEndOfFrameProcessSlot > 0)
+            InitializeInstanceID();
+
+            if (_nextEndOfFrameProcessSlot > 0)
                 RunCoroutineSingletonOnInstance(_EOFPumpWatcher(), "MEC_EOFPumpWatcher", SingletonBehavior.Abort);
+        }
+
+        void OnDisable()
+        {
+            if (_instanceID < ActiveInstances.Length)
+                ActiveInstances[_instanceID] = null;
+        }
+
+        private void InitializeInstanceID()
+        {
+            if (ActiveInstances[_instanceID] == null)
+            {
+                if (_instanceID == 0x00)
+                    _instanceID++;
+
+                for (; _instanceID <= 0x10; _instanceID++)
+                {
+                    if (_instanceID == 0x10)
+                    {
+                        GameObject.Destroy(gameObject);
+                        throw new System.OverflowException("You are only allowed 15 different contexts for MEC to run inside at one time.");
+                    }
+
+                    if (ActiveInstances[_instanceID] == null)
+                    {
+                        ActiveInstances[_instanceID] = this;
+                        break;
+                    }
+                }
+            }
         }
 
         void Update()
@@ -310,8 +355,10 @@ namespace CYM
                 {
                     try
                     {
-                        if (!SlowUpdatePaused[coindex.i] && SlowUpdateProcesses[coindex.i] != null && !(localTime < SlowUpdateProcesses[coindex.i].Current))
+                        if (!SlowUpdatePaused[coindex.i] && !SlowUpdateHeld[coindex.i] && SlowUpdateProcesses[coindex.i] != null && !(localTime < SlowUpdateProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Slow Update), " +
@@ -356,8 +403,10 @@ namespace CYM
                 {
                     try
                     {
-                        if (!RealtimeUpdatePaused[coindex.i] && RealtimeUpdateProcesses[coindex.i] != null && !(localTime < RealtimeUpdateProcesses[coindex.i].Current))
+                        if (!RealtimeUpdatePaused[coindex.i] && !RealtimeUpdateHeld[coindex.i] && RealtimeUpdateProcesses[coindex.i] != null && !(localTime < RealtimeUpdateProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Realtime Update), " +
@@ -402,8 +451,10 @@ namespace CYM
                 {
                     try
                     {
-                        if (!UpdatePaused[coindex.i] && UpdateProcesses[coindex.i] != null && !(localTime < UpdateProcesses[coindex.i].Current))
+                        if (!UpdatePaused[coindex.i] && !UpdateHeld[coindex.i] && UpdateProcesses[coindex.i] != null && !(localTime < UpdateProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
@@ -457,6 +508,9 @@ namespace CYM
                         Profiler.EndSample();
                 }
             }
+
+            _currentCoroutine = default(CoroutineHandle);
+
         }
 
         void FixedUpdate()
@@ -474,8 +528,10 @@ namespace CYM
                 {
                     try
                     {
-                        if (!FixedUpdatePaused[coindex.i] && FixedUpdateProcesses[coindex.i] != null && !(localTime < FixedUpdateProcesses[coindex.i].Current))
+                        if (!FixedUpdatePaused[coindex.i] && !FixedUpdateHeld[coindex.i] && FixedUpdateProcesses[coindex.i] != null && !(localTime < FixedUpdateProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
@@ -508,6 +564,8 @@ namespace CYM
                         Debug.LogException(ex);
                     }
                 }
+
+                _currentCoroutine = default(CoroutineHandle);
             }
         }
 
@@ -526,8 +584,10 @@ namespace CYM
                 {
                     try
                     {
-                        if (!LateUpdatePaused[coindex.i] && LateUpdateProcesses[coindex.i] != null && !(localTime < LateUpdateProcesses[coindex.i].Current))
+                        if (!LateUpdatePaused[coindex.i] && !LateUpdateHeld[coindex.i] && LateUpdateProcesses[coindex.i] != null && !(localTime < LateUpdateProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
@@ -560,6 +620,8 @@ namespace CYM
                         Debug.LogException(ex);
                     }
                 }
+
+                _currentCoroutine = default(CoroutineHandle);
             }
         }
 
@@ -583,9 +645,11 @@ namespace CYM
                 {
                     try
                     {
-                        if (!ManualTimeframePaused[coindex.i] && ManualTimeframeProcesses[coindex.i] != null &&
+                        if (!ManualTimeframePaused[coindex.i] && !ManualTimeframeHeld[coindex.i] && ManualTimeframeProcesses[coindex.i] != null &&
                             !(localTime < ManualTimeframeProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine (Manual Timeframe), " +
@@ -632,6 +696,8 @@ namespace CYM
                 if (ProfilerDebugAmount != DebugInfoType.None)
                     Profiler.EndSample();
             }
+
+            _currentCoroutine = default(CoroutineHandle);
         }
 
         private bool OnEditorStart()
@@ -643,8 +709,8 @@ namespace CYM
             if (_lastEditorUpdateTime < 0.001)
                 _lastEditorUpdateTime = (float)EditorApplication.timeSinceStartup;
 
-            if (!ActiveInstances.ContainsKey(_instanceID))
-                Awake();
+            if (ActiveInstances[_instanceID] == null)
+                OnEnable();
 
             EditorApplication.update -= OnEditorUpdate;
 
@@ -683,9 +749,11 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastEditorSlowUpdateProcessSlot; coindex.i++)
                 {
+                    _currentCoroutine = _indexToHandle[coindex];
+
                     try
                     {
-                        if (!EditorSlowUpdatePaused[coindex.i] && EditorSlowUpdateProcesses[coindex.i] != null &&
+                        if (!EditorSlowUpdatePaused[coindex.i] && !EditorSlowUpdateHeld[coindex.i] && EditorSlowUpdateProcesses[coindex.i] != null &&
                             !(EditorApplication.timeSinceStartup < EditorSlowUpdateProcesses[coindex.i].Current))
                         {
                             if (!EditorSlowUpdateProcesses[coindex.i].MoveNext())
@@ -719,9 +787,11 @@ namespace CYM
 
                 for (coindex.i = 0; coindex.i < _lastEditorUpdateProcessSlot; coindex.i++)
                 {
+                    _currentCoroutine = _indexToHandle[coindex];
+
                     try
                     {
-                        if (!EditorUpdatePaused[coindex.i] && EditorUpdateProcesses[coindex.i] != null &&
+                        if (!EditorUpdatePaused[coindex.i] && !EditorUpdateHeld[coindex.i] && EditorUpdateProcesses[coindex.i] != null &&
                             !(EditorApplication.timeSinceStartup < EditorUpdateProcesses[coindex.i].Current))
                         {
                             if (!EditorUpdateProcesses[coindex.i].MoveNext())
@@ -753,6 +823,8 @@ namespace CYM
 
                 EditorRemoveUnused();
             }
+
+            _currentCoroutine = default(CoroutineHandle);
         }
 #endif
 
@@ -789,8 +861,10 @@ namespace CYM
                 {
                     try
                     {
-                        if (!EndOfFramePaused[coindex.i] && EndOfFrameProcesses[coindex.i] != null && !(localTime < EndOfFrameProcesses[coindex.i].Current))
+                        if (!EndOfFramePaused[coindex.i] && !EndOfFrameHeld[coindex.i] && EndOfFrameProcesses[coindex.i] != null && !(localTime < EndOfFrameProcesses[coindex.i].Current))
                         {
+                            _currentCoroutine = _indexToHandle[coindex];
+
                             if (ProfilerDebugAmount != DebugInfoType.None && _indexToHandle.ContainsKey(coindex))
                             {
                                 Profiler.BeginSample(ProfilerDebugAmount == DebugInfoType.SeperateTags ? ("Processing Coroutine, " +
@@ -824,6 +898,8 @@ namespace CYM
                     }
                 }
             }
+
+            _currentCoroutine = default(CoroutineHandle);
         }
 
         private void RemoveUnused()
@@ -855,6 +931,7 @@ namespace CYM
                     {
                         UpdateProcesses[inner.i] = UpdateProcesses[outer.i];
                         UpdatePaused[inner.i] = UpdatePaused[outer.i];
+                        UpdateHeld[inner.i] = UpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -874,6 +951,7 @@ namespace CYM
             {
                 UpdateProcesses[outer.i] = null;
                 UpdatePaused[outer.i] = false;
+                UpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -893,6 +971,7 @@ namespace CYM
                     {
                         FixedUpdateProcesses[inner.i] = FixedUpdateProcesses[outer.i];
                         FixedUpdatePaused[inner.i] = FixedUpdatePaused[outer.i];
+                        FixedUpdateHeld[inner.i] = FixedUpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -912,6 +991,7 @@ namespace CYM
             {
                 FixedUpdateProcesses[outer.i] = null;
                 FixedUpdatePaused[outer.i] = false;
+                FixedUpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -932,6 +1012,7 @@ namespace CYM
                     {
                         LateUpdateProcesses[inner.i] = LateUpdateProcesses[outer.i];
                         LateUpdatePaused[inner.i] = LateUpdatePaused[outer.i];
+                        LateUpdateHeld[inner.i] = LateUpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -951,6 +1032,7 @@ namespace CYM
             {
                 LateUpdateProcesses[outer.i] = null;
                 LateUpdatePaused[outer.i] = false;
+                LateUpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -971,6 +1053,7 @@ namespace CYM
                     {
                         SlowUpdateProcesses[inner.i] = SlowUpdateProcesses[outer.i];
                         SlowUpdatePaused[inner.i] = SlowUpdatePaused[outer.i];
+                        SlowUpdateHeld[inner.i] = SlowUpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -990,6 +1073,7 @@ namespace CYM
             {
                 SlowUpdateProcesses[outer.i] = null;
                 SlowUpdatePaused[outer.i] = false;
+                SlowUpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -1010,6 +1094,7 @@ namespace CYM
                     {
                         RealtimeUpdateProcesses[inner.i] = RealtimeUpdateProcesses[outer.i];
                         RealtimeUpdatePaused[inner.i] = RealtimeUpdatePaused[outer.i];
+                        RealtimeUpdateHeld[inner.i] = RealtimeUpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -1029,6 +1114,7 @@ namespace CYM
             {
                 RealtimeUpdateProcesses[outer.i] = null;
                 RealtimeUpdatePaused[outer.i] = false;
+                RealtimeUpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -1049,6 +1135,7 @@ namespace CYM
                     {
                         EndOfFrameProcesses[inner.i] = EndOfFrameProcesses[outer.i];
                         EndOfFramePaused[inner.i] = EndOfFramePaused[outer.i];
+                        EndOfFrameHeld[inner.i] = EndOfFrameHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -1068,6 +1155,7 @@ namespace CYM
             {
                 EndOfFrameProcesses[outer.i] = null;
                 EndOfFramePaused[outer.i] = false;
+                EndOfFrameHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -1088,6 +1176,7 @@ namespace CYM
                     {
                         ManualTimeframeProcesses[inner.i] = ManualTimeframeProcesses[outer.i];
                         ManualTimeframePaused[inner.i] = ManualTimeframePaused[outer.i];
+                        ManualTimeframeHeld[inner.i] = ManualTimeframeHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -1107,6 +1196,7 @@ namespace CYM
             {
                 ManualTimeframeProcesses[outer.i] = null;
                 ManualTimeframePaused[outer.i] = false;
+                ManualTimeframeHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -1141,6 +1231,7 @@ namespace CYM
                     {
                         EditorUpdateProcesses[inner.i] = EditorUpdateProcesses[outer.i];
                         EditorUpdatePaused[inner.i] = EditorUpdatePaused[outer.i];
+                        EditorUpdateHeld[inner.i] = EditorUpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -1160,6 +1251,7 @@ namespace CYM
             {
                 EditorUpdateProcesses[outer.i] = null;
                 EditorUpdatePaused[outer.i] = false;
+                EditorUpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -1180,6 +1272,7 @@ namespace CYM
                     {
                         EditorSlowUpdateProcesses[inner.i] = EditorSlowUpdateProcesses[outer.i];
                         EditorUpdatePaused[inner.i] = EditorUpdatePaused[outer.i];
+                        EditorUpdateHeld[inner.i] = EditorUpdateHeld[outer.i];
 
                         if (_indexToHandle.ContainsKey(inner))
                         {
@@ -1199,6 +1292,7 @@ namespace CYM
             {
                 EditorSlowUpdateProcesses[outer.i] = null;
                 EditorSlowUpdatePaused[outer.i] = false;
+                EditorSlowUpdateHeld[outer.i] = false;
                 if (_indexToHandle.ContainsKey(outer))
                 {
                     RemoveGraffiti(_indexToHandle[outer]);
@@ -2261,6 +2355,8 @@ namespace CYM
 
             float currentLocalTime = localTime;
             float currentDeltaTime = deltaTime;
+            CoroutineHandle cashedHandle = _currentCoroutine;
+            _currentCoroutine = handle;
 
             try
             {
@@ -2272,14 +2368,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = UpdateProcesses;
                             bool[] oldPausedArray = UpdatePaused;
+                            bool[] oldHeldArray = UpdateHeld;
 
                             UpdateProcesses = new IEnumerator<float>[UpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             UpdatePaused = new bool[UpdateProcesses.Length];
+                            UpdateHeld = new bool[UpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 UpdateProcesses[i] = oldProcArray[i];
                                 UpdatePaused[i] = oldPausedArray[i];
+                                UpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2314,7 +2413,7 @@ namespace CYM
                                     UpdateProcesses[slot.i] = ReplacementFunction(UpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !UpdatePaused[slot.i];
+                                prewarm = !UpdatePaused[slot.i] || !UpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2330,14 +2429,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = FixedUpdateProcesses;
                             bool[] oldPausedArray = FixedUpdatePaused;
+                            bool[] oldHeldArray = FixedUpdateHeld;
 
                             FixedUpdateProcesses = new IEnumerator<float>[FixedUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             FixedUpdatePaused = new bool[FixedUpdateProcesses.Length];
+                            FixedUpdateHeld = new bool[FixedUpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 FixedUpdateProcesses[i] = oldProcArray[i];
                                 FixedUpdatePaused[i] = oldPausedArray[i];
+                                FixedUpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2372,7 +2474,7 @@ namespace CYM
                                     FixedUpdateProcesses[slot.i] = ReplacementFunction(FixedUpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !FixedUpdatePaused[slot.i];
+                                prewarm = !FixedUpdatePaused[slot.i] || !FixedUpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2388,14 +2490,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = LateUpdateProcesses;
                             bool[] oldPausedArray = LateUpdatePaused;
+                            bool[] oldHeldArray = LateUpdateHeld;
 
                             LateUpdateProcesses = new IEnumerator<float>[LateUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             LateUpdatePaused = new bool[LateUpdateProcesses.Length];
+                            LateUpdateHeld = new bool[LateUpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 LateUpdateProcesses[i] = oldProcArray[i];
                                 LateUpdatePaused[i] = oldPausedArray[i];
+                                LateUpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2430,7 +2535,7 @@ namespace CYM
                                     LateUpdateProcesses[slot.i] = ReplacementFunction(LateUpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !LateUpdatePaused[slot.i];
+                                prewarm = !LateUpdatePaused[slot.i] || !LateUpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2446,14 +2551,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = SlowUpdateProcesses;
                             bool[] oldPausedArray = SlowUpdatePaused;
+                            bool[] oldHeldArray = SlowUpdateHeld;
 
                             SlowUpdateProcesses = new IEnumerator<float>[SlowUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             SlowUpdatePaused = new bool[SlowUpdateProcesses.Length];
+                            SlowUpdateHeld = new bool[SlowUpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 SlowUpdateProcesses[i] = oldProcArray[i];
                                 SlowUpdatePaused[i] = oldPausedArray[i];
+                                SlowUpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2488,7 +2596,7 @@ namespace CYM
                                     SlowUpdateProcesses[slot.i] = ReplacementFunction(SlowUpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !SlowUpdatePaused[slot.i];
+                                prewarm = !SlowUpdatePaused[slot.i] || !SlowUpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2504,14 +2612,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = RealtimeUpdateProcesses;
                             bool[] oldPausedArray = RealtimeUpdatePaused;
+                            bool[] oldHeldArray = RealtimeUpdateHeld;
 
                             RealtimeUpdateProcesses = new IEnumerator<float>[RealtimeUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             RealtimeUpdatePaused = new bool[RealtimeUpdateProcesses.Length];
+                            RealtimeUpdateHeld = new bool[RealtimeUpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 RealtimeUpdateProcesses[i] = oldProcArray[i];
                                 RealtimeUpdatePaused[i] = oldPausedArray[i];
+                                RealtimeUpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2546,7 +2657,7 @@ namespace CYM
                                     RealtimeUpdateProcesses[slot.i] = ReplacementFunction(RealtimeUpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !RealtimeUpdatePaused[slot.i];
+                                prewarm = !RealtimeUpdatePaused[slot.i] || !RealtimeUpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2568,14 +2679,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = EditorUpdateProcesses;
                             bool[] oldPausedArray = EditorUpdatePaused;
+                            bool[] oldHeldArray = EditorUpdateHeld;
 
                             EditorUpdateProcesses = new IEnumerator<float>[EditorUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             EditorUpdatePaused = new bool[EditorUpdateProcesses.Length];
+                            EditorUpdateHeld = new bool[EditorUpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 EditorUpdateProcesses[i] = oldProcArray[i];
                                 EditorUpdatePaused[i] = oldPausedArray[i];
+                                EditorUpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2610,7 +2724,7 @@ namespace CYM
                                     EditorUpdateProcesses[slot.i] = ReplacementFunction(EditorUpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !EditorUpdatePaused[slot.i];
+                                prewarm = !EditorUpdatePaused[slot.i] || !EditorUpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2632,14 +2746,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = EditorSlowUpdateProcesses;
                             bool[] oldPausedArray = EditorSlowUpdatePaused;
+                            bool[] oldHeldArray = EditorSlowUpdateHeld;
 
                             EditorSlowUpdateProcesses = new IEnumerator<float>[EditorSlowUpdateProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             EditorSlowUpdatePaused = new bool[EditorSlowUpdateProcesses.Length];
+                            EditorSlowUpdateHeld = new bool[EditorSlowUpdateProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 EditorSlowUpdateProcesses[i] = oldProcArray[i];
                                 EditorSlowUpdatePaused[i] = oldPausedArray[i];
+                                EditorSlowUpdateHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2674,7 +2791,7 @@ namespace CYM
                                     EditorSlowUpdateProcesses[slot.i] = ReplacementFunction(EditorSlowUpdateProcesses[slot.i], _indexToHandle[slot]);
                                     ReplacementFunction = null;
                                 }
-                                prewarm = !EditorSlowUpdatePaused[slot.i];
+                                prewarm = !EditorSlowUpdatePaused[slot.i] || !EditorSlowUpdateHeld[slot.i];
                             }
                             else
                             {
@@ -2690,14 +2807,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = EndOfFrameProcesses;
                             bool[] oldPausedArray = EndOfFramePaused;
+                            bool[] oldHeldArray = EndOfFrameHeld;
 
                             EndOfFrameProcesses = new IEnumerator<float>[EndOfFrameProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             EndOfFramePaused = new bool[EndOfFrameProcesses.Length];
+                            EndOfFrameHeld = new bool[EndOfFrameProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 EndOfFrameProcesses[i] = oldProcArray[i];
                                 EndOfFramePaused[i] = oldPausedArray[i];
+                                EndOfFrameHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2726,14 +2846,17 @@ namespace CYM
                         {
                             IEnumerator<float>[] oldProcArray = ManualTimeframeProcesses;
                             bool[] oldPausedArray = ManualTimeframePaused;
+                            bool[] oldHeldArray = ManualTimeframeHeld;
 
                             ManualTimeframeProcesses = new IEnumerator<float>[ManualTimeframeProcesses.Length + (ProcessArrayChunkSize * _expansions++)];
                             ManualTimeframePaused = new bool[ManualTimeframeProcesses.Length];
+                            ManualTimeframeHeld = new bool[ManualTimeframeProcesses.Length];
 
                             for (int i = 0; i < oldProcArray.Length; i++)
                             {
                                 ManualTimeframeProcesses[i] = oldProcArray[i];
                                 ManualTimeframePaused[i] = oldPausedArray[i];
+                                ManualTimeframeHeld[i] = oldHeldArray[i];
                             }
                         }
 
@@ -2766,6 +2889,7 @@ namespace CYM
 
             localTime = currentLocalTime;
             deltaTime = currentDeltaTime;
+            _currentCoroutine = cashedHandle;
 
             return handle;
         }
@@ -2791,46 +2915,55 @@ namespace CYM
 
             UpdateProcesses = new IEnumerator<float>[InitialBufferSizeLarge];
             UpdatePaused = new bool[InitialBufferSizeLarge];
+            UpdateHeld = new bool[InitialBufferSizeLarge];
             UpdateCoroutines = 0;
             _nextUpdateProcessSlot = 0;
 
             LateUpdateProcesses = new IEnumerator<float>[InitialBufferSizeSmall];
             LateUpdatePaused = new bool[InitialBufferSizeSmall];
+            LateUpdateHeld = new bool[InitialBufferSizeSmall];
             LateUpdateCoroutines = 0;
             _nextLateUpdateProcessSlot = 0;
 
             FixedUpdateProcesses = new IEnumerator<float>[InitialBufferSizeMedium];
             FixedUpdatePaused = new bool[InitialBufferSizeMedium];
+            FixedUpdateHeld = new bool[InitialBufferSizeMedium];
             FixedUpdateCoroutines = 0;
             _nextFixedUpdateProcessSlot = 0;
 
             SlowUpdateProcesses = new IEnumerator<float>[InitialBufferSizeMedium];
             SlowUpdatePaused = new bool[InitialBufferSizeMedium];
+            SlowUpdateHeld = new bool[InitialBufferSizeMedium];
             SlowUpdateCoroutines = 0;
             _nextSlowUpdateProcessSlot = 0;
 
             RealtimeUpdateProcesses = new IEnumerator<float>[InitialBufferSizeSmall];
             RealtimeUpdatePaused = new bool[InitialBufferSizeSmall];
+            RealtimeUpdateHeld = new bool[InitialBufferSizeSmall];
             RealtimeUpdateCoroutines = 0;
             _nextRealtimeUpdateProcessSlot = 0;
 
             EditorUpdateProcesses = new IEnumerator<float>[InitialBufferSizeSmall];
             EditorUpdatePaused = new bool[InitialBufferSizeSmall];
+            EditorUpdateHeld = new bool[InitialBufferSizeSmall];
             EditorUpdateCoroutines = 0;
             _nextEditorUpdateProcessSlot = 0;
 
             EditorSlowUpdateProcesses = new IEnumerator<float>[InitialBufferSizeSmall];
             EditorSlowUpdatePaused = new bool[InitialBufferSizeSmall];
+            EditorSlowUpdateHeld = new bool[InitialBufferSizeSmall];
             EditorSlowUpdateCoroutines = 0;
             _nextEditorSlowUpdateProcessSlot = 0;
 
             EndOfFrameProcesses = new IEnumerator<float>[InitialBufferSizeSmall];
             EndOfFramePaused = new bool[InitialBufferSizeSmall];
+            EndOfFrameHeld = new bool[InitialBufferSizeSmall];
             EndOfFrameCoroutines = 0;
             _nextEndOfFrameProcessSlot = 0;
 
             ManualTimeframeProcesses = new IEnumerator<float>[InitialBufferSizeSmall];
             ManualTimeframePaused = new bool[InitialBufferSizeSmall];
+            ManualTimeframeHeld = new bool[InitialBufferSizeSmall];
             ManualTimeframeCoroutines = 0;
             _nextManualTimeframeProcessSlot = 0;
 
@@ -2857,7 +2990,7 @@ namespace CYM
         /// <returns>The number of coroutines that were found and killed (0 or 1).</returns>
         public static int KillCoroutines(CoroutineHandle handle)
         {
-            return ActiveInstances.ContainsKey(handle.Key) ? GetInstance(handle.Key).KillCoroutinesOnInstance(handle) : 0;
+            return ActiveInstances[handle.Key] != null ? GetInstance(handle.Key).KillCoroutinesOnInstance(handle) : 0;
         }
 
         /// <summary>
@@ -3087,7 +3220,9 @@ namespace CYM
         /// <returns>The manager, or null if not found.</returns>
         public static Timing GetInstance(byte ID)
         {
-            return ActiveInstances.ContainsKey(ID) ? ActiveInstances[ID] : null;
+            if (ID >= 0x10)
+                return null;
+            return ActiveInstances[ID];
         }
 
         /// <summary>
@@ -3450,7 +3585,7 @@ namespace CYM
         /// <returns>The number of coroutines that were paused (0 or 1).</returns>
         public static int PauseCoroutines(CoroutineHandle handle)
         {
-            return ActiveInstances.ContainsKey(handle.Key) ? GetInstance(handle.Key).PauseCoroutinesOnInstance(handle) : 0;
+            return ActiveInstances[handle.Key] != null ? GetInstance(handle.Key).PauseCoroutinesOnInstance(handle) : 0;
         }
 
         /// <summary>
@@ -3462,7 +3597,7 @@ namespace CYM
         {
             int count = 0;
 
-            if (_handleToIndex.ContainsKey(handle) && !CoindexIsNull(_handleToIndex[handle]) && !SetPause(_handleToIndex[handle]))
+            if (_handleToIndex.ContainsKey(handle) && !CoindexIsNull(_handleToIndex[handle]) && !SetPause(_handleToIndex[handle], true))
                 count++;
 
             if (Links.ContainsKey(handle))
@@ -3476,6 +3611,20 @@ namespace CYM
             }
 
             return count;
+        }
+
+        /// <summary>
+        /// This will pause any matching coroutines until ResumeCoroutines is called.
+        /// </summary>
+        /// <param name="handle">A list of handles to coroutines you want to pause.</param>
+        /// <returns>The number of coroutines that were paused.</returns>
+        public static int PauseCoroutines(IEnumerable<CoroutineHandle> handles)
+        {
+            int total = 0;
+            var handlesEnum = handles.GetEnumerator();
+            while (!handlesEnum.MoveNext())
+                total += PauseCoroutines(handlesEnum.Current);
+            return total;
         }
 
         /// <summary>
@@ -3523,7 +3672,7 @@ namespace CYM
 
             while (matchesEnum.MoveNext())
             {
-                if (!CoindexIsNull(_handleToIndex[matchesEnum.Current]) && !SetPause(_handleToIndex[matchesEnum.Current]))
+                if (!CoindexIsNull(_handleToIndex[matchesEnum.Current]) && !SetPause(_handleToIndex[matchesEnum.Current], true))
                     count++;
 
                 if (Links.ContainsKey(matchesEnum.Current))
@@ -3565,7 +3714,7 @@ namespace CYM
 
             while (matchesEnum.MoveNext())
             {
-                if (!CoindexIsNull(_handleToIndex[matchesEnum.Current]) && !SetPause(_handleToIndex[matchesEnum.Current]))
+                if (!CoindexIsNull(_handleToIndex[matchesEnum.Current]) && !SetPause(_handleToIndex[matchesEnum.Current], true))
                     count++;
 
                 if (Links.ContainsKey(matchesEnum.Current))
@@ -3637,7 +3786,7 @@ namespace CYM
                 if (_processLayers.ContainsKey(matchesEnum.Current) && _processLayers[matchesEnum.Current] == layer
                     && !CoindexIsNull(_handleToIndex[matchesEnum.Current]))
                 {
-                    if (!SetPause(_handleToIndex[matchesEnum.Current]))
+                    if (!SetPause(_handleToIndex[matchesEnum.Current], true))
                         count++;
 
                     if (Links.ContainsKey(matchesEnum.Current))
@@ -3675,7 +3824,7 @@ namespace CYM
             ProcessIndex coindex;
             for (coindex.i = 0, coindex.seg = Segment.Update; coindex.i < _nextUpdateProcessSlot; coindex.i++)
             {
-                if (UpdatePaused[coindex.i] && UpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (UpdatePaused[coindex.i] && UpdateProcesses[coindex.i] != null)
                 {
                     UpdatePaused[coindex.i] = false;
                     count++;
@@ -3684,7 +3833,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.LateUpdate; coindex.i < _nextLateUpdateProcessSlot; coindex.i++)
             {
-                if (LateUpdatePaused[coindex.i] && LateUpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (LateUpdatePaused[coindex.i] && LateUpdateProcesses[coindex.i] != null)
                 {
                     LateUpdatePaused[coindex.i] = false;
                     count++;
@@ -3693,7 +3842,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.FixedUpdate; coindex.i < _nextFixedUpdateProcessSlot; coindex.i++)
             {
-                if (FixedUpdatePaused[coindex.i] && FixedUpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (FixedUpdatePaused[coindex.i] && FixedUpdateProcesses[coindex.i] != null)
                 {
                     FixedUpdatePaused[coindex.i] = false;
                     count++;
@@ -3702,7 +3851,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.SlowUpdate; coindex.i < _nextSlowUpdateProcessSlot; coindex.i++)
             {
-                if (SlowUpdatePaused[coindex.i] && SlowUpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (SlowUpdatePaused[coindex.i] && SlowUpdateProcesses[coindex.i] != null)
                 {
                     SlowUpdatePaused[coindex.i] = false;
                     count++;
@@ -3711,7 +3860,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.RealtimeUpdate; coindex.i < _nextRealtimeUpdateProcessSlot; coindex.i++)
             {
-                if (RealtimeUpdatePaused[coindex.i] && RealtimeUpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (RealtimeUpdatePaused[coindex.i] && RealtimeUpdateProcesses[coindex.i] != null)
                 {
                     RealtimeUpdatePaused[coindex.i] = false;
                     count++;
@@ -3720,7 +3869,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.EditorUpdate; coindex.i < _nextEditorUpdateProcessSlot; coindex.i++)
             {
-                if (EditorUpdatePaused[coindex.i] && EditorUpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (EditorUpdatePaused[coindex.i] && EditorUpdateProcesses[coindex.i] != null)
                 {
                     EditorUpdatePaused[coindex.i] = false;
                     count++;
@@ -3729,7 +3878,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.EditorSlowUpdate; coindex.i < _nextEditorSlowUpdateProcessSlot; coindex.i++)
             {
-                if (EditorSlowUpdatePaused[coindex.i] && EditorSlowUpdateProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (EditorSlowUpdatePaused[coindex.i] && EditorSlowUpdateProcesses[coindex.i] != null)
                 {
                     EditorSlowUpdatePaused[coindex.i] = false;
                     count++;
@@ -3738,7 +3887,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.EndOfFrame; coindex.i < _nextEndOfFrameProcessSlot; coindex.i++)
             {
-                if (EndOfFramePaused[coindex.i] && EndOfFrameProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (EndOfFramePaused[coindex.i] && EndOfFrameProcesses[coindex.i] != null)
                 {
                     EndOfFramePaused[coindex.i] = false;
                     count++;
@@ -3747,7 +3896,7 @@ namespace CYM
 
             for (coindex.i = 0, coindex.seg = Segment.ManualTimeframe; coindex.i < _nextManualTimeframeProcessSlot; coindex.i++)
             {
-                if (ManualTimeframePaused[coindex.i] && ManualTimeframeProcesses[coindex.i] != null && !_allWaiting.Contains(_indexToHandle[coindex]))
+                if (ManualTimeframePaused[coindex.i] && ManualTimeframeProcesses[coindex.i] != null)
                 {
                     ManualTimeframePaused[coindex.i] = false;
                     count++;
@@ -3774,7 +3923,21 @@ namespace CYM
         /// <returns>The number of coroutines that were resumed. (Normally 0 or 1).</returns>
         public static int ResumeCoroutines(CoroutineHandle handle)
         {
-            return ActiveInstances.ContainsKey(handle.Key) ? GetInstance(handle.Key).ResumeCoroutinesOnInstance(handle) : 0;
+            return ActiveInstances[handle.Key] != null ? GetInstance(handle.Key).ResumeCoroutinesOnInstance(handle) : 0;
+        }
+
+        /// <summary>
+        /// This will resume any matching coroutines.
+        /// </summary>
+        /// <param name="handles">A list of handles to coroutines you want to resume.</param>
+        /// <returns>The number of coroutines that were resumed.</returns>
+        public static int ResumeCoroutines(IEnumerable<CoroutineHandle> handles)
+        {
+            int count = 0;
+            var handlesEnum = handles.GetEnumerator();
+            while (!handlesEnum.MoveNext())
+                ResumeCoroutines(handlesEnum.Current);
+            return count;
         }
 
         /// <summary>
@@ -3784,9 +3947,6 @@ namespace CYM
         /// <returns>The number of coroutines that were resumed. (Normally 0 or 1)</returns>
         public int ResumeCoroutinesOnInstance(CoroutineHandle handle)
         {
-            if (_allWaiting.Contains(handle))
-                return 0;
-
             int count = 0;
 
             if (_handleToIndex.ContainsKey(handle) && !CoindexIsNull(_handleToIndex[handle]) && SetPause(_handleToIndex[handle], false))
@@ -3851,8 +4011,7 @@ namespace CYM
             var indexesEnum = _layeredProcesses[layer].GetEnumerator();
             while (indexesEnum.MoveNext())
             {
-                if (!CoindexIsNull(_handleToIndex[indexesEnum.Current]) && !_allWaiting.Contains(indexesEnum.Current)
-                    && SetPause(_handleToIndex[indexesEnum.Current], false))
+                if (!CoindexIsNull(_handleToIndex[indexesEnum.Current]) && SetPause(_handleToIndex[indexesEnum.Current], false))
                 {
                     count++;
                 }
@@ -3895,8 +4054,7 @@ namespace CYM
             var indexesEnum = _taggedProcesses[tag].GetEnumerator();
             while (indexesEnum.MoveNext())
             {
-                if (!CoindexIsNull(_handleToIndex[indexesEnum.Current]) && !_allWaiting.Contains(indexesEnum.Current)
-                    && SetPause(_handleToIndex[indexesEnum.Current], false))
+                if (!CoindexIsNull(_handleToIndex[indexesEnum.Current]) && SetPause(_handleToIndex[indexesEnum.Current], false))
                 {
                     count++;
                 }
@@ -3967,8 +4125,7 @@ namespace CYM
             var indexesEnum = _taggedProcesses[tag].GetEnumerator();
             while (indexesEnum.MoveNext())
             {
-                if (!CoindexIsNull(_handleToIndex[indexesEnum.Current]) && _layeredProcesses[layer].Contains(indexesEnum.Current)
-                    && !_allWaiting.Contains(indexesEnum.Current))
+                if (!CoindexIsNull(_handleToIndex[indexesEnum.Current]) && _layeredProcesses[layer].Contains(indexesEnum.Current))
                 {
                     if (SetPause(_handleToIndex[indexesEnum.Current], false))
                         count++;
@@ -4010,6 +4167,24 @@ namespace CYM
             Timing inst = GetInstance(handle.Key);
             return inst != null && inst._handleToIndex.ContainsKey(handle) && inst._processLayers.ContainsKey(handle)
                   ? inst._processLayers[handle] : (int?)null;
+        }
+
+        /// <summary>
+        /// Returns >NET's name for the coroutine that the handle points to.
+        /// </summary>
+        /// <param name="handle">The handle to the coroutine.</param>
+        /// <returns>The underlying debug name of the coroutine, or info about the state of the coroutine.</returns>
+        public static string GetDebugName(CoroutineHandle handle)
+        {
+            if (handle.Key == 0)
+                return "Uninitialized handle";
+            Timing inst = GetInstance(handle.Key);
+            if (inst == null)
+                return "Invalid handle";
+            if (!inst._handleToIndex.ContainsKey(handle))
+                return "Expired coroutine";
+
+            return inst.CoindexPeek(inst._handleToIndex[handle]).ToString();
         }
 
         /// <summary>
@@ -4074,6 +4249,8 @@ namespace CYM
             Timing inst = GetInstance(handle.Key);
             if (inst == null || !inst._handleToIndex.ContainsKey(handle) || inst.CoindexIsNull(inst._handleToIndex[handle]))
                 return false;
+
+            // TODO, invistage whether leaving holes here causes problems.
 
             inst.RunCoroutineInternal(inst.CoindexExtract(inst._handleToIndex[handle]), newSegment, inst._processLayers.ContainsKey(handle)
                 ? inst._processLayers[handle] : (int?)null, inst._processTags.ContainsKey(handle)
@@ -4368,7 +4545,7 @@ namespace CYM
             }
         }
 
-        private bool SetPause(ProcessIndex coindex, bool newPausedState = true)
+        private bool SetPause(ProcessIndex coindex, bool newPausedState)
         {
             if (CoindexPeek(coindex) == null)
                 return false;
@@ -4463,7 +4640,102 @@ namespace CYM
             }
         }
 
-        private IEnumerator<float> CreatePause(ProcessIndex coindex, IEnumerator<float> coptr, bool newPausedState = true)
+        private bool SetHeld(ProcessIndex coindex, bool newHeldState)
+        {
+            if (CoindexPeek(coindex) == null)
+                return false;
+
+            bool isHeld;
+
+            switch (coindex.seg)
+            {
+                case Segment.Update:
+                    isHeld = UpdateHeld[coindex.i];
+                    UpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && UpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        UpdateProcesses[coindex.i] = _InjectDelay(UpdateProcesses[coindex.i],
+                            UpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.FixedUpdate:
+                    isHeld = FixedUpdateHeld[coindex.i];
+                    FixedUpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && FixedUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        FixedUpdateProcesses[coindex.i] = _InjectDelay(FixedUpdateProcesses[coindex.i],
+                            FixedUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.LateUpdate:
+                    isHeld = LateUpdateHeld[coindex.i];
+                    LateUpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && LateUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        LateUpdateProcesses[coindex.i] = _InjectDelay(LateUpdateProcesses[coindex.i],
+                            LateUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.SlowUpdate:
+                    isHeld = SlowUpdateHeld[coindex.i];
+                    SlowUpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && SlowUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        SlowUpdateProcesses[coindex.i] = _InjectDelay(SlowUpdateProcesses[coindex.i],
+                            SlowUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.RealtimeUpdate:
+                    isHeld = RealtimeUpdateHeld[coindex.i];
+                    RealtimeUpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && RealtimeUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        RealtimeUpdateProcesses[coindex.i] = _InjectDelay(RealtimeUpdateProcesses[coindex.i],
+                            RealtimeUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.EditorUpdate:
+                    isHeld = EditorUpdateHeld[coindex.i];
+                    EditorUpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && EditorUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        EditorUpdateProcesses[coindex.i] = _InjectDelay(EditorUpdateProcesses[coindex.i],
+                            EditorUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.EditorSlowUpdate:
+                    isHeld = EditorSlowUpdateHeld[coindex.i];
+                    EditorSlowUpdateHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && EditorSlowUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        EditorSlowUpdateProcesses[coindex.i] = _InjectDelay(EditorSlowUpdateProcesses[coindex.i],
+                            EditorSlowUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.EndOfFrame:
+                    isHeld = EndOfFrameHeld[coindex.i];
+                    EndOfFrameHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && EndOfFrameProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        EndOfFrameProcesses[coindex.i] = _InjectDelay(EndOfFrameProcesses[coindex.i],
+                            EndOfFrameProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                case Segment.ManualTimeframe:
+                    isHeld = ManualTimeframeHeld[coindex.i];
+                    ManualTimeframeHeld[coindex.i] = newHeldState;
+
+                    if (newHeldState && ManualTimeframeProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                        ManualTimeframeProcesses[coindex.i] = _InjectDelay(ManualTimeframeProcesses[coindex.i],
+                            ManualTimeframeProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
+
+                    return isHeld;
+                default:
+                    return false;
+            }
+        }
+
+        private IEnumerator<float> CreateHold(ProcessIndex coindex, IEnumerator<float> coptr)
         {
             if (CoindexPeek(coindex) == null)
                 return null;
@@ -4471,72 +4743,72 @@ namespace CYM
             switch (coindex.seg)
             {
                 case Segment.Update:
-                    UpdatePaused[coindex.i] = newPausedState;
+                    UpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && UpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (UpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(UpdateProcesses[coindex.i], UpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.FixedUpdate:
-                    FixedUpdatePaused[coindex.i] = newPausedState;
+                    FixedUpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && FixedUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (FixedUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(FixedUpdateProcesses[coindex.i],
                             FixedUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.LateUpdate:
-                    LateUpdatePaused[coindex.i] = newPausedState;
+                    LateUpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && LateUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (LateUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(LateUpdateProcesses[coindex.i],
                             LateUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.SlowUpdate:
-                    SlowUpdatePaused[coindex.i] = newPausedState;
+                    SlowUpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && SlowUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (SlowUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(SlowUpdateProcesses[coindex.i],
                             SlowUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.RealtimeUpdate:
-                    RealtimeUpdatePaused[coindex.i] = newPausedState;
+                    RealtimeUpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && RealtimeUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (RealtimeUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(RealtimeUpdateProcesses[coindex.i],
                             RealtimeUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.EditorUpdate:
-                    EditorUpdatePaused[coindex.i] = newPausedState;
+                    EditorUpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && EditorUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (EditorUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(EditorUpdateProcesses[coindex.i],
                             EditorUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.EditorSlowUpdate:
-                    EditorSlowUpdatePaused[coindex.i] = newPausedState;
+                    EditorSlowUpdateHeld[coindex.i] = true;
 
-                    if (newPausedState && EditorSlowUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (EditorSlowUpdateProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(EditorSlowUpdateProcesses[coindex.i],
                             EditorSlowUpdateProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.EndOfFrame:
-                    EndOfFramePaused[coindex.i] = newPausedState;
+                    EndOfFrameHeld[coindex.i] = true;
 
-                    if (newPausedState && EndOfFrameProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (EndOfFrameProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(EndOfFrameProcesses[coindex.i],
                             EndOfFrameProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
                     return coptr;
                 case Segment.ManualTimeframe:
-                    ManualTimeframePaused[coindex.i] = newPausedState;
+                    ManualTimeframeHeld[coindex.i] = true;
 
-                    if (newPausedState && ManualTimeframeProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
+                    if (ManualTimeframeProcesses[coindex.i].Current > GetSegmentTime(coindex.seg))
                         coptr = _InjectDelay(ManualTimeframeProcesses[coindex.i],
                             ManualTimeframeProcesses[coindex.i].Current - GetSegmentTime(coindex.seg));
 
@@ -4568,6 +4840,33 @@ namespace CYM
                     return EndOfFramePaused[coindex.i];
                 case Segment.ManualTimeframe:
                     return ManualTimeframePaused[coindex.i];
+                default:
+                    return false;
+            }
+        }
+
+        private bool CoindexIsHeld(ProcessIndex coindex)
+        {
+            switch (coindex.seg)
+            {
+                case Segment.Update:
+                    return UpdateHeld[coindex.i];
+                case Segment.FixedUpdate:
+                    return FixedUpdateHeld[coindex.i];
+                case Segment.LateUpdate:
+                    return LateUpdateHeld[coindex.i];
+                case Segment.SlowUpdate:
+                    return SlowUpdateHeld[coindex.i];
+                case Segment.RealtimeUpdate:
+                    return RealtimeUpdateHeld[coindex.i];
+                case Segment.EditorUpdate:
+                    return EditorUpdateHeld[coindex.i];
+                case Segment.EditorSlowUpdate:
+                    return EditorSlowUpdateHeld[coindex.i];
+                case Segment.EndOfFrame:
+                    return EndOfFrameHeld[coindex.i];
+                case Segment.ManualTimeframe:
+                    return ManualTimeframeHeld[coindex.i];
                 default:
                     return false;
             }
@@ -4731,40 +5030,28 @@ namespace CYM
                     inst._waitingTriggers.Add(otherCoroutine, new HashSet<CoroutineHandle>());
                 }
 
-                _tmpBool = warnOnIssue;
-                _tmpHandle = otherCoroutine;
-                ReplacementFunction = inst.WaitUntilDoneWrapper;
+                if (inst._currentCoroutine == otherCoroutine)
+                {
+                    Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for itself.");
+                    return WaitForOneFrame;
+                }
+                if (!inst._currentCoroutine.IsValid)
+                {
+                    Assert.IsFalse(warnOnIssue, "The two coroutines are not running on the same MEC instance.");
+                    return WaitForOneFrame;
+                }
+
+                inst._waitingTriggers[otherCoroutine].Add(inst._currentCoroutine);
+                if (!inst._allWaiting.Contains(inst._currentCoroutine))
+                    inst._allWaiting.Add(inst._currentCoroutine);
+                inst.SetHeld(inst._handleToIndex[inst._currentCoroutine], true);
+                inst.SwapToLast(otherCoroutine, inst._currentCoroutine);
 
                 return float.NaN;
             }
 
-            Assert.IsFalse(warnOnIssue, "WaitUntilDone cannot hold: The coroutine handle that was passed in is invalid.\n" + otherCoroutine);
-
+            Assert.IsFalse(warnOnIssue, "WaitUntilDone cannot hold, the coroutine handle that was passed in is invalid: " + otherCoroutine);
             return 0f;
-        }
-
-        private IEnumerator<float> WaitUntilDoneWrapper(IEnumerator<float> coptr, CoroutineHandle handle)
-        {
-            bool warnOnIssue = _tmpBool;
-            CoroutineHandle otherHandle = _tmpHandle;
-
-            if (handle == otherHandle)
-            {
-                Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for itself.");
-                return coptr;
-            }
-            if (handle.Key != otherHandle.Key)
-            {
-                Assert.IsFalse(warnOnIssue, "A coroutine cannot wait for another coroutine on a different MEC instance.");
-                return coptr;
-            }
-
-            _waitingTriggers[otherHandle].Add(handle);
-            if (!_allWaiting.Contains(handle))
-                _allWaiting.Add(handle);
-            coptr = CreatePause(_handleToIndex[handle], coptr);
-
-            return coptr;
         }
 
         /// <summary>
@@ -4805,7 +5092,8 @@ namespace CYM
                 inst._waitingTriggers[otherHandle].Add(handle);
                 if (!inst._allWaiting.Contains(handle))
                     inst._allWaiting.Add(handle);
-                inst.SetPause(inst._handleToIndex[handle]);
+                inst.SetHeld(inst._handleToIndex[handle], true);
+                inst.SwapToLast(otherHandle, handle);
             }
         }
 
@@ -4850,8 +5138,34 @@ namespace CYM
                 inst._waitingTriggers[othersEnum.Current].Add(handle);
                 if (!inst._allWaiting.Contains(handle))
                     inst._allWaiting.Add(handle);
-                inst.SetPause(inst._handleToIndex[handle]);
+                inst.SetHeld(inst._handleToIndex[handle], true);
+                inst.SwapToLast(othersEnum.Current, handle);
             }
+        }
+
+        private void SwapToLast(CoroutineHandle firstHandle, CoroutineHandle lastHandle)
+        {
+            if (firstHandle.Key != lastHandle.Key)
+                return;
+
+            ProcessIndex firstIndex = _handleToIndex[firstHandle];
+            ProcessIndex lastIndex = _handleToIndex[lastHandle];
+
+            if (firstIndex.seg != lastIndex.seg || firstIndex.i < lastIndex.i)
+                return;
+
+            IEnumerator<float> tempCoptr = CoindexPeek(firstIndex);
+            CoindexReplace(firstIndex, CoindexPeek(lastIndex));
+            CoindexReplace(lastIndex, tempCoptr);
+
+            _indexToHandle[firstIndex] = lastHandle;
+            _indexToHandle[lastIndex] = firstHandle;
+            _handleToIndex[firstHandle] = lastIndex;
+            _handleToIndex[lastHandle] = firstIndex;
+            bool tmpB = SetPause(firstIndex, CoindexIsPaused(lastIndex));
+            SetPause(lastIndex, tmpB);
+            tmpB = SetHeld(firstIndex, CoindexIsHeld(lastIndex));
+            SetHeld(lastIndex, tmpB);
         }
 
         private IEnumerator<float> _StartWhenDone(CoroutineHandle handle, IEnumerator<float> proc)
@@ -4883,8 +5197,8 @@ namespace CYM
             {
                 if (_handleToIndex.ContainsKey(tasksEnum.Current) && !HandleIsInWaitingList(tasksEnum.Current))
                 {
-                    SetPause(_handleToIndex[tasksEnum.Current], false);
-                    _allWaiting.Remove(handle);
+                    SetHeld(_handleToIndex[tasksEnum.Current], false);
+                    _allWaiting.Remove(tasksEnum.Current);
                 }
             }
         }
@@ -4944,14 +5258,13 @@ namespace CYM
         {
             if (operation == null || operation.isDone) return float.NaN;
 
-            _tmpRef = operation;
-            ReplacementFunction = WaitUntilDoneAscOpHelper;
-            return float.NaN;
-        }
+            CoroutineHandle handle = CurrentCoroutine;
+            Timing inst = GetInstance(CurrentCoroutine.Key);
+            if (inst == null) return float.NaN;
 
-        private static IEnumerator<float> WaitUntilDoneAscOpHelper(IEnumerator<float> coptr, CoroutineHandle handle)
-        {
-            return _StartWhenDone(_tmpRef as AsyncOperation, coptr);
+            _tmpRef = _StartWhenDone(operation, inst.CoindexPeek(inst._handleToIndex[handle]));
+            ReplacementFunction = ReturnTmpRefForRepFunc;
+            return float.NaN;
         }
 
         private static IEnumerator<float> _StartWhenDone(AsyncOperation operation, IEnumerator<float> pausedProc)
@@ -4973,14 +5286,13 @@ namespace CYM
         {
             if (operation == null || !operation.keepWaiting) return float.NaN;
 
-            _tmpRef = operation;
-            ReplacementFunction = WaitUntilDoneCustYieldHelper;
-            return float.NaN;
-        }
+            CoroutineHandle handle = CurrentCoroutine;
+            Timing inst = GetInstance(CurrentCoroutine.Key);
+            if (inst == null) return float.NaN;
 
-        private static IEnumerator<float> WaitUntilDoneCustYieldHelper(IEnumerator<float> coptr, CoroutineHandle handle)
-        {
-            return _StartWhenDone(_tmpRef as CustomYieldInstruction, coptr);
+            _tmpRef = _StartWhenDone(operation, inst.CoindexPeek(inst._handleToIndex[handle]));
+            ReplacementFunction = ReturnTmpRefForRepFunc;
+            return float.NaN;
         }
 
         private static IEnumerator<float> _StartWhenDone(CustomYieldInstruction operation, IEnumerator<float> pausedProc)
@@ -5064,7 +5376,7 @@ namespace CYM
             else
                 _waitingTriggers[key].Add(coroutine);
 
-            SetPause(_handleToIndex[coroutine]);
+            SetHeld(_handleToIndex[coroutine], true);
 
             return true;
         }
@@ -5083,7 +5395,7 @@ namespace CYM
 
             _waitingTriggers[key].Remove(coroutine);
 
-            SetPause(_handleToIndex[coroutine], HandleIsInWaitingList(coroutine));
+            SetHeld(_handleToIndex[coroutine], HandleIsInWaitingList(coroutine));
 
             return true;
         }
@@ -6270,6 +6582,24 @@ namespace CYM
             return _id;
         }
 
+        public override string ToString()
+        {
+            if (Timing.GetTag(this) == null)
+            {
+                if (Timing.GetLayer(this) == null)
+                    return Timing.GetDebugName(this);
+                else
+                    return Timing.GetDebugName(this) + " Layer: " + Timing.GetLayer(this);
+            }
+            else
+            {
+                if (Timing.GetLayer(this) == null)
+                    return Timing.GetDebugName(this) + " Tag: " + Timing.GetTag(this);
+                else
+                    return Timing.GetDebugName(this) + " Tag: " + Timing.GetTag(this) + " Layer: " + Timing.GetLayer(this);
+            }
+        }
+
         /// <summary>
         /// Get or set the corrosponding coroutine's tag. Null removes the tag or represents no tag assigned.
         /// </summary>
@@ -6418,7 +6748,7 @@ public static class MECExtensionMethods
     }
 
     /// <summary>
-    /// Cancels this coroutine when the supplied game objects are destroyed or made inactive.
+    /// Cancels this coroutine when either of the supplied game objects are destroyed or made inactive.
     /// </summary>
     /// <param name="coroutine">The coroutine handle to act upon.</param>
     /// <param name="gameObject1">The first GameObject to test.</param>
@@ -6428,6 +6758,21 @@ public static class MECExtensionMethods
     {
         while (MEC.Timing.MainThread != System.Threading.Thread.CurrentThread || (gameObject1 && gameObject1.activeInHierarchy && 
                 gameObject2 && gameObject2.activeInHierarchy && coroutine.MoveNext()))
+            yield return coroutine.Current;
+    }
+
+    /// <summary>
+    /// Cancels this coroutine when the supplied monobehavior is removed from its game object, or the game object is made inactive or destroyed.
+    /// </summary>
+    /// <param name="coroutine">The coroutine handle to act upon.</param>
+    /// <param name="gameObject">The GameObject to test.</param>
+    /// <returns>The modified coroutine handle.</returns>
+    public static IEnumerator<float> CancelWith<T>(this IEnumerator<float> coroutine, T script) where T : MonoBehaviour
+    {
+        GameObject myGO = script.gameObject;
+
+        while (MEC.Timing.MainThread != System.Threading.Thread.CurrentThread ||
+                (myGO && myGO.activeInHierarchy && script != null && coroutine.MoveNext()))
             yield return coroutine.Current;
     }
 
@@ -6453,7 +6798,7 @@ public static class MECExtensionMethods
     /// <returns>The modified coroutine handle.</returns>
     public static IEnumerator<float> PauseWith(this IEnumerator<float> coroutine, GameObject gameObject)
     {
-        while(MEC.Timing.MainThread != System.Threading.Thread.CurrentThread || gameObject)
+        while(MEC.Timing.MainThread == System.Threading.Thread.CurrentThread && gameObject)
         {
             if (gameObject.activeInHierarchy)
             {
@@ -6464,13 +6809,13 @@ public static class MECExtensionMethods
             }
             else
             {
-                yield return 0f;
+                yield return MEC.Timing.WaitForOneFrame;
             }
         }
     }
 
     /// <summary>
-    /// Cancels this coroutine when the supplied game objects are destroyed, but only pauses them while they're inactive.
+    /// Cancels this coroutine when either of the supplied game objects are destroyed, but only pauses them while they're inactive.
     /// </summary>
     /// <param name="coroutine">The coroutine handle to act upon.</param>
     /// <param name="gameObject1">The first GameObject to test.</param>
@@ -6478,7 +6823,7 @@ public static class MECExtensionMethods
     /// <returns>The modified coroutine handle.</returns>
     public static IEnumerator<float> PauseWith(this IEnumerator<float> coroutine, GameObject gameObject1, GameObject gameObject2)
     {
-        while (MEC.Timing.MainThread != System.Threading.Thread.CurrentThread || (gameObject1 && gameObject2))
+        while (MEC.Timing.MainThread == System.Threading.Thread.CurrentThread && gameObject1 && gameObject2)
         {
             if (gameObject1.activeInHierarchy && gameObject2.activeInHierarchy)
             {
@@ -6489,7 +6834,34 @@ public static class MECExtensionMethods
             }
             else
             {
-                yield return 0f;
+                yield return MEC.Timing.WaitForOneFrame;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Cancels this coroutine when the supplied monobehavior is removed from its game object, or the game object is destroyed. Pauses the coroutine 
+    /// if the game object or script is disabled.
+    /// </summary>
+    /// <param name="coroutine">The coroutine handle to act upon.</param>
+    /// <param name="gameObject">The GameObject to test.</param>
+    /// <returns>The modified coroutine handle.</returns>
+    public static IEnumerator<float> PauseWith<T>(this IEnumerator<float> coroutine, T script) where T : MonoBehaviour
+    {
+        GameObject myGO = script.gameObject;
+
+        while (MEC.Timing.MainThread == System.Threading.Thread.CurrentThread && myGO && myGO.GetComponent<T>() != null)
+        {
+            if (myGO.activeInHierarchy && script.enabled)
+            {
+                if (coroutine.MoveNext())
+                    yield return coroutine.Current;
+                else
+                    yield break;
+            }
+            else
+            {
+                yield return MEC.Timing.WaitForOneFrame;
             }
         }
     }

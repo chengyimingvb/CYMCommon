@@ -91,6 +91,7 @@ namespace CYM
 
         #region prop
         public int ID{get;set;}
+        public string TDID { get; set; }
         public virtual LayerData LayerData => BaseConstMgr.Layer_Default;
         #endregion
 

@@ -789,7 +789,7 @@ public class SimpleLOD_MaterialPopup : EditorWindow {
 		for(int i=0;i<submeshRows.Count;i++) {
 			Hashtable row = (Hashtable)submeshRows[i];
 			Material m = (Material)row["atlasMat"];
-			if(row["atlasMat"] == atlasMat || (m.HasProperty(masterTexKey) && m.GetTexture(masterTexKey) == masterTex)) {
+			if(row["atlasMat"] == (atlasMat as object) || (m.HasProperty(masterTexKey) && m.GetTexture(masterTexKey) == masterTex)) {
 				atlasRows.Add(row);
 			}
 		}
@@ -1084,7 +1084,7 @@ public class SimpleLOD_MaterialPopup : EditorWindow {
 								AssetDatabase.Refresh();
 
                                 TextureImporter tempImporter = (TextureImporter)TextureImporter.GetAtPath(localPath);
-								if(key == "_BumpMap" || key == "_DetailBumpMap") tempImporter.normalmap = true;
+                                if (key == "_BumpMap" || key == "_DetailBumpMap") tempImporter.textureType = TextureImporterType.NormalMap;// .normalmap = true;
                                 tempImporter.maxTextureSize = Mathf.NextPowerOfTwo(Mathf.Max(atlasTex.width, atlasTex.height));
                                 AssetDatabase.ImportAsset(localPath);
                                 atlasTex = (Texture2D)AssetDatabase.LoadAssetAtPath(localPath, typeof(Texture2D));

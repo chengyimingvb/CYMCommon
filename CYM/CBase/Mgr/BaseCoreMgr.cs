@@ -25,8 +25,8 @@ namespace CYM
     /// </summary>
     public class BaseCoreMgr:ICYMBase, IDBDataConvert, IUnit
     {
+
         #region member variable
-        private int id;
         protected List<BaseCoreMgr> subComponets = new List<BaseCoreMgr>();
         public bool IsSubComponent { get; private set; }
         protected BaseCoreMgr parentComponet { get; set; }
@@ -39,28 +39,14 @@ namespace CYM
         #endregion
 
         #region property
-
-        public int ID
-        {
-            get
-            {
-                return id;
-            }
-            set { id=value; }
-        }
-
+        public int ID { get; set; }
+        public string TDID { get; set; }
         public BaseCoreMono Mono { get; private set; }
         public BaseGlobal SelfBaseGlobal { get; protected set; }
         public BaseUnit SelfBaseUnit { get; protected set; }
         public BaseSceneObject BaseSceneObject => BaseSceneObject.Ins;
-
-        public bool Finished
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
+        public bool Finished=> throw new NotImplementedException();
+        private bool isDirty = false;
         #endregion
 
         #region methon
@@ -113,6 +99,14 @@ namespace CYM
                 item.OnBeAdded(Mono);
         }
         /// <summary>
+        /// Spawn的时候
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="team"></param>
+        public virtual void OnSpawnInit(string id, int team)
+        {
+        }
+        /// <summary>
         /// mono的OnEnable
         /// </summary>
         public virtual void OnEnable()
@@ -157,6 +151,12 @@ namespace CYM
             foreach (var item in subComponets)
                 if(item.IsEnable)
                     item.OnFixedUpdate();
+
+            if (isDirty)
+            {
+                Refresh();
+                isDirty = false;
+            }
         }
         /// <summary>
         /// mono的回合帧
@@ -190,6 +190,21 @@ namespace CYM
             foreach (var item in subComponets)
                 if(item.IsEnable)
                     item.GameFrameTurn(gameFramesPerSecond);
+        }
+        /// <summary>
+        /// 刷新
+        /// </summary>
+        public virtual void Refresh()
+        {
+            foreach (var item in subComponets)
+                item.Refresh();
+        }
+        /// <summary>
+        /// dirty
+        /// </summary>
+        public void SetDirty()
+        {
+            isDirty = true;
         }
         /// <summary>
         /// mono的OnGui

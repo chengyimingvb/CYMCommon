@@ -17,7 +17,7 @@ using System;
 
 namespace CYM
 {
-    public class BaseTerrainGridMgr : BaseGlobalCoreMgr 
+    public class BaseTerrainGridMgr : BaseGFlowMgr 
     {
         //#region prop
         //TerrainGridSystem TerrainGridSystem;

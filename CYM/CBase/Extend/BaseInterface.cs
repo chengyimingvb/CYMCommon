@@ -9,11 +9,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using MoonSharp;
+using UnityEngine;
+
 namespace CYM
 {
     public interface ICYMBase
     {
         int ID { get; set; }
+        string TDID { get; set; }
     }
     public interface IMono
     {
@@ -149,10 +152,10 @@ namespace CYM
     {
         List<string> GetPrespawnPerforms();
     }
-    public interface ISpawnMgr<T>
+    public interface ISpawnMgr<T> where T:ICYMBase
     {
         T Gold { get; set; }
-        List<T> Data { get; set; }
+        DicList<T> Data { get; set; }
         event Callback<T> Callback_OnAdd;
         event Callback<T> Callback_OnSpawnGold;
         event Callback<T> Callback_OnSpawn;
@@ -222,6 +225,7 @@ namespace CYM
     {
         BaseDBSettingsData GetBaseSettings();
         BaseDevSettingsData GetBaseDevSettings();
+        void Save();
     }
     public interface IBaseDifficultMgr
     {
@@ -242,5 +246,53 @@ namespace CYM
         bool IsSettedGMMod();
         bool IsHavePlot();
         #endregion
+    }
+    public interface IBaseScreenMgr
+    {
+        BaseUnit BaseLocalPlayer { get; set; }
+        BaseUnit BasePrePlayer { get; set; }
+        Vector3 GetMouseHitPoint();
+    }
+
+    public interface IBaseTalkMgr
+    {
+        #region set
+        TalkFragment StartOption(string id);
+        TalkFragment Start(string id, int index = 0);
+        TalkFragment Next();
+        void ClickOption(int index);
+        void ClickTalk();
+        string SelectOption(int index);
+        void SelectPreOption();
+        void SelectNextOption();
+        void Stop();
+        bool IsHave();
+        bool IsInOption();
+        bool IsLockNextTalk { get; }
+        #endregion
+
+        #region get
+        TalkFragment CurTalkFragment();
+        #endregion
+    }
+
+    public interface IBaseNarrationMgr
+    {
+        #region set
+        NarrationFragment Start(string id);
+        NarrationFragment Next();
+        void Stop();
+        bool IsHave();
+        #endregion
+
+        #region get
+        NarrationFragment CurNarrationFragment();
+        #endregion
+    }
+
+    public interface IBaseSenseMgr
+    {
+        void OnTriggerEnter(Collider col);
+        void OnTriggerExit(Collider col);
     }
 }

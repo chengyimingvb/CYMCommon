@@ -1,0 +1,258 @@
+
+         UNITY_DECLARE_TEX2DARRAY(_ClusterDiffuse2);
+         UNITY_DECLARE_TEX2DARRAY(_ClusterNormal2);
+
+         #if _PACKINGHQ
+            UNITY_DECLARE_TEX2DARRAY(_ClusterSmoothAO2);
+         #endif
+
+         #if _USEEMISSIVEMETAL
+            UNITY_DECLARE_TEX2DARRAY(_ClusterEmissiveMetal2);
+         #endif
+
+         #if _TEXTURECLUSTER3
+         UNITY_DECLARE_TEX2DARRAY(_ClusterDiffuse3);
+         UNITY_DECLARE_TEX2DARRAY(_ClusterNormal3);
+            #if _PACKINGHQ
+               UNITY_DECLARE_TEX2DARRAY(_ClusterSmoothAO3);
+            #endif
+            #if _USEEMISSIVEMETAL
+               UNITY_DECLARE_TEX2DARRAY(_ClusterEmissiveMetal3);
+            #endif
+         #endif
+         
+         UNITY_DECLARE_TEX2D_NOSAMPLER(_ClusterNoise);
+         half4 _ClusterParams;
+         half _ClusterContrast;
+         half _ClusterScaleVar;
+         half _ClusterBoost;
+
+         half3 ClusterWeights2(half4 iWeights, half h0, half h1)
+         {
+             half2 blend = iWeights.xy / dot(iWeights.xy, half2(1,1));
+             float2 heights = float2(h0, h1) + (blend * 3.0);
+             half height_start = max(heights.x, heights.y) - iWeights.w;
+             half2 h = max(heights - height_start.xx, half2(0,0));
+             blend = h / dot(h, half2(1,1));
+             return half3(blend, 0);
+         }
+
+
+         half3 ClusterWeights3(half4 iWeights, half h0, half h1, half h2)
+         {
+             half3 blend = iWeights.xyz / dot(iWeights.xyz, half3(1,1,1));
+             float3 heights = float3(h0, h1, h2) + (blend * 3.0);
+             half height_start = max(max(heights.x, heights.y), heights.z) - iWeights.w;
+             half3 h = max(heights - height_start.xxx, half3(0,0,0));
+             blend = h / dot(h, half3(1,1,1));
+             return blend;
+         }
+
+
+         half4 ClusterSampleDiffuse(float3 uv, inout half4 cluster, MIPFORMAT mipLevel)
+         {
+            half4 a0 = MICROSPLAT_SAMPLE(_Diffuse, uv, mipLevel);
+            half4 a1 = MICROSPLAT_SAMPLE(_ClusterDiffuse2, float3(uv.xy * (1 + _ClusterScaleVar), uv.z), mipLevel);
+
+            #if _TEXTURECLUSTER3
+               half4 a2 = MICROSPLAT_SAMPLE(_ClusterDiffuse3, float3(uv.xy * (1 - _ClusterScaleVar), uv.z), mipLevel);
+               cluster.rgb = ClusterWeights3(cluster, a0.a, a1.a, a2.a);
+               return a0 * cluster.x + a1 * cluster.y + a2 * cluster.z;
+            #else
+               cluster.rgb = ClusterWeights2(cluster, a0.a, a1.a);
+               return a0 * cluster.x + a1 * cluster.y;
+            #endif
+         }
+
+
+         half4 ClusterSampleEmis(float3 uv, inout half4 cluster, MIPFORMAT mipLevel)
+         {
+            #if _USEEMISSIVEMETAL
+               half4 a0 = MICROSPLAT_SAMPLE(_EmissiveMetal, uv, mipLevel);
+               half4 a1 = MICROSPLAT_SAMPLE(_ClusterEmissiveMetal2, float3(uv.xy * (1 + _ClusterScaleVar), uv.z), mipLevel);
+
+               #if _TEXTURECLUSTER3
+                  half4 a2 = MICROSPLAT_SAMPLE(_ClusterEmissiveMetal3, float3(uv.xy * (1 - _ClusterScaleVar), uv.z), mipLevel);
+                  return a0 * cluster.x + a1 * cluster.y + a2 * cluster.z;
+               #else
+                  return a0 * cluster.x + a1 * cluster.y;
+               #endif
+            #endif
+            return 0;
+         }
+
+         half4 ClusterSampleDiffuseLOD(float3 uv, inout half4 cluster, float mipLevel)
+         {
+            half4 a0 = UNITY_SAMPLE_TEX2DARRAY_LOD(_Diffuse, uv, mipLevel);
+            half4 a1 = UNITY_SAMPLE_TEX2DARRAY_LOD(_ClusterDiffuse2, float3(uv.xy * (1 + _ClusterScaleVar), uv.z), mipLevel);
+            #if _TEXTURECLUSTER3
+               half4 a2 = UNITY_SAMPLE_TEX2DARRAY_LOD(_ClusterDiffuse3, float3(uv.xy * (1 - _ClusterScaleVar), uv.z), mipLevel);
+               cluster.rgb = ClusterWeights3(cluster, a0.a, a1.a, a2.a);
+               return a0 * cluster.x + a1 * cluster.y + a2 * cluster.z;
+            #else
+               cluster.rgb = ClusterWeights2(cluster, a0.a, a1.a);
+               return a0 * cluster.x + a1 * cluster.y;
+            #endif
+         }
+
+         half4 ClusterSampleNormal(float3 uv, half4 cluster, MIPFORMAT mipLevel)
+         {
+            cluster.rgb *= cluster.rgb;
+            #if _PACKINGHQ
+               half4 a0 = half4(MICROSPLAT_SAMPLE(_NormalSAO, uv, mipLevel).ga, MICROSPLAT_SAMPLE(_SmoothAO, uv, mipLevel).ga).brag;
+            #else
+               half4 a0 = MICROSPLAT_SAMPLE(_NormalSAO, uv, mipLevel);
+            #endif
+            a0.ga *= 2;
+            a0.ga -= 1;
+            float3 uv2 = float3(uv.xy * (1 + _ClusterScaleVar), uv.z);
+            #if _PACKINGHQ
+               half4 a1 = half4(MICROSPLAT_SAMPLE(_ClusterNormal2, uv2, mipLevel).ga, MICROSPLAT_SAMPLE(_ClusterSmoothAO2, uv2, mipLevel).ga).brag;
+            #else
+               half4 a1 = MICROSPLAT_SAMPLE(_ClusterNormal2, uv2, mipLevel);
+            #endif
+            a1.ga *= 2;
+            a1.ga -= 1;
+            #if _TEXTURECLUSTER3
+               float3 uv3 = float3(uv.xy * (1 - _ClusterScaleVar), uv.z);
+               #if _PACKINGHQ
+                  half4 a2 = half4(MICROSPLAT_SAMPLE(_ClusterNormal3, uv3, mipLevel).ga, MICROSPLAT_SAMPLE(_ClusterSmoothAO2, uv3, mipLevel).ga).brag;
+               #else
+                  half4 a2 = MICROSPLAT_SAMPLE(_ClusterNormal3, uv3, mipLevel);
+               #endif
+               a2.ga *= 2;
+               a2.ga -= 1;
+               half4 ret = a0 * cluster.x + a1 * cluster.y + a2 * cluster.z;
+               ret.ga *= 0.5;
+               ret.ga += 0.5;
+               return ret;
+            #else
+               half4 ret = a0 * cluster.x + a1 * cluster.y;
+               ret.ga *= 0.5;
+               ret.ga += 0.5;
+               return ret;
+            #endif
+         }
+
+
+         #undef MICROSPLAT_SAMPLE_DIFFUSE
+         #undef MICROSPLAT_SAMPLE_NORMAL
+         #undef MICROSPLAT_SAMPLE_DIFFUSE_LOD
+         #undef MICROSPLAT_SAMPLE_EMIS
+
+         #define MICROSPLAT_SAMPLE_DIFFUSE(u, cl, l) ClusterSampleDiffuse(u, cl, l)
+         #define MICROSPLAT_SAMPLE_NORMAL(u, cl, l) ClusterSampleNormal(u, cl, l)
+         #define MICROSPLAT_SAMPLE_DIFFUSE_LOD(u, cl, l) ClusterSampleDiffuseLOD(u, cl, l)
+
+         #define MICROSPLAT_SAMPLE_EMIS(u, cl, l) ClusterSampleEmis(u, cl, l)
+
+
+         void PrepClusterData(half4 noise, inout Config c)
+         {
+            noise.a = _ClusterContrast;
+
+            #if _PERTEXCLUSTERBOOST || _PERTEXCLUSTERCONTRAST
+               SAMPLE_PER_TEX(pt, 10.5, c, 0.5);
+            #endif
+
+            #if _PERTEXCLUSTERBOOST
+               c.cluster0 = noise;
+               c.cluster1 = noise;
+               c.cluster2 = noise;
+               c.cluster3 = noise;
+
+
+               c.cluster0.rgb = pow(c.cluster0.rgb, pt0.g);
+               c.cluster1.rgb = pow(c.cluster1.rgb, pt1.g);
+               #if !_MAX2LAYER
+                  c.cluster2.rgb = pow(c.cluster2.rgb, pt2.g);
+               #endif
+               #if !_MAX3LAYER || !_MAX2LAYER
+                  c.cluster3.rgb = pow(c.cluster3.rgb, pt3.g);
+               #endif
+
+               #if _TEXTURECLUSTER3
+                  c.cluster0.rgb = normalize(c.cluster0.rgb);
+                  c.cluster1.rgb = normalize(c.cluster1.rgb);
+                  c.cluster2.rgb = normalize(c.cluster2.rgb);
+                  c.cluster3.rgb = normalize(c.cluster3.rgb);
+               #else
+                  c.cluster0.rg = normalize(c.cluster0.rg);
+                  c.cluster1.rg = normalize(c.cluster1.rg);
+                  c.cluster2.rg = normalize(c.cluster2.rg);
+                  c.cluster3.rg = normalize(c.cluster3.rg);
+               #endif
+            #else
+
+               noise.rgb = pow(noise.rgb, _ClusterBoost);
+
+               #if _TEXTURECLUSTER3
+                  noise.rgb = normalize(noise.rgb);
+               #else
+                  noise.rg = normalize(noise.rg);
+               #endif
+
+               c.cluster0 = noise;
+               c.cluster1 = noise;
+               c.cluster2 = noise;
+               c.cluster3 = noise;
+            #endif
+
+
+            #if _PERTEXCLUSTERCONTRAST
+               c.cluster0.a = max(pt0.r, 0.01);
+               c.cluster1.a = max(pt1.r, 0.01);;
+               #if !_MAX2LAYER
+                  c.cluster2.a = max(pt2.r, 0.01);
+               #endif
+               #if !_MAX3LAYER || !_MAX2LAYER
+                  c.cluster3.a = max(pt3.r, 0.01);
+               #endif
+            #endif
+         }
+
+         void PrepClusters(float2 uv, inout Config c, float3 worldPos, float3 normal)
+         {
+            #if _TEXTURECLUSTERTRIPLANARNOISE
+               float3 pn = pow(abs(normal), 0.7);
+               pn = pn / (pn.x + pn.y + pn.z);
+               half3 axisSign = sign(normal);
+               float2 uv0 = (worldPos.zy * _ClusterParams.xy + _ClusterParams.zw) * axisSign.x;
+               float2 uv1 = (worldPos.xz * _ClusterParams.xy + _ClusterParams.zw) * axisSign.y;
+               float2 uv2 = (worldPos.xy * _ClusterParams.xy + _ClusterParams.zw) * axisSign.z;
+               
+               half4 n0 = UNITY_SAMPLE_TEX2D_SAMPLER(_ClusterNoise, _Diffuse, uv0);
+               half4 n1 = UNITY_SAMPLE_TEX2D_SAMPLER(_ClusterNoise, _Diffuse, uv1);
+               half4 n2 = UNITY_SAMPLE_TEX2D_SAMPLER(_ClusterNoise, _Diffuse, uv2);
+               half4 noise = n0 * pn.x + n1 * pn.y + n2 * pn.z;
+            #else
+               uv = uv * _ClusterParams.xy + _ClusterParams.zw;
+               half4 noise = UNITY_SAMPLE_TEX2D_SAMPLER(_ClusterNoise, _Diffuse, uv);
+            #endif
+            
+            PrepClusterData(noise, c);
+
+         }
+
+         void PrepClustersDisplace(float2 uv, inout Config c, float3 worldPos, float3 normal)
+         {
+            #if _TRIPLANAR
+               float3 pn = pow(abs(normal), 0.7);
+               pn = pn / (pn.x + pn.y + pn.z);
+               half3 axisSign = sign(normal);
+               float2 uv0 = (worldPos.zy * _ClusterParams.xy + _ClusterParams.zw) * axisSign.x;
+               float2 uv1 = (worldPos.xz * _ClusterParams.xy + _ClusterParams.zw) * axisSign.y;
+               float2 uv2 = (worldPos.xy * _ClusterParams.xy + _ClusterParams.zw) * axisSign.z;
+               
+               half4 n0 = MICROSPLAT_SAMPLE_TEX2D_SAMPLER_LOD(_ClusterNoise, _Diffuse, uv0, 0);
+               half4 n1 = MICROSPLAT_SAMPLE_TEX2D_SAMPLER_LOD(_ClusterNoise, _Diffuse, uv1, 0);
+               half4 n2 = MICROSPLAT_SAMPLE_TEX2D_SAMPLER_LOD(_ClusterNoise, _Diffuse, uv2, 0);
+               half4 noise = n0 * pn.x + n1 * pn.y + n2 * pn.z;
+            #else
+               uv = uv * _ClusterParams.xy + _ClusterParams.zw;
+               half4 noise = MICROSPLAT_SAMPLE_TEX2D_SAMPLER_LOD(_ClusterNoise, _Diffuse, uv, 0);
+            #endif
+            PrepClusterData(noise, c);
+         }
+
+

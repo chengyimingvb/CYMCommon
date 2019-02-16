@@ -12,7 +12,7 @@ using UnityEngine;
 using CYM;
 namespace CYM
 {
-    public class BaseProfilterMgr : BaseGlobalCoreMgr
+    public class BaseProfilterMgr : BaseGFlowMgr
     {
         public void StartProfilter(string name,GameObject obj=null)
         {

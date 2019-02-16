@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using CYM.Utile;
 namespace CYM
 {
-    public class BaseFeedbackMgr : BaseCoreMgr 
+    public class BaseFeedbackMgr : BaseCoreMgr  
     {
         #region Callback val
         #endregion
@@ -53,7 +53,7 @@ namespace CYM
         #endregion
 
         #region set
-        public void Send(string title,string desc)
+        public void Send(string title, string desc)
         {
             if (title.IsInvStr())
                 return;

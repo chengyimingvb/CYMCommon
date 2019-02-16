@@ -50,7 +50,7 @@ namespace CYM
         /// <summary>
         /// 音效音量
         /// </summary>
-        public float VolumeSFX = 0.8f;
+        public float VolumeSFX = 1.0f;
         /// <summary>
         /// 主音量
         /// </summary>
@@ -99,6 +99,18 @@ namespace CYM
         /// 全屏
         /// </summary>
         public bool FullScreen = false;
+        /// <summary>
+        /// 地形精度
+        /// </summary>
+        public int TerrainAccuracy = 200;
+        /// <summary>
+        /// 摄像机移动速度
+        /// </summary>
+        public float CameraMoveSpeed = 0.5f;
+        /// <summary>
+        /// 摄像机滚动速度
+        /// </summary>
+        public float CameraScrollSpeed = 0.5f;
     }
 
     [Serializable]
@@ -110,7 +122,7 @@ namespace CYM
         public bool NoPlot = false;
     }
 
-    public class BaseSettingsMgr<TDBSetting,TDevSetting> : BaseGlobalCoreMgr, IBaseSettingsMgr where  TDBSetting: BaseDBSettingsData,new() where TDevSetting: BaseDevSettingsData, new()
+    public class BaseSettingsMgr<TDBSetting,TDevSetting> : BaseGFlowMgr, IBaseSettingsMgr where  TDBSetting: BaseDBSettingsData,new() where TDevSetting: BaseDevSettingsData, new()
     {
         #region prop
         public TDBSetting Settings { get; protected set; } = new TDBSetting();
@@ -292,6 +304,10 @@ namespace CYM
             QualitySettings.SetQualityLevel(index);
             Settings.Quality = (GamePropType)index;
         }
+        public void SetTerrainAccuracy(float val)
+        {
+            Settings.TerrainAccuracy = (int)val;
+        }
         #endregion
 
         #region get
@@ -416,6 +432,7 @@ namespace CYM
 
             SetQuality((int)data.Quality);
             SetResolution(data.Resolution, data.FullScreen);
+            SetTerrainAccuracy(data.TerrainAccuracy);
         }
         protected virtual void OnInitSetting()
         {

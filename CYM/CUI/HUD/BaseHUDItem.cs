@@ -10,6 +10,9 @@ using UnityEngine;
 using CYM;
 using CYM.UI;
 using CYM.AI;
+using Sirenix.OdinInspector;
+using UnityEngine.UI;
+
 namespace CYM.UI
 {
     public class BaseHUDItem : Presenter<PresenterData> 
@@ -19,51 +22,43 @@ namespace CYM.UI
         public Color Color;
         public NodeType NodeType= NodeType.Center;
         public Vector3 Offset = Vector3.zero;
-        protected Transform followObj;
-        protected float curTime;
-        protected Vector3 pos;
-        protected float Offset_y = 0f;
-        protected float Offset_x = 0f;
-        protected float curPercent
-        {
-            get { return curTime / LifeTime; }
-        }
+        public BaseUnit SelfUnit { get; private set; }
+        #endregion
+
+        #region 曲线
+        [HideIf("Inspector_HideCurve")]
+        public AnimationCurve OffsetCurveY = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0f), new Keyframe(0.2f, 120f), new Keyframe(0.3f, 140f), new Keyframe(0.8f, 70f) });
+        [HideIf("Inspector_HideCurve")]
+        public AnimationCurve OffsetCurveX = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0f), new Keyframe(0.8f, 130f) });
+        [HideIf("Inspector_HideCurve")]
+        public AnimationCurve AlphaCurve = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0.4f), new Keyframe(0.7f, 1f), new Keyframe(0.9f, 1f), new Keyframe(1f, 0.8f) });
+        [HideIf("Inspector_HideCurve")]
+        public AnimationCurve ScaleCurve = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0.5f), new Keyframe(0.33f, 0.7f), new Keyframe(0.67f, 1f), new Keyframe(1f, 1f) });
         #endregion
 
         #region property
-        public bool IsLifeOver { get { return curTime >= LifeTime; } }
         public Callback<BaseHUDItem> OnLifeOver;
+        public bool IsLifeOver { get { return CurTime >= LifeTime; } }
+        protected Transform followObj;
+        protected float CurTime;
+        protected Vector3 TempPos;
+        protected float Offset_y = 0f;
+        protected float Offset_x = 0f;
+        protected float CurPercent => CurTime / LifeTime;
+        protected CanvasScaler CanvasScaler;
         #endregion
 
         #region methon
-        /// <summary>
-        /// 位置偏移曲线
-        /// </summary>
-        public AnimationCurve offsetCurve_y = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0f), new Keyframe(0.2f, 120f), new Keyframe(0.3f, 140f), new Keyframe(0.8f, 70f) });
-        public AnimationCurve offsetCurve_x = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0f), new Keyframe(0.8f, 130f) });
-
-        /// <summary>
-        /// alpha曲线
-        /// </summary>
-        public AnimationCurve alphaCurve = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0.4f), new Keyframe(0.7f, 1f), new Keyframe(0.9f, 1f), new Keyframe(1f, 0.8f) });
-
-        /// <summary>
-        /// 缩放曲线
-        /// </summary>
-        public AnimationCurve scaleCurve = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 0.5f), new Keyframe(0.33f, 0.7f), new Keyframe(0.67f, 1f), new Keyframe(1f, 1f) });
-
         /// <summary>
         /// 跳字创建的时候需要调用此函数
         /// </summary>
         /// <param name="text"></param>
         /// <param name="pool"></param>
         /// <param name="follow"></param>
-        public virtual void Init(object obj/*自定义参数*/,Transform followObj=null)
+        public virtual void Init(object obj/*自定义参数*/,BaseUnit unit,Transform followObj=null)
         {
             this.followObj = followObj;
-            //if (posOffset.HasValue)
-            //    positionOffset = posOffset.Value;
-            
+            SelfUnit = unit;
         }
         public void SetFollowObj(Transform followObj = null)
         {
@@ -71,38 +66,48 @@ namespace CYM.UI
         }
         protected override void OnEnable()
         {
-            curTime = 0.0f;
+            CurTime = 0.0f;
             Offset_y = 0f;
             Offset_x = 0f;
             Color.a = 0.0f;
             base.OnEnable();
         }
 
-        protected virtual void Update()
+        public virtual void OnUpdate()
         {
-            curTime += Time.deltaTime;
-            Offset_y = offsetCurve_y.Evaluate(curPercent);
-            Offset_x = offsetCurve_x.Evaluate(curPercent);
-            Color.a = alphaCurve.Evaluate(curPercent);
-            Trans.localScale = scaleCurve.Evaluate(curPercent) * Vector3.one;
-            if (curTime > LifeTime)
+            if (CanvasScaler == null)
             {
-                if (OnLifeOver != null)
-                    OnLifeOver(this);
+                if(BaseUIView!=null&& BaseUIView.RootView!=null)
+                    CanvasScaler  = BaseUIView.RootView.CanvasScaler;
             }
-            if (followObj != null)
-                pos = followObj.position + Offset;
-            Trans.position = Camera.main.WorldToScreenPoint(pos);
-            Trans.position += new Vector3(Offset_x, Offset_y, 0f);
-            //Text.color = Color;
+            if (LifeTime > 0)
+            {
+                CurTime += Time.deltaTime;
+                Offset_y = OffsetCurveY.Evaluate(CurPercent);
+                Offset_x = OffsetCurveX.Evaluate(CurPercent);
+                Color.a = AlphaCurve.Evaluate(CurPercent);
+                Trans.localScale = ScaleCurve.Evaluate(CurPercent) * Vector3.one;
+                if (CurTime > LifeTime)
+                {
+                    OnLifeOver?.Invoke(this);
+                }
+                if (followObj != null)
+                    TempPos = followObj.position + Offset;
+                Trans.position = Camera.main.WorldToScreenPoint(TempPos);
+                Trans.position += new Vector3(Offset_x, Offset_y, 0f);
+            }
         }
         public void DoDestroy()
         {
-            curTime = LifeTime;
+            CurTime = LifeTime;
         }
         #endregion
 
-        #region get
+        #region Callback
+        bool Inspector_HideCurve()
+        {
+            return LifeTime <= 0;
+        }
         #endregion
     }
 }

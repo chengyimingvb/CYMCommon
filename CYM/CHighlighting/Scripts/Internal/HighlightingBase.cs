@@ -33,7 +33,7 @@ namespace CYM.Highlighting
 					//|| device == GraphicsDeviceType.Xbox360			// SHADER_API_XBOX360
 					//|| device == GraphicsDeviceType.PlayStation3		// SHADER_API_PS3
 				    device == GraphicsDeviceType.Direct3D11		// SHADER_API_D3D11
-					|| device == GraphicsDeviceType.PlayStationVita	// SHADER_API_PSP2
+					//|| device == GraphicsDeviceType.PlayStationVita	// SHADER_API_PSP2
 					|| device == GraphicsDeviceType.PlayStation4		// SHADER_API_PSSL
 					|| device == GraphicsDeviceType.Metal			// SHADER_API_METAL
 					// device == GraphicsDeviceType.?				// SHADER_API_D3D11_9X - Direct3D 11 “feature level 9.x” target for Windows Store & Windows Phone.

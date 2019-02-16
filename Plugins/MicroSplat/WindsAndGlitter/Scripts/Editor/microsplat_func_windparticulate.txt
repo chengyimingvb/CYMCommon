@@ -1,0 +1,197 @@
+
+      #if _GLOBALPARTICULATEROTATION
+         float     _Global_WindParticulateRotation;
+      #else
+         float     _WindParticulateRotation;
+      #endif
+
+      #if _WINDPARTICULATE
+
+         float4    _WindParticulateParams;
+         fixed4    _WindParticulateColor;
+         half3     _WindParticulateShadow;
+         half4     _WindParticulateShadowColor;
+         float4    _WindParticulateHeightMask;
+         float4    _WindParticulateAngleMask;
+
+         #if _GLOBALWINDPARTICULATESTRENGTH
+            half      _Global_WindParticulateStrength;
+         #else
+            half      _WindParticulateStrength;
+         #endif
+      #endif
+
+
+      #if _SNOWPARTICULATE
+         float4    _SnowParticulateParams;
+         fixed4    _SnowParticulateColor;
+         half3     _SnowParticulateShadow;
+         half4     _SnowParticulateShadowColor;
+         float4    _SnowParticulateHeightMask;
+         float4    _SnowParticulateAngleMask;
+
+         #if _GLOBALSNOWPARTICULATESTRENGTH
+            half      _Global_SnowParticulateStrength;
+         #else
+            half      _SnowParticulateStrength;
+         #endif
+      #endif
+
+      half2 _WindEmissive;
+
+      float2 RotateUV(float2 uv, float amt)
+      {
+         uv -=0.5;
+         float s = sin ( amt);
+         float c = cos ( amt );
+         float2x2 mtx = float2x2( c, -s, s, c);
+         mtx *= 0.5;
+         mtx += 0.5;
+         mtx = mtx * 2-1;
+         uv = mul ( uv, mtx );
+         uv += 0.5;
+         return uv;
+      }
+
+      half FilterParticulateRange(float4 range, float y)
+      {
+         half w = saturate((y - range.x) / max(range.y - range.x, 0.0001));
+         w *= 1.0 - saturate((y - range.z) / max(range.w - range.z, 0.0001));
+         return w;
+      }
+
+      fixed ComputeParticulateMask(float2 wuv, float4 parms)
+      {
+         wuv *= float2(parms.z, 1) * parms.w;
+         float speed = _Time.x * parms.x;
+         fixed w1 = UNITY_SAMPLE_TEX2D_SAMPLER(_GlitterWind, _Diffuse, wuv * 3 + speed * float2(1,0)).a;
+         fixed w2 = UNITY_SAMPLE_TEX2D_SAMPLER(_GlitterWind, _Diffuse, wuv + speed * float2(1.1,0)).a;
+         return (w1 * w2);
+      }
+
+      fixed ProcessParticulateMask(inout fixed mask, float contrast)
+      {
+         mask = pow(mask, contrast);
+         fixed invMask = 1.0 - mask;
+         invMask *= invMask; 
+         invMask *= invMask;
+         return invMask;
+      }
+
+      void DoWindParticulate(Input i, inout MicroSplatLayer o, Config config, half4 weights, float camDist, float3 worldNormalVertex, half snowWeight)
+      {
+
+         #if defined(UNITY_PASS_FORWARDBASE) || defined(UNITY_PASS_DEFERRED) || (defined(_MSRENDERLOOP_UNITYLD) && defined(_PASSFORWARD))
+
+            half upDot = max(0.0, dot(worldNormalVertex, float3(0, 0, 1)));
+
+            float2 uv = i.worldPos.xz * 0.01;
+            #if _GLOBALPARTICULATEROTATION
+               float windRotation = _Global_WindParticulateRotation;
+            #else
+               float windRotation = _WindParticulateRotation;
+            #endif
+
+            float2 wuv = RotateUV(uv, windRotation);
+
+            half windBlend = 1.0;
+            #if _PERTEXWINDPARTICULATE
+               SAMPLE_PER_TEX(ptWind, 7.5, config, half4(1,1,1,1));
+               windBlend = BlendWeights(ptWind0.a, ptWind1.a, ptWind2.a, ptWind3.a, weights);
+            #endif
+
+            #if _WINDPARTICULATE || _WINDSHADOWS
+               float windWorldMask = FilterParticulateRange(_WindParticulateHeightMask, i.worldPos.y);
+               windWorldMask *= FilterParticulateRange(_WindParticulateAngleMask, upDot);
+            #endif
+
+            #if _WINDSHADOWS
+               float2 offset = i.color.yx * _WindParticulateShadow.x;
+               fixed shadowMask = ComputeParticulateMask(wuv + offset.xy, _WindParticulateParams);
+
+               #if _GLOBALWINDPARTICULATESTRENGTH
+                  float shadowWindStrength = _Global_WindParticulateStrength;
+               #else
+                  float shadowWindStrength = _WindParticulateStrength;
+               #endif
+               shadowMask *= shadowWindStrength * windBlend * windWorldMask;
+               shadowMask *= (1.0 - snowWeight);
+
+               fixed shadowInvMask = ProcessParticulateMask(shadowMask, _WindParticulateParams.y);
+               o.Albedo = lerp(o.Albedo, o.Albedo * _WindParticulateShadowColor.rgb * _WindParticulateShadowColor.a, saturate(shadowMask * _WindParticulateShadow.y));
+               o.Normal.xy *= shadowInvMask;
+               o.Occlusion -= shadowMask * 0.5;
+               o.Smoothness *= shadowInvMask;
+               o.Metallic *= shadowInvMask;
+            #endif
+
+            #if _WINDPARTICULATE
+               // compute mask
+               fixed windMask = ComputeParticulateMask(wuv, _WindParticulateParams);
+
+               #if _GLOBALWINDPARTICULATESTRENGTH
+                  float windStrength = _Global_WindParticulateStrength;
+               #else
+                  float windStrength = _WindParticulateStrength;
+               #endif
+
+               windMask *= windStrength * windBlend * windWorldMask;
+               windMask *= (1.0 - snowWeight);
+
+               fixed windInvMask = ProcessParticulateMask(windMask, _WindParticulateParams.y);
+
+               o.Albedo = lerp(o.Albedo, _WindParticulateColor.rgb, windMask * _WindParticulateColor.a);
+               o.Emission += _WindParticulateColor.rgb * windMask * _WindParticulateColor.a * _WindEmissive.x;
+               o.Normal.xy *= windInvMask;
+               o.Smoothness *= windInvMask;
+               o.Occlusion *= windInvMask;
+               o.Metallic *= windInvMask;
+            #endif
+
+            #if _SNOWPARTICULATE || _SNOWSHADOWS
+               float snowWorldMask = FilterParticulateRange(_SnowParticulateHeightMask, i.worldPos.y);
+               snowWorldMask *= FilterParticulateRange(_SnowParticulateAngleMask, upDot);
+            #endif
+
+
+            #if _SNOWSHADOWS
+               float2 snowOffset = i.color.yx * _SnowParticulateShadow.x;
+               #if _GLOBALSNOWPARTICULATESTRENGTH
+                  float snowShadowStrength = _Global_SnowParticulateStrength;
+               #else
+                  float snowShadowStrength = _SnowParticulateStrength;
+               #endif
+
+               fixed snowShadowMask = ComputeParticulateMask(wuv + snowOffset.xy, _SnowParticulateParams) * snowShadowStrength;
+               snowShadowMask *= snowWeight * snowWorldMask;
+
+               fixed snowShadowInvMask = ProcessParticulateMask(snowShadowMask, _SnowParticulateParams.y);
+               o.Albedo = lerp(o.Albedo, o.Albedo * _SnowParticulateShadowColor.rgb * _SnowParticulateShadowColor.a, saturate(snowShadowMask * _SnowParticulateShadow.y));
+
+               o.Normal.xy *= snowShadowInvMask;
+               o.Occlusion -= snowShadowMask * 0.5;
+               o.Smoothness *= snowShadowInvMask;
+               o.Metallic *= snowShadowInvMask;
+            #endif
+
+            #if _SNOWPARTICULATE
+               // compute mask
+               #if _GLOBALSNOWPARTICULATESTRENGTH
+                  float snowStrength = _Global_SnowParticulateStrength;
+               #else
+                  float snowStrength = _SnowParticulateStrength;
+               #endif
+
+               fixed snowMask = ComputeParticulateMask(wuv, _SnowParticulateParams) * snowStrength;
+               snowMask *= snowWeight * snowWorldMask;
+               fixed snowInvMask = ProcessParticulateMask(snowMask, _SnowParticulateParams.y);
+
+               o.Albedo = lerp(o.Albedo, _SnowParticulateColor.rgb, snowMask * _SnowParticulateColor.a);
+               o.Emission += _SnowParticulateColor.rgb * _SnowParticulateColor.a * snowMask * _WindEmissive.y;
+               o.Normal.xy *= snowInvMask;
+               o.Smoothness *= snowInvMask;
+               o.Occlusion *= snowInvMask;
+               o.Metallic *= snowInvMask;
+            #endif
+         #endif
+      }

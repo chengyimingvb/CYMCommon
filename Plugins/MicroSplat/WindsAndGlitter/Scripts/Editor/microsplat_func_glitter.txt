@@ -1,0 +1,63 @@
+
+      #if _GLITTER
+         
+         half _GlitterGraininess;
+         half _GlitterShininess;
+         half _GlitterViewDep;
+         half _GlitterThreshold;
+         float2 _GlitterUVScale;
+         half _GlitterStrength;
+         float4 _GlitterDistFade;
+
+         #if defined(UNITY_PASS_DEFERRED)
+         float3 _gGlitterLight;
+         #endif
+
+         void DoGlitter(Input i, inout RawSamples s, Config c, float camDist, float3 worldVertexNormal)
+         {
+            float str = _GlitterStrength * lerp(_GlitterDistFade.z, _GlitterDistFade.w, saturate((camDist - _GlitterDistFade.x) / max(_GlitterDistFade.y, 0.01)));
+
+            #if defined(UNITY_PASS_DEFERRED)
+            half3 lightDir = normalize(_gGlitterLight);
+            #else
+            half3 lightDir = normalize(_WorldSpaceLightPos0.xyz);
+            #endif
+            half3 viewDir = normalize(_WorldSpaceCameraPos.xyz - i.worldPos);
+            half specular = saturate(dot(worldVertexNormal, normalize(viewDir + lightDir)));
+            specular = pow(specular, _GlitterShininess);
+
+
+            float boost = pow(specular, _GlitterShininess) * _GlitterThreshold;
+
+            float2 uvo = sin(c.uv * _GlitterUVScale.xy * 0.237);
+            half2 n = UNITY_SAMPLE_TEX2D_SAMPLER(_GlitterWind, _Diffuse, c.uv * _GlitterUVScale + i.viewDir.z * _GlitterViewDep).xy;
+            half n2 = UNITY_SAMPLE_TEX2D_SAMPLER(_GlitterWind, _Diffuse, uvo + c.uv * _GlitterUVScale * 0.17921 + 0.5).b;
+            n.xy = n.xy * 2 - 1;
+            n.xy *= n2;
+
+            n.xy *= _GlitterGraininess * boost;
+
+
+            boost *= str;
+
+            SAMPLE_PER_TEX(pt, 8.5, c, half4(1,0,1,1));
+
+            s.normSAO0.xy = lerp(s.normSAO0.xy, BlendNormal2(s.normSAO0.xy, n), boost * pt0.g);
+            s.normSAO0.z = min(1, s.normSAO0.z + boost * pt0.g);
+            s.normSAO1.xy = lerp(s.normSAO1.xy, BlendNormal2(s.normSAO1.xy, n), boost * pt1.g);
+            s.normSAO1.z = min(1, s.normSAO1.z + boost * pt1.g);
+            #if !_MAX2LAYER
+               s.normSAO2.xy = lerp(s.normSAO2.xy, BlendNormal2(s.normSAO2.xy, n), boost * pt2.g);
+               s.normSAO2.z = min(1, s.normSAO2.z + boost * pt2.g);
+            #endif
+            #if !_MAX3LAYER || !_MAX2LAYER
+               s.normSAO3.xy = lerp(s.normSAO3.xy, BlendNormal2(s.normSAO3.xy, n), boost * pt3.g);
+               s.normSAO3.z = min(1, s.normSAO3.z + boost * pt3.g);
+            #endif
+
+         }
+
+      #endif
+
+     
+

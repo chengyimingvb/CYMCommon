@@ -39,16 +39,39 @@ namespace CYM.Lua
 
         private static void ReadProperty<T>(T obj, string propertyName, DynValue propertyValue)
 		{
-			try
-			{
-				//Debug.Log(propertyName);
-				PropertyInfo property = obj.GetType().GetProperty(propertyName);
+            try
+            {
+                PropertyInfo property = obj.GetType().GetProperty(propertyName);
+                FieldInfo field = obj.GetType().GetField(propertyName);
 
-				if (property != null && property.CanWrite && propertyValue != null)
-				{
-					Type propertyType = property.PropertyType;
-					property.SetValue(obj, Convert(propertyValue, propertyType), null);
-				}
+                if (propertyValue == null)
+                {
+                    CLog.Error($"{propertyName}:读取的值为空");
+                    return;
+                }
+
+                if (property == null && field == null)
+                {
+                    CLog.Error($"{propertyName}:没有这个属性!");
+                    return;
+                }
+
+                if (property != null)
+                {
+                    if (!property.CanWrite)
+                    {
+                        CLog.Error($"{propertyName}:读取错误!");
+                        return;
+                    }
+                }
+
+                Type tempType = null;
+                if(property!=null)
+                    tempType = property.PropertyType;
+                else if(field!=null)
+                    tempType = field.FieldType;
+
+                property.SetValue(obj, Convert(propertyValue, tempType), null);
 			}
 			catch
 			{
