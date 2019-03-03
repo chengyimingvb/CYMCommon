@@ -24,8 +24,8 @@ namespace JBooth.MicroSplat.Utility
            
             // annoying to work around all the odd unity issues
             // copy to temp texture..
-            Texture2D tempTexture = new Texture2D(texture2DArray.width, texture2DArray.height, texture2DArray.format, true, true);
-            Graphics.CopyTexture(texture2DArray, i, tempTexture, 0);
+            Texture2D tempTexture = new Texture2D(texture2DArray.width, texture2DArray.height, texture2DArray.format, false, true);
+            Graphics.CopyTexture(texture2DArray, i, 0, tempTexture, 0, 0);
             tempTexture.Apply();
 
             // blit to render target

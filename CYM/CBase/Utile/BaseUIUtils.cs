@@ -606,11 +606,31 @@ namespace CYM
         /// 检测鼠标是否悬在在ui上
         /// </summary>
         /// <returns></returns>
-        public static bool CheckGuiObjects()
+        public static bool CheckGuiObjects(bool isIgnoreHUD = false)
         {
+            if (BaseView.IsFullScreenState.IsIn())
+                return true;
             if (EventSystem.current == null)
                 return false;
-            return EventSystem.current.IsPointerOverGameObject();
+
+            if (isIgnoreHUD)
+            {
+                PointerEventData eventDataCurrentPosition = new PointerEventData(EventSystem.current);
+                List<RaycastResult> results = new List<RaycastResult>();
+                EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
+                if (results.Count == 0)
+                    return false;
+                foreach (var item in results)
+                {
+                    if (item.gameObject.CompareTag(BaseConstMgr.Tag_IgnorGUIBlock))
+                        return true;
+                }
+                return false;
+            }
+            else
+            {
+                return EventSystem.current.IsPointerOverGameObject();
+            }
         }
         #endregion
 

@@ -29,23 +29,15 @@
                   half fade = 1.0 - ((_AntiTileDetailNoiseScaleFadeStr.y - camDist) / _AntiTileDetailNoiseScaleFadeStr.y);
                   fade = 1.0 - (fade*fade);
                   fade *= _AntiTileDetailNoiseScaleFadeStr.z;
+                  
 
-                  MIPFORMAT mipLevel = 0;
-                  #if _USELODMIP
-                     mipLevel = ComputeMipLevel(uv, _AntiTileArray_TexelSize.zw);
-                  #endif
-
-                  #if _USEGRADMIP
-                     mipLevel = float4(ddx(uv), ddy(uv));
-                  #endif
-
-                  half noise0 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv0.z), mipLevel).r;
-                  half noise1 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv1.z), mipLevel).r;
+                  half noise0 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv0.z)).r;
+                  half noise1 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv1.z)).r;
                   #if !_MAX2LAYER
-                  half noise2 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv2.z), mipLevel).r;
+                  half noise2 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv2.z)).r;
                   #endif
                   #if !_MAX2LAYER && !_MAX3LAYER
-                  half noise3 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv3.z), mipLevel).r;
+                  half noise3 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv3.z)).r;
                   #endif
 
                   o.albedo0.rgb = lerp(o.albedo0.rgb, BlendMult2X(o.albedo0.rgb, noise0.xxx), fade * strs0.y);
@@ -67,23 +59,14 @@
                {
                   float fade = saturate ((camDist - _AntiTileDistanceNoiseScaleFadeStr.y) / _AntiTileDistanceNoiseScaleFadeStr.z);
                   fade *= _AntiTileDistanceNoiseScaleFadeStr.w;
-
-                  MIPFORMAT mipLevel = 0;
-                  #if _USELODMIP
-                     mipLevel = ComputeMipLevel(uv, _AntiTileArray_TexelSize.zw);
-                  #endif
-
-                  #if _USEGRADMIP
-                     mipLevel = float4(ddx(uv), ddy(uv));
-                  #endif
-
-                  half noise0 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv0.z), mipLevel).b;
-                  half noise1 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv1.z), mipLevel).b;
+                  
+                  half noise0 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv0.z)).b;
+                  half noise1 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv1.z)).b;
                   #if !_MAX2LAYER
-                  half noise2 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv2.z), mipLevel).b;
+                  half noise2 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv2.z)).b;
                   #endif
                   #if !_MAX2LAYER && !_MAX3LAYER
-                  half noise3 = MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv3.z), mipLevel).b;
+                  half noise3 = UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv3.z)).b;
                   #endif
 
                   o.albedo0.rgb = lerp(o.albedo0.rgb, BlendMult2X(o.albedo0.rgb, noise0.xxx), fade * strs0.z);
@@ -102,23 +85,15 @@
             #if _ANTITILEARRAYNORMAL
             {
                float2 uv = config.uv * _AntiTileNormalNoiseScaleStr.x;
+               
 
-               MIPFORMAT mipLevel = 0;
-               #if _USELODMIP
-                  mipLevel = ComputeMipLevel(uv, _AntiTileArray_TexelSize.zw);
-               #endif
-
-               #if _USEGRADMIP
-                  mipLevel = float4(ddx(uv), ddy(uv));
-               #endif
-
-               half2 noise0 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv0.z), mipLevel));
-               half2 noise1 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv1.z), mipLevel));
+               half2 noise0 = UnpackNormal2(UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv0.z)));
+               half2 noise1 = UnpackNormal2(UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv1.z)));
                #if !_MAX2LAYER
-               half2 noise2 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv2.z), mipLevel));
+               half2 noise2 = UnpackNormal2(UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv2.z)));
                #endif
                #if !_MAX2LAYER && !_MAX3LAYER
-               half2 noise3 = UnpackNormal2(MICROSPLAT_SAMPLE(_AntiTileArray, float3(uv, config.uv3.z), mipLevel));
+               half2 noise3 = UnpackNormal2(UNITY_SAMPLE_TEX2DARRAY(_AntiTileArray, float3(uv, config.uv3.z)));
                #endif
 
                o.normSAO0.xy = lerp(o.normSAO0.xy, BlendNormal2(o.normSAO0.xy, noise0.xy), _AntiTileNormalNoiseScaleStr.y * strs0.x);

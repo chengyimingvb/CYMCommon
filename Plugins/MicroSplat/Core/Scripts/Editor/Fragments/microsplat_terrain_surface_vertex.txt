@@ -1,8 +1,4 @@
 
-#if _VSSHADOWMAP
-      float4 gVSSunDirection;
-#endif
-
 
 #if UNITY_VERSION >= 201830 && !_TERRAINBLENDABLESHADER && !_MICROMESH
 #if defined(UNITY_INSTANCING_ENABLED) && !defined(SHADER_API_D3D11_9X)

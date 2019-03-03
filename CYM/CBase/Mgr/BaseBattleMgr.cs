@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CYM.DLC;
+using CYM.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 namespace CYM
@@ -332,6 +333,7 @@ namespace CYM
         /// <returns></returns>
         IEnumerator<float> _LoadBattle(bool readData = true)
         {
+            BaseView.IsFullScreenState.Reset();
             SelfBaseGlobal.ResumeGame();
             SelfBaseGlobal.PlotMgr.ResumePlotMode();
             yield return Timing.WaitForOneFrame;

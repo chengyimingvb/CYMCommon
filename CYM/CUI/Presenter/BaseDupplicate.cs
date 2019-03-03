@@ -1,19 +1,27 @@
 ﻿using System;
-using CYM;
 using System.Collections.Generic;
-using UnityEngine;
 using System.Linq;
+using Sirenix.OdinInspector;
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using DG.Tweening;
 
 namespace CYM.UI
 {
-    public class BaseDupplicate : BaseGOProvider
+    public class BaseDupplicate : Presenter<PresenterData>
     {
+        #region Inspector
+        [FoldoutGroup("Data"), SerializeField]
+        bool IsAutoInit = false;
+        [FoldoutGroup("Data"),ShowIf("Inspector_IsInitCount"), SerializeField]
+        int Count = 0;
+        [FoldoutGroup("Data"), SerializeField]
+        bool IsToggleGroup = false;
+        [FoldoutGroup("Data"), SerializeField]
+        GameObject Prefab;
+        #endregion
+
         #region prop
-        public GameObject Prefab;
-        private int Count;
         /// <summary>
         /// obj1=presenter
         /// obj2=用户自定义数据
@@ -31,11 +39,36 @@ namespace CYM.UI
         /// <summary>
         /// 用户自定义数据缓存
         /// </summary>
-        IList<object> CustomDatas=new List<object>();
+        IList<object> CustomDatas = new List<object>();
         /// <summary>
         /// 刷新Layout
         /// </summary>
         Timer RefreshLayoutTimer = new Timer(0.02f);
+        /// <summary>
+        /// int1 =当前的index
+        /// int2 =上次的index
+        /// </summary>
+        Callback<int, int> Callback_OnSelectChange;
+        /// <summary>
+        /// 当前选得index
+        /// </summary>
+        Callback<int> Callback_OnClickSelected;
+        public List<GameObject> GOs { get; set; } = new List<GameObject>();
+        public List<BasePresenter> Presenters { get; set; } = new List<BasePresenter>();
+        List<BaseCheckBox> ToggleGroupCheckBoxs { get; set; } = new List<BaseCheckBox>();
+        /// <summary>
+        /// 子对象数量
+        /// </summary>
+        public int GOCount => GOs.Count;
+        /// <summary>
+        /// 当前选择的index
+        /// </summary>
+        public int CurSelectIndex { get; protected set; } = 0;
+        /// <summary>
+        /// 上一次的选择
+        /// </summary>
+        public int PreSelectIndex { get; protected set; } = 0;
+        bool IsInitedCount = false;
         #endregion
 
         #region life
@@ -45,10 +78,18 @@ namespace CYM.UI
             var dupps = GetComponentsInChildren<BaseDupplicate>();
             if (dupps.Length > 1)
             {
-                CLog.Error("BaseDupplicate 重叠,无法嵌套使用:{0}",name);
+                CLog.Error("BaseDupplicate 重叠,无法嵌套使用:{0}", name);
             }
 
             base.Awake();
+        }
+        protected override void Start()
+        {
+            base.Start();
+            if (IsAutoInit)
+            {
+                InitCount<BaseEmptyPresenter, PresenterData>(Count);
+            }
         }
         /// <summary>
         /// 刷新
@@ -73,6 +114,7 @@ namespace CYM.UI
                 }
                 RefreshLayoutTimer.Restart();
             }
+            Callback_OnSelectChange?.Invoke(CurSelectIndex, PreSelectIndex);
         }
         public override void OnFixedUpdate()
         {
@@ -104,6 +146,7 @@ namespace CYM.UI
                 LayoutRebuilder.ForceRebuildLayoutImmediate(RectTrans);
             }
         }
+        [Button("自动适应")]
         public void AutoFix()
         {
             RectTransform tempTrans = Prefab.transform as RectTransform;
@@ -134,7 +177,7 @@ namespace CYM.UI
             GetCustomDatas = getCustomDatas;
             CustomDatas = getCustomDatas();
             Init(new PresenterData());
-            InitCount(CustomDatas.Count);
+            InitCount<TP, TD>(CustomDatas.Count);
             OnRefresh = onRefresh;
             OnFixedRefresh = null;
             var retData = GetGOs<TP, TD>();
@@ -148,17 +191,12 @@ namespace CYM.UI
         /// count=初始化数量
         /// onRefresh=自定义刷新方法
         /// <returns></returns>
-        public virtual TP[] Init<TP, TD>(int count, Callback<object, object> onRefresh, Callback<object, object> onFixedRefresh=null, TD pData=null) where TP : Presenter<TD>, new() where TD : PresenterData, new()
+        public virtual TP[] Init<TP, TD>(int count, Callback<object, object> onRefresh=null, Callback<object, object> onFixedRefresh = null, TD pData = null) where TP : Presenter<TD>, new() where TD : PresenterData, new()
         {
-            if (onRefresh == null)
-            {
-                CLog.Error("onRefresh 为 null");
-            }
             Init(new PresenterData());
-            InitCount(count);
+            InitCount<TP, TD>(count);
             OnRefresh = onRefresh;
             OnFixedRefresh = onFixedRefresh;
-            //BaseUIView.ActivePresenterUpdate(this);
             var retData = GetGOs<TP, TD>(pData);
             return retData;
         }
@@ -169,14 +207,14 @@ namespace CYM.UI
         /// TD=控件数据
         /// data=控件数据列表
         /// <returns></returns>
-        public virtual TP[] Init<TP,TD>(params TD[] data) where TP:Presenter<TD>,new() where TD:PresenterData,new()
+        public virtual TP[] Init<TP, TD>(params TD[] data) where TP : Presenter<TD>, new() where TD : PresenterData, new()
         {
             if (data == null) return null;
             Init(new PresenterData());
-            InitCount(data.Length);
+            InitCount<TP, TD>(data.Length);
             OnRefresh = null;
             OnFixedRefresh = null;
-            return GetGOs<TP,TD>(data);
+            return GetGOs<TP, TD>(data);
         }
         /// <summary>
         /// 自动刷新
@@ -186,14 +224,13 @@ namespace CYM.UI
         /// data=控件数据列表
         /// onRefresh=自定义刷新方法
         /// <returns></returns>
-        public virtual TP[] Init<TP, TD>(Callback<object, object> onRefresh,Callback<object, object> onFixedRefresh,params TD[] data) where TP : Presenter<TD>, new() where TD : PresenterData, new()
+        public virtual TP[] Init<TP, TD>(Callback<object, object> onRefresh, Callback<object, object> onFixedRefresh, params TD[] data) where TP : Presenter<TD>, new() where TD : PresenterData, new()
         {
             if (data == null) return null;
             Init(new PresenterData());
-            InitCount(data.Length);
+            InitCount<TP, TD>(data.Length);
             OnRefresh = onRefresh;
             OnFixedRefresh = onFixedRefresh;
-            //BaseUIView.ActivePresenterUpdate(this);
             return GetGOs<TP, TD>(data);
         }
         /// <summary>
@@ -207,7 +244,7 @@ namespace CYM.UI
         {
             if (data == null) return null;
             Init(pdata);
-            InitCount(data.Length);
+            InitCount<TP, TD>(data.Length);
             OnRefresh = null;
             OnFixedRefresh = null;
             return GetGOs<TP, TD>(data);
@@ -216,16 +253,27 @@ namespace CYM.UI
         /// 通过数量初始化
         /// </summary>
         /// <param name="count"></param>
-        private void InitCount(int count)
+        public void InitCount<TP, TD>(int count) where TP : Presenter<TD>, new() where TD : PresenterData, new()
         {
+            if (IsInitedCount)
+            {
+                CLog.Error("InitCount 无法初始化2次!!!!");
+                return;
+            }
+            IsInitedCount = true;
             GOs.Clear();
             for (int i = 0; i < Trans.childCount; ++i)
             {
                 Transform temp = Trans.GetChild(i);
+                var ele = temp.GetComponent<LayoutElement>();
+                if (ele != null && ele.ignoreLayout)
+                {
+                    continue;
+                }
                 GOs.Add(temp.gameObject);
                 temp.gameObject.SetActive(false);
             }
-            if (Prefab == null && GOs.Count>0)
+            if (Prefab == null && GOs.Count > 0)
             {
                 Prefab = GOs[0];
             }
@@ -236,7 +284,7 @@ namespace CYM.UI
             }
             if (count <= 0)
                 CLog.Error("Count <= 0");
-            if(Prefab.name.StartsWith(BaseConstMgr.STR_Base))
+            if (Prefab.name.StartsWith(BaseConstMgr.STR_Base))
                 CLog.Error($"不能使用基础UI Prefab 初始化:{Prefab.name}");
 
             //差值
@@ -254,13 +302,152 @@ namespace CYM.UI
                 }
             }
 
-            for(int i=0;i< count;++i)
+            for (int i = 0; i < count; ++i)
+            {
                 GOs[i].SetActive(true);
+                var tempPresenter = GOs[i].GetComponent<TP>();
+                Presenters.Add(tempPresenter);
+
+                if (tempPresenter is BaseCheckBox checkBox)
+                {
+                    checkBox.IsToggleGroup = IsToggleGroup;
+                    ToggleGroupCheckBoxs.Add(checkBox);
+                }
+            }
 
             //设置数量
-            Count = GOs.Count;
+            //Count = GOs.Count;
         }
         #endregion
+
+        #region get GOs
+        public TP[] GetGOs<TP, TD>(TD data = null) where TP : Presenter<TD> where TD : PresenterData, new()
+        {
+            if (data == null)
+            {
+                data = new TD();
+            }
+            for (int i = 0; i < GOs.Count; i++)
+            {
+                if (GOs[i] == null)
+                {
+                    CLog.Error("有的GO为null");
+                }
+            }
+            TP[] ts = GOs.Where(go => go != null).Select(go => go.GetComponent<TP>()).ToArray();
+            for (int i = 0; i < ts.Length; i++)
+            {
+                if (ts[i] == null)
+                {
+                    CLog.Error(string.Format("取出组件为null, type={0}", typeof(TP)));
+                    break;
+                }
+                else
+                {
+                    ts[i].SetIndex(i);
+                    ts[i].BaseDupplicate = this;
+                    AddChild(ts[i], true);
+                    if (data != null)
+                    {
+                        ts[i].Init(data);
+                    }
+                }
+            }
+            return ts;
+        }
+        public TP[] GetGOs<TP, TD>(TD[] data) where TP : Presenter<TD> where TD : PresenterData, new()
+        {
+            for (int i = 0; i < GOs.Count; i++)
+            {
+                if (GOs[i] == null)
+                {
+                    CLog.Error("有的GO为null");
+                }
+            }
+            TP[] ts = GOs.Where(go => go != null).Select(go => go.GetComponent<TP>()).ToArray();
+            for (int i = 0; i < ts.Length; i++)
+            {
+                if (ts[i] == null)
+                {
+                    CLog.Error(string.Format("取出组件为null, type={0},如果想要忽略,请添加IgnoreElement组件", typeof(TP)));
+                    break;
+                }
+                else
+                {
+                    ts[i].SetIndex(i);
+                    ts[i].BaseDupplicate = this;
+                    AddChild(ts[i], true);
+                    if (data != null)
+                    {
+                        if (i < data.Length)
+                            ts[i].Init(data[i]);
+                    }
+                    else
+                    {
+                        ts[i].Init(new TD());
+                    }
+                }
+            }
+            return ts;
+        }
+        #endregion
+
+        #region callback
+        public void OnTabClick(BasePresenter arg1, PointerEventData arg2)
+        {
+            PreSelectIndex = CurSelectIndex;
+            CurSelectIndex = arg1.Index;
+            Callback_OnClickSelected?.Invoke(CurSelectIndex);
+            Refresh();
+        }
+        /// <summary>
+        /// 鼠标进入
+        /// </summary>
+        /// <param name="eventData"></param>
+        public override void OnPointerEnter(PointerEventData eventData)
+        {
+        }
+        /// <summary>
+        /// 鼠标退出
+        /// </summary>
+        /// <param name="eventData"></param>
+		public override void OnPointerExit(PointerEventData eventData)
+        {
+        }
+        /// <summary>
+        /// 鼠标点击
+        /// </summary>
+        /// <param name="eventData"></param>
+        public override void OnPointerClick(PointerEventData eventData)
+        {
+        }
+        /// <summary>
+        /// 鼠标按下
+        /// </summary>
+        /// <param name="eventData"></param>
+        public override void OnPointerDown(PointerEventData eventData)
+        {
+        }
+        /// <summary>
+        /// 鼠标按下
+        /// </summary>
+        /// <param name="eventData"></param>
+        public override void OnPointerUp(PointerEventData eventData)
+        {
+        }
+        /// <summary>
+        /// 点击状态变化
+        /// </summary>
+        /// <param name="b"></param>
+        public override void OnInteractable(bool b)
+        {
+        }
+        #endregion
+
+        bool Inspector_IsInitCount()
+        {
+            return IsAutoInit;
+        }
     }
 
 }

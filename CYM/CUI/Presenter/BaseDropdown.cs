@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using CYM;
 using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 
 namespace CYM.UI
 {
@@ -16,9 +17,9 @@ namespace CYM.UI
     public class BaseDropdown : Presenter<BaseDropdownData>
     {
         #region presenter
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         Dropdown Dropdown;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         Text Name;
         #endregion
 

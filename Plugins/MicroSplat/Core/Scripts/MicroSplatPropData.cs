@@ -13,8 +13,8 @@ using UnityEngine;
 // 2 Normal Strength, Smoothness, AO, Metallic
 // 3 Brightness, Contrast, porosity, foam
 // 4 DetailNoiseStrength, distance Noise Strength, Distance Resample, A OPEN
-// 5 geoTex, tint strength, normal strength, (A) OPEN
-// 6 displace, bias, offset (A) OPEN
+// 5 geoTex, tint strength, normal strength, SmoothAOMetal strength
+// 6 displace, bias, offset global emis strength
 // 7 Noise 0, Noise 1, Noise 2, Wind Particulate Strength
 // 8 Snow (R), Glitter (G),  (BA) OPEN
 // 9 Triplanar, trplanar contrast (BA) OPEN

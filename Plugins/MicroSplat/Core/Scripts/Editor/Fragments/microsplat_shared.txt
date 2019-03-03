@@ -1,8 +1,37 @@
-      #if _USEGRADMIP
-         #define MIPFORMAT float4
-      #else
-         #define MIPFORMAT float
+      struct TriGradMipFormat
+      {
+         float4 d0;
+         float4 d1;
+         float4 d2;
+      };
+      
+      #if _VSSHADOWMAP
+         float4 gVSSunDirection;
       #endif
+      
+      #if _TRIPLANAR
+         #if _USEGRADMIP
+            #define MIPFORMAT TriGradMipFormat
+            #define INITMIPFORMAT (TriGradMipFormat)0;
+            #define MIPFROMATRAW float4
+         #else
+            #define MIPFORMAT float3
+            #define INITMIPFORMAT 0;
+            #define MIPFROMATRAW float3
+         #endif
+      #else
+         #if _USEGRADMIP
+            #define MIPFORMAT float4
+            #define INITMIPFORMAT 0;
+            #define MIPFROMATRAW float4
+         #else
+            #define MIPFORMAT float
+            #define INITMIPFORMAT 0;
+            #define MIPFROMATRAW float
+         #endif
+      #endif
+      
+      
 
       #if _MESHSUBARRAY
          half4 _MeshSubArrayIndexes;
@@ -166,7 +195,7 @@
          half4 normSAO1;
          half4 normSAO2;
          half4 normSAO3;
-         #if _USEEMISSIVEMETAL
+         #if _USEEMISSIVEMETAL || _GLOBALEMIS || _GLOBALSMOOTHAOMETAL
             half4 emisMetal0;
             half4 emisMetal1;
             half4 emisMetal2;
@@ -494,7 +523,7 @@
          config.uv2 = float3(scaledUV, indexes.z);
          config.uv3 = float3(scaledUV, indexes.w);
       }
-
+      
       float ComputeMipLevel(float2 uv, float2 textureSize)
       {
          uv *= textureSize;
@@ -552,17 +581,6 @@
            #define MICROSPLAT_SAMPLE_TEX2D_GRAD(tex,coord,dx,dy) half4(0,0,1,0) 
         #endif
       
-
-
-              #if defined(SHADER_API_D3D11) || defined(SHADER_API_XBOXONE) || defined(UNITY_COMPILER_HLSLCC) || defined(SHADER_API_PSSL)
-            #define MY_UNITY_SAMPLE_TEX2DARRAY_GRAD(tex,coord,dx,dy) tex.SampleGrad (sampler##tex,coord,dx,dy)
-        #else
-
-            #if defined(UNITY_COMPILER_HLSL2GLSL) || defined(SHADER_TARGET_SURFACE_ANALYSIS)
-                #define MY_UNITY_SAMPLE_TEX2DARRAY_GRAD(tex,coord,dx,dy) texCUBEgrad (tex,coord,float3(dx.x,dx.y,0),float3(dy.x,dy.y,0))
-            #endif
-        #endif 
-
 
 
       #if _USELODMIP

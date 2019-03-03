@@ -102,6 +102,8 @@ namespace CYM
         {
             get
             {
+                if (BuildConfig.Ins.IsDevBuild)
+                    return true;
                 if (Client.Instance == null)
                     return false;
                 if (!Client.Instance.IsValid)

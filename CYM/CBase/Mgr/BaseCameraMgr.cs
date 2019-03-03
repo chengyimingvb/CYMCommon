@@ -13,13 +13,17 @@ namespace CYM
         public Camera MainCamera { get; private set; }
         protected Transform MainCameraTrans { get; set; }
         protected HighlighterRenderer HighlighterRenderer { get; set; }
+        public const float MostHight = 600.0f;
         public const float TopHight = 300.0f;
         public const float MidHight = 137.0f;
+        public const float NearHight = 80.0f;
         public float CameraHight { get; private set; }
-        public bool IsTopHight { get { return CameraHight >= TopHight; } }
-        public bool IsLowHight { get { return CameraHight <= MidHight; } }
-        public bool IsMiddleHight { get { return CameraHight > MidHight && CameraHight < TopHight; } }
-        public float ZoomPercent { get { return CameraHight / 400; } }
+        public bool IsNearHight => CameraHight <= NearHight;
+        public bool IsLowHight =>  CameraHight <= MidHight;
+        public bool IsMiddleHight => CameraHight > MidHight && CameraHight <= TopHight;
+        public bool IsTopHight => CameraHight >= TopHight ;
+        public bool IsMostHight => CameraHight >= MostHight;
+        public float ZoomPercent => CameraHight / MostHight; 
         #endregion
 
         #region Callback
@@ -44,7 +48,7 @@ namespace CYM
         public override void OnBeAdded(IMono mono)
         {
             base.OnBeAdded(mono);
-            MainCamera = Mono.GetComponentInChildren<Camera>();
+            MainCamera = Camera.main;
             MainCameraTrans = MainCamera.transform;
             HighlighterRenderer = Mono.GetComponentInChildren<HighlighterRenderer>();
         }
@@ -58,6 +62,16 @@ namespace CYM
             {
                 Callback_OnIsHight?.Invoke(IsTopHight);
             }
+        }
+        protected override void OnBattleLoaded()
+        {
+            base.OnBattleLoaded();
+            EnableSkyBox(true);
+        }
+        protected override void OnBattleUnLoaded()
+        {
+            base.OnBattleUnLoaded();
+            EnableSkyBox(false);
         }
         #endregion
 

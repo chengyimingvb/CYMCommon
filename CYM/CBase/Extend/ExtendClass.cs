@@ -246,6 +246,7 @@ namespace CYM
     }
     public class BoolState
     {
+        bool isIn = false;
         int count = 0;
         public bool Push(bool b)
         {
@@ -270,7 +271,11 @@ namespace CYM
         }
         public bool IsIn()
         {
-            return count > 0;
+            return count > 0 || isIn;
+        }
+        public void Set(bool b)
+        {
+            isIn = b;
         }
     }
     public class IndexState

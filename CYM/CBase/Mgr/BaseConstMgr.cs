@@ -103,6 +103,10 @@ namespace CYM
         public static readonly LayerData Layer_Terrain = "Terrain";
         #endregion
 
+        #region TAG
+        public static readonly string Tag_IgnorGUIBlock = "IgnorGUIBlock";
+        #endregion
+
         #region STR
         public const string STR_Infinite = "∞";
         public const string STR_None = "None";
@@ -153,6 +157,10 @@ namespace CYM
         #endregion
 
         #region Prefix Suffix
+        //姓氏翻译
+        public const string Prefix_SurnameTrans = "S_";
+        //名字翻译
+        public const string Prefix_NameTrans = "N_";
         //注释前缀
         public const string Prefix_Notes = "#";
         //动态ID,所有动态资源的前缀,比如头像,音效,语音,包括翻译字符串等等
@@ -171,6 +179,10 @@ namespace CYM
         public const string Suffix_Disable = "_Dis";
         //选项后缀,用于对话等系统
         public const string Suffix_Op = "_Op";
+        //复选框后缀正常图片
+        public const string Suffix_Checkbox_N = "_N";
+        //复选框后缀激活图片
+        public const string Suffix_Checkbox_On = "_On";
         #endregion
 
         #region dir
@@ -296,7 +308,7 @@ namespace CYM
         /// <summary>
         /// 开发目录
         /// </summary>
-        public static readonly string Path_Dev = Path.Combine(Application.persistentDataPath, "dev");
+        public static readonly string Path_Dev = Path.Combine(Application.persistentDataPath, "Dev");
         /// <summary>
         /// 开发者配置目录
         /// </summary>
@@ -341,6 +353,14 @@ namespace CYM
         /// 内部bundle
         /// </summary>
         public static readonly string Path_InternalBundle = Path.Combine(Path_Common, "_Bundle");
+        /// <summary>
+        /// 内部语言
+        /// </summary>
+        public static readonly string Path_InternalLanguage= Path.Combine(Path_InternalBundle, "Language");
+        /// <summary>
+        /// 内部Lua
+        /// </summary>
+        public static readonly string Path_InternalLua = Path.Combine(Path_InternalBundle, "Lua");
         #endregion
 
         #region color

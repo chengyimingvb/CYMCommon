@@ -1027,6 +1027,10 @@ namespace Pathfinding {
 			}
 		}
 
+		public NavmeshBase () {
+			navmeshUpdateData = new NavmeshUpdates.NavmeshUpdateSettings(this);
+		}
+
 		/// <summary>
 		/// Returns if there is an obstacle between origin and end on the graph.
 		/// This is not the same as Physics.Linecast, this function traverses the \b graph and looks for collisions instead of checking for collider intersection.
@@ -1105,10 +1109,6 @@ namespace Pathfinding {
 
 		/// <summary>Used to optimize linecasts by precomputing some values</summary>
 		static readonly byte[] LinecastShapeEdgeLookup;
-
-		public NavmeshBase () {
-			navmeshUpdateData = new NavmeshUpdates.NavmeshUpdateSettings(this);
-		}
 
 		static NavmeshBase () {
 			// Want want to figure out which side of a triangle that a ray exists using.

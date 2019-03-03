@@ -527,6 +527,12 @@ namespace JBooth.MicroSplat
          {
             samplerMode = SamplerMode.GradientSampler;
          }
+         // force gradient sampling for stochastic mode
+         if (samplerMode == SamplerMode.Default &&  System.Array.Exists(keywords, e => e == "_STOCHASTIC"))
+         {
+            samplerMode = SamplerMode.GradientSampler;
+         }
+
 
          uvMode = HasFeature(keywords, DefineFeature._WORLDUV) ? UVMode.WorldSpace : UVMode.UV;
          /*

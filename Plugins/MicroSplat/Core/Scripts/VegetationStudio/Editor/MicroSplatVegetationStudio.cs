@@ -71,7 +71,7 @@ namespace JBooth.MicroSplat
 
       public override string GetVersion()
       {
-         return "2.3";
+         return "2.4";
       }
 
       public override void DrawFeatureGUI(Material mat)

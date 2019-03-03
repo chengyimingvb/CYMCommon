@@ -13,6 +13,9 @@
          half4     _WindParticulateShadowColor;
          float4    _WindParticulateHeightMask;
          float4    _WindParticulateAngleMask;
+         #if _WINDPARTICULATEUPFILTER
+            float4    _WindParticulateUpMask;
+         #endif
 
          #if _GLOBALWINDPARTICULATESTRENGTH
             half      _Global_WindParticulateStrength;
@@ -29,6 +32,9 @@
          half4     _SnowParticulateShadowColor;
          float4    _SnowParticulateHeightMask;
          float4    _SnowParticulateAngleMask;
+         #if _SNOWPARTICULATEUPFILTER
+            float4    _SnowParticulateUpMask;
+         #endif
 
          #if _GLOBALSNOWPARTICULATESTRENGTH
             half      _Global_SnowParticulateStrength;
@@ -58,6 +64,14 @@
          half w = saturate((y - range.x) / max(range.y - range.x, 0.0001));
          w *= 1.0 - saturate((y - range.z) / max(range.w - range.z, 0.0001));
          return w;
+      }
+      
+      half FilterParticulateSlope(float4 range, float3 worldNormalVertex, float windRot)
+      {
+         float2 windDir = RotateUV(float2(1, 0), windRot);
+         float2 flow = lerp(worldNormalVertex.xz, normalize(worldNormalVertex.xz), max(0.1, worldNormalVertex.z));
+         float cofacing = dot(windDir, flow); // 1 going downhill, -1 going uphill
+         return FilterParticulateRange(range, cofacing);
       }
 
       fixed ComputeParticulateMask(float2 wuv, float4 parms)
@@ -103,6 +117,9 @@
             #if _WINDPARTICULATE || _WINDSHADOWS
                float windWorldMask = FilterParticulateRange(_WindParticulateHeightMask, i.worldPos.y);
                windWorldMask *= FilterParticulateRange(_WindParticulateAngleMask, upDot);
+               #if _WINDPARTICULATEUPFILTER
+                  windWorldMask *= FilterParticulateSlope(_WindParticulateUpMask, worldNormalVertex, windRotation);
+               #endif
             #endif
 
             #if _WINDSHADOWS
@@ -151,6 +168,9 @@
             #if _SNOWPARTICULATE || _SNOWSHADOWS
                float snowWorldMask = FilterParticulateRange(_SnowParticulateHeightMask, i.worldPos.y);
                snowWorldMask *= FilterParticulateRange(_SnowParticulateAngleMask, upDot);
+               #if _WINDPARTICULATEUPFILTER
+                  snowWorldMask *= FilterParticulateSlope(_SnowParticulateUpMask, worldNormalVertex, windRotation);
+               #endif
             #endif
 
 

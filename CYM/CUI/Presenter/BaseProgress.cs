@@ -1,5 +1,6 @@
 ﻿using System;
 using DG.Tweening;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
 namespace CYM.UI
@@ -13,7 +14,9 @@ namespace CYM.UI
     public class BaseProgress : Presenter<BaseProgressData>
     {
         #region 组建
+        [FoldoutGroup("Inspector")]
         public Image Fill;
+        [FoldoutGroup("Inspector")]
         public Text Text;
         #endregion
 

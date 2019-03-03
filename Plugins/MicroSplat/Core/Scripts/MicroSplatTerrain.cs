@@ -269,11 +269,22 @@ public class MicroSplatTerrain : MicroSplatObject
                      path = path.Replace("\\", "/");
                      path = path.Substring(0, path.LastIndexOf("/"));
                      path += "/microsplat_layer_";
+                     path = path.Replace("//", "/");
+
+                     if (cfg.sourceTextures[i].diffuse != null)
+                     {
+                        path += cfg.sourceTextures[i].diffuse.name;
+                     }
+                     path += "_" + i;
+                     path += ".terrainlayer";
                      TerrainLayer sp = UnityEditor.AssetDatabase.LoadAssetAtPath<TerrainLayer>(path);
                      if (sp != null)
                      {
                         if (sp.diffuseTexture == cfg.sourceTextures[i].diffuse)
+                        {
+                           protos[i] = sp;
                            continue;
+                        }
                      }
 
                      sp = new TerrainLayer();
@@ -287,12 +298,7 @@ public class MicroSplatTerrain : MicroSplatObject
                      
                      protos[i] = sp;
 
-                     if (sp.diffuseTexture != null)
-                     {
-                        path += sp.diffuseTexture.name;
-                     }
-                     path += "_" + i;
-                     path += ".terrainlayer";
+
                      UnityEditor.AssetDatabase.CreateAsset(sp, path);
                   }
 

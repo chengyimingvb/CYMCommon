@@ -97,7 +97,7 @@ namespace CYM
                     // 若是目录
                     if (System.IO.Directory.Exists(entry))
                     {
-                        CopyDir(entry, targetPath);
+                        CopyDir(entry, targetPath, overrideIfNewer, deleteTarget);
                     }
                     else
                     {

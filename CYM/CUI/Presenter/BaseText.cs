@@ -8,14 +8,18 @@ using DG.Tweening.Core;
 using CYM;
 using UnityEngine.Events;
 using System;
+using Sirenix.OdinInspector;
 
 namespace CYM.UI
 {
     public class BaseTextData : PresenterData
     {
-        /// <summary>
-        /// 是否自动翻译
-        /// </summary>
+        public Func<Sprite> ActiveIcon = null;
+        public string ActiveIconStr = BaseConstMgr.STR_Inv;
+        public Func<Sprite> Icon = null;
+        public string IconStr = BaseConstMgr.STR_Inv;
+        public Func<Sprite> Bg = null;
+        public string BgStr = BaseConstMgr.STR_Inv;
         public bool IsTrans = true;
         public Func<string> Name = null;
         public string NameStr = BaseConstMgr.STR_Inv;
@@ -28,7 +32,36 @@ namespace CYM.UI
             }
             return GetTransStr(str);
         }
-
+        public Sprite GetIcon()
+        {
+            if (Icon != null)
+            {
+                return Icon.Invoke();
+            }
+            if (!IconStr.IsInvStr())
+                return BaseGRMgr.GetIcon(IconStr);
+            return null;
+        }
+        public Sprite GetActiveIcon()
+        {
+            if (ActiveIcon != null)
+            {
+                return ActiveIcon.Invoke();
+            }
+            if (!ActiveIconStr.IsInvStr())
+                return BaseGRMgr.GetIcon(ActiveIconStr);
+            return null;
+        }
+        public Sprite GetBg()
+        {
+            if (Bg != null)
+            {
+                return Bg.Invoke();
+            }
+            if (!BgStr.IsInvStr())
+                return BaseGRMgr.GetIcon(BgStr);
+            return null;
+        }
         public string GetTransStr(string str)
         {
             if(IsTrans)
@@ -41,10 +74,12 @@ namespace CYM.UI
     public class BaseText : Presenter<BaseTextData>
     {
         #region 组建
+        [FoldoutGroup("Inspector"), SerializeField]
+        public Text Text;
+        [FoldoutGroup("Inspector"), SerializeField,Tooltip("可以位空")]
+        public Image Icon;
         [SerializeField]
         bool IsAnim = false;
-        [SerializeField]
-        public Text Text;
         #endregion
 
         #region prop
@@ -56,7 +91,10 @@ namespace CYM.UI
         {
             base.Refresh();
             text = Data.GetName();
-
+            if (Icon != null)
+            {
+                Icon.sprite = Data.GetIcon();
+            }
         }
         #endregion
 

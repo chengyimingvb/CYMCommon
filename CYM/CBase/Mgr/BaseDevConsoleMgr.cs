@@ -14,6 +14,10 @@ namespace CYM
 {
 	public class BaseDevConsoleMgr : BaseGFlowMgr
     {
+        #region prop
+        BaseExcelMgr ExcelMgr => SelfBaseGlobal.ExcelMgr;
+        #endregion
+
         static BaseDevConsoleMgr Ins;
         protected override void OnSetNeedFlag()
         {
@@ -89,6 +93,10 @@ namespace CYM
                 return SelfBaseGlobal.DiffMgr.IsGMMode();
             }
         }
+        #endregion
+
+        #region Command
+
         #endregion
     }
 }

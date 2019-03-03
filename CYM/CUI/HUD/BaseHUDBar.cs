@@ -32,6 +32,8 @@ namespace CYM
         /// </summary>
         protected virtual void UpdateAnchoredPosition()
         {
+            if (RectTrans == null)
+                return;
             if (CanvasScaler == null)
                 return;
             if (SelfBaseGlobal == null)
@@ -45,16 +47,20 @@ namespace CYM
                 }
                 else
                     Show(true);
-                float resolutionX = CanvasScaler.referenceResolution.x;
-                float resolutionY = CanvasScaler.referenceResolution.y;
-                float offect = (Screen.width / CanvasScaler.referenceResolution.x) * (1 - CanvasScaler.matchWidthOrHeight)
-                    + (Screen.height / CanvasScaler.referenceResolution.y) * CanvasScaler.matchWidthOrHeight;
-                Vector2 a = RectTransformUtility.WorldToScreenPoint(Camera.main, followObj.position+Offset);
-                Vector2 relationPos = new Vector2(a.x / offect, a.y / offect);
-                float distance = BaseCameraMgr.CameraHight;
-                Vector3 anchorPos = relationPos;
-                if (RectTrans.localPosition != anchorPos)
-                    RectTrans.localPosition = anchorPos;
+
+                if (IsShow)
+                {
+                    float resolutionX = CanvasScaler.referenceResolution.x;
+                    float resolutionY = CanvasScaler.referenceResolution.y;
+                    float offect = (Screen.width / CanvasScaler.referenceResolution.x) * (1 - CanvasScaler.matchWidthOrHeight)
+                        + (Screen.height / CanvasScaler.referenceResolution.y) * CanvasScaler.matchWidthOrHeight;
+                    Vector2 a = RectTransformUtility.WorldToScreenPoint(Camera.main, followObj.position + Offset);
+                    Vector2 relationPos = new Vector2(a.x / offect, a.y / offect);
+                    float distance = BaseCameraMgr.CameraHight;
+                    Vector3 anchorPos = relationPos;
+                    if (RectTrans.localPosition != anchorPos)
+                        RectTrans.localPosition = anchorPos;
+                }
             }
         }
 

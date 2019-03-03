@@ -12,7 +12,7 @@ using System.Collections.Generic;
 
 namespace JBooth.MicroSplat
 {
-   #if __MICROSPLAT__
+#if __MICROSPLAT__
    [InitializeOnLoad]
    public class MicroSplatGlobalTexture : FeatureDescriptor
    {
@@ -21,9 +21,9 @@ namespace JBooth.MicroSplat
       {
          MicroSplatDefines.InitDefine(sGlobalTextureDefine);
       }
-      [PostProcessSceneAttribute (0)]
+      [PostProcessSceneAttribute(0)]
       public static void OnPostprocessScene()
-      { 
+      {
          MicroSplatDefines.InitDefine(sGlobalTextureDefine);
       }
 
@@ -40,13 +40,16 @@ namespace JBooth.MicroSplat
          _PERTEXGEO,
          _GLOBALTINT,
          _GLOBALNORMALS,
+         _GLOBALSMOOTHAOMETAL,
+         _GLOBALEMIS,
          _GLOBALTINTMULT2X,
          _GLOBALTINTOVERLAY,
          _GLOBALTINTCROSSFADE,
          _GLOBALNORMALCROSSFADE,
          _PERTEXGLOBALTINTSTRENGTH,
          _PERTEXGLOBALNORMALSTRENGTH,
-
+         _PERTEXGLOBALSOAMSTRENGTH,
+         _PERTEXGLOBALEMISSTRENGTH,
          kNumFeatures,
       }
 
@@ -65,21 +68,33 @@ namespace JBooth.MicroSplat
          CrossFade
       }
 
+      public enum SAOMBlendMode
+      {
+         Off,
+         CrossFade
+      }
+
 
       public bool geoTexture;
       public bool geoRange;
       public bool perTexGeoStr;
       public bool perTexTintStr;
       public bool perTexNormalStr;
+      public bool perTexEmisStr;
+      public bool perTexSAOMStr;
       public bool geoCurve;
 
 
       public BlendMode tintBlendMode = BlendMode.Off;
       public NormalBlendMode normalBlendMode = NormalBlendMode.Off;
-     
+      public SAOMBlendMode SAOMBlend = SAOMBlendMode.Off;
+      public SAOMBlendMode emisBlend = SAOMBlendMode.Off;
+
       public TextAsset properties_geomap;
       public TextAsset properties_tint;
       public TextAsset properties_normal;
+      public TextAsset properties_saom;
+      public TextAsset properties_emis;
       public TextAsset properties_params;
       public TextAsset function_geomap;
 
@@ -88,7 +103,8 @@ namespace JBooth.MicroSplat
       GUIContent CShaderGeoCurve = new GUIContent("Geo Curve", "Use a Curve to distort the height of the geotexture on the terrain");
       GUIContent CShaderTint = new GUIContent("Global Tint", "Enable a Tint map, which is blended with the albedo of the terrain in one of several ways");
       GUIContent CShaderGlobalNormal = new GUIContent("Global Normal", "Enabled a global normal map which is blended with the terrain in one of several ways");
-
+      GUIContent CShaderGlobalSAOM = new GUIContent("Global Smoothness(R), AO(G), Metallic(B)", "Global map for smoothness, ao, and metallic values");
+      GUIContent CShaderGlobalEmis = new GUIContent("Global Emissive Map", "Global map for emissive color");
       // Can we template these somehow?
       static Dictionary<DefineFeature, string> sFeatureNames = new Dictionary<DefineFeature, string>();
       public static string GetFeatureName(DefineFeature feature)
@@ -116,7 +132,7 @@ namespace JBooth.MicroSplat
 
       public override string GetVersion()
       {
-         return "2.3";
+         return "2.4";
       }
 
       public override void DrawFeatureGUI(Material mat)
@@ -131,6 +147,9 @@ namespace JBooth.MicroSplat
          }
          tintBlendMode = (BlendMode)EditorGUILayout.EnumPopup(CShaderTint, tintBlendMode);
          normalBlendMode = (NormalBlendMode)EditorGUILayout.EnumPopup(CShaderGlobalNormal, normalBlendMode);
+         SAOMBlend = (SAOMBlendMode)EditorGUILayout.EnumPopup(CShaderGlobalSAOM, SAOMBlend);
+         emisBlend = (SAOMBlendMode)EditorGUILayout.EnumPopup(CShaderGlobalEmis, emisBlend);
+
       }
 
       static GUIContent CGeoTex = new GUIContent("Geo Texture", "Virtical striping texture for terrain");
@@ -216,7 +235,7 @@ namespace JBooth.MicroSplat
 
             }
          }
-         if ((tintBlendMode != BlendMode.Off || normalBlendMode != NormalBlendMode.Off) && MicroSplatUtilities.DrawRollup("Global Texture"))
+         if ((tintBlendMode != BlendMode.Off || normalBlendMode != NormalBlendMode.Off || SAOMBlend != SAOMBlendMode.Off || emisBlend != SAOMBlendMode.Off) && MicroSplatUtilities.DrawRollup("Global Texture"))
          {
             if (tintBlendMode != BlendMode.Off && mat.HasProperty("_GlobalTintTex"))
             {
@@ -309,12 +328,109 @@ namespace JBooth.MicroSplat
                   }
                }
             }
+            // saom
+            if (SAOMBlend != SAOMBlendMode.Off && mat.HasProperty("_GlobalSAOMTex"))
+            {
+               materialEditor.TexturePropertySingleLine(new GUIContent("Smoothness(R)/AO(G)/Metal(B) Texture", "Global smoothness, ao, metallic Texture"), shaderGUI.FindProp("_GlobalSAOMTex", props));
+               Vector4 parms = mat.GetVector("_GlobalTextureParams");
+               EditorGUI.BeginChangeCheck();
+               parms.z = EditorGUILayout.Slider("Blend", parms.z, 0, 3);
+               if (EditorGUI.EndChangeCheck())
+               {
+                  mat.SetVector("_GlobalTextureParams", parms);
+                  EditorUtility.SetDirty(mat);
+               }
+
+               if (mat.HasProperty("_GlobalSAOMFade"))
+               {
+                  Vector4 fade = mat.GetVector("_GlobalSAOMFade");
+                  EditorGUI.BeginChangeCheck();
+
+                  fade.x = EditorGUILayout.FloatField("Begin Fade", fade.x);
+                  fade.z = EditorGUILayout.Slider("Opacity At Begin", fade.z, 0, 1);
+                  fade.y = EditorGUILayout.FloatField("Fade Range", fade.y);
+                  fade.w = EditorGUILayout.Slider("Opacity At End", fade.w, 0, 1);
+
+                  if (EditorGUI.EndChangeCheck())
+                  {
+                     mat.SetVector("_GlobalSAOMFade", fade);
+                     EditorUtility.SetDirty(mat);
+                  }
+               }
+               if (mat.HasProperty("_GlobalSAOMUVScale"))
+               {
+                  Vector4 uv = mat.GetVector("_GlobalSAOMUVScale");
+                  Vector2 scale = new Vector2(uv.x, uv.y);
+                  Vector2 offset = new Vector2(uv.z, uv.w);
+
+                  EditorGUI.BeginChangeCheck();
+                  scale = EditorGUILayout.Vector2Field(CUVScale, scale);
+                  offset = EditorGUILayout.Vector2Field(CUVOffset, offset);
+
+                  if (EditorGUI.EndChangeCheck())
+                  {
+                     uv = new Vector4(scale.x, scale.y, offset.x, offset.y);
+                     mat.SetVector("_GlobalSAOMUVScale", uv);
+                     EditorUtility.SetDirty(mat);
+                  }
+               }
+            }
+
+            // emis
+            if (emisBlend != SAOMBlendMode.Off && mat.HasProperty("_GlobalEmisTex"))
+            {
+               materialEditor.TexturePropertySingleLine(new GUIContent("Emission Texture", "Global Emission"), shaderGUI.FindProp("_GlobalEmisTex", props));
+               Vector4 parms = mat.GetVector("_GlobalTextureParams");
+               EditorGUI.BeginChangeCheck();
+               parms.w = EditorGUILayout.Slider("Blend", parms.w, 0, 3);
+               if (EditorGUI.EndChangeCheck())
+               {
+                  mat.SetVector("_GlobalTextureParams", parms);
+                  EditorUtility.SetDirty(mat);
+               }
+
+               if (mat.HasProperty("_GlobalEmisFade"))
+               {
+                  Vector4 fade = mat.GetVector("_GlobalEmisFade");
+                  EditorGUI.BeginChangeCheck();
+
+                  fade.x = EditorGUILayout.FloatField("Begin Fade", fade.x);
+                  fade.z = EditorGUILayout.Slider("Opacity At Begin", fade.z, 0, 1);
+                  fade.y = EditorGUILayout.FloatField("Fade Range", fade.y);
+                  fade.w = EditorGUILayout.Slider("Opacity At End", fade.w, 0, 1);
+
+                  if (EditorGUI.EndChangeCheck())
+                  {
+                     mat.SetVector("_GlobalEmisFade", fade);
+                     EditorUtility.SetDirty(mat);
+                  }
+               }
+               if (mat.HasProperty("_GlobalEmisUVScale"))
+               {
+                  Vector4 uv = mat.GetVector("_GlobalEmisUVScale");
+                  Vector2 scale = new Vector2(uv.x, uv.y);
+                  Vector2 offset = new Vector2(uv.z, uv.w);
+
+                  EditorGUI.BeginChangeCheck();
+                  scale = EditorGUILayout.Vector2Field(CUVScale, scale);
+                  offset = EditorGUILayout.Vector2Field(CUVOffset, offset);
+
+                  if (EditorGUI.EndChangeCheck())
+                  {
+                     uv = new Vector4(scale.x, scale.y, offset.x, offset.y);
+                     mat.SetVector("_GlobalEmisUVScale", uv);
+                     EditorUtility.SetDirty(mat);
+                  }
+               }
+            }
          }
       }
 
       static GUIContent CPerTexGeo = new GUIContent("Geo Strength", "How much the geo texture should show on this texture");
       static GUIContent CPerTexTint = new GUIContent("Global Tint Strength", "How much the global tint texture should show on this texture");
       static GUIContent CPerTexNormal = new GUIContent("Global Normal Strength", "How much the global normal texture should show on this texture");
+      static GUIContent CPerTexSAOM = new GUIContent("Global Smoothness/AO/Metal Strength", "How much the global smoothness/ao/metal texture should show on this texture");
+      static GUIContent CPerTexEmis = new GUIContent("Global Emissive Strength", "How much the global emission texture should show on this texture");
 
 
       public override void DrawPerTextureGUI(int index, Material mat, MicroSplatPropData propData)
@@ -334,6 +450,16 @@ namespace JBooth.MicroSplat
          {
             perTexNormalStr = DrawPerTexFloatSlider(index, 5, GetFeatureName(DefineFeature._PERTEXGLOBALNORMALSTRENGTH),
                mat, propData, Channel.B,  CPerTexNormal, 0, 2);
+         }
+         if (SAOMBlend != SAOMBlendMode.Off)
+         {
+            perTexSAOMStr = DrawPerTexFloatSlider(index, 5, GetFeatureName(DefineFeature._PERTEXGLOBALSOAMSTRENGTH),
+               mat, propData, Channel.A, CPerTexSAOM, 0, 2);
+         }
+         if (emisBlend != SAOMBlendMode.Off)
+         {
+            perTexEmisStr = DrawPerTexFloatSlider(index, 6, GetFeatureName(DefineFeature._PERTEXGLOBALEMISSTRENGTH),
+               mat, propData, Channel.A, CPerTexEmis, 0, 2);
          }
       }
 
@@ -358,6 +484,14 @@ namespace JBooth.MicroSplat
             {
                properties_tint = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
             }
+            if (p.EndsWith("microsplat_properties_globalsaom.txt"))
+            {
+               properties_saom = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
+            }
+            if (p.EndsWith("microsplat_properties_globalemis.txt"))
+            {
+               properties_emis = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
+            }
             if (p.EndsWith("microsplat_properties_globalparams.txt"))
             {
                properties_params = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
@@ -380,8 +514,16 @@ namespace JBooth.MicroSplat
          {
             sb.Append(properties_normal.text);
          }
+         if (SAOMBlend != SAOMBlendMode.Off)
+         {
+            sb.Append(properties_saom.text);
+         }
+         if (emisBlend != SAOMBlendMode.Off)
+         {
+            sb.Append(properties_emis.text);
+         }
 
-         if (tintBlendMode != BlendMode.Off || normalBlendMode != NormalBlendMode.Off)
+         if (tintBlendMode != BlendMode.Off || normalBlendMode != NormalBlendMode.Off || emisBlend != SAOMBlendMode.Off || SAOMBlend != SAOMBlendMode.Off)
          {
             sb.Append(properties_params.text);
          }
@@ -403,6 +545,14 @@ namespace JBooth.MicroSplat
             textureSampleCount++;
          }
          if (normalBlendMode != NormalBlendMode.Off)
+         {
+            textureSampleCount++;
+         }
+         if (emisBlend != SAOMBlendMode.Off)
+         {
+            textureSampleCount++;
+         }
+         if (SAOMBlend != SAOMBlendMode.Off)
          {
             textureSampleCount++;
          }
@@ -460,13 +610,30 @@ namespace JBooth.MicroSplat
                features.Add(GetFeatureName(DefineFeature._GLOBALNORMALCROSSFADE));
             }
          }
+         if (SAOMBlend != SAOMBlendMode.Off)
+         {
+            features.Add(GetFeatureName(DefineFeature._GLOBALSMOOTHAOMETAL));
+            if (perTexSAOMStr)
+            {
+               features.Add(GetFeatureName(DefineFeature._PERTEXGLOBALSOAMSTRENGTH));
+            }
+         }
+         if (emisBlend != SAOMBlendMode.Off)
+         {
+            features.Add(GetFeatureName(DefineFeature._GLOBALEMIS));
+            if (perTexEmisStr)
+            {
+               features.Add(GetFeatureName(DefineFeature._PERTEXGLOBALEMISSTRENGTH));
+            }
+         }
 
          return features.ToArray();
       }
 
       public override void WriteFunctions(System.Text.StringBuilder sb)
       {
-         if (geoTexture || tintBlendMode != BlendMode.Off || normalBlendMode != NormalBlendMode.Off)
+         if (geoTexture || tintBlendMode != BlendMode.Off || normalBlendMode != NormalBlendMode.Off ||
+            SAOMBlend != SAOMBlendMode.Off || emisBlend != SAOMBlendMode.Off)
          {
             sb.AppendLine(function_geomap.text);
          }
@@ -509,7 +676,13 @@ namespace JBooth.MicroSplat
             normalBlendMode = NormalBlendMode.CrossFade;
          }
 
+         SAOMBlend = HasFeature(keywords, DefineFeature._GLOBALSMOOTHAOMETAL) ? SAOMBlendMode.CrossFade : SAOMBlendMode.Off;
+
+         emisBlend = HasFeature(keywords, DefineFeature._GLOBALEMIS) ? SAOMBlendMode.CrossFade : SAOMBlendMode.Off;
+
          perTexNormalStr = HasFeature(keywords, DefineFeature._PERTEXGLOBALNORMALSTRENGTH);
+         perTexSAOMStr = HasFeature(keywords, DefineFeature._PERTEXGLOBALSOAMSTRENGTH);
+         perTexEmisStr = HasFeature(keywords, DefineFeature._PERTEXGLOBALEMISSTRENGTH);
       }
 
    }   

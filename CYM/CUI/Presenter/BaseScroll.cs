@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,76 +20,125 @@ namespace CYM.UI
         public List<Func<object, object>> Sorter = new List<Func<object, object>>();
     }
 
-    #region delegate
-    /// <summary>
-    /// This delegate handles the visibility changes of cell views
-    /// </summary>
-    /// <param name="cellView">The cell view that changed visibility</param>
-    public delegate void CellViewVisibilityChangedDelegate(BasePresenter cellView);
-
-    /// <summary>
-    /// This delegate will be fired just before the cell view is recycled
-    /// </summary>
-    /// <param name="cellView"></param>
-    public delegate void CellViewWillRecycleDelegate(BasePresenter cellView);
-
-    /// <summary>
-    /// This delegate handles the scrolling callback of the ScrollRect.
-    /// </summary>
-    /// <param name="scroller">The scroller that called the delegate</param>
-    /// <param name="val">The scroll value of the scroll rect</param>
-    /// <param name="scrollPosition">The scroll position in pixels from the start of the scroller</param>
-    public delegate void ScrollerScrolledDelegate(BaseScroll scroller, Vector2 val, float scrollPosition);
-
-    /// <summary>
-    /// This delegate handles the snapping of the scroller.
-    /// </summary>
-    /// <param name="scroller">The scroller that called the delegate</param>
-    /// <param name="cellIndex">The index of the cell view snapped on (this may be different than the data index in case of looping)</param>
-    /// <param name="dataIndex">The index of the data the view snapped on</param>
-    public delegate void ScrollerSnappedDelegate(BaseScroll scroller, int cellIndex, int dataIndex, BasePresenter cellView);
-
-    /// <summary>
-    /// This delegate handles the change in state of the scroller (scrolling or not scrolling)
-    /// </summary>
-    /// <param name="scroller">The scroller that changed state</param>
-    /// <param name="scrolling">Whether or not the scroller is scrolling</param>
-    public delegate void ScrollerScrollingChangedDelegate(BaseScroll scroller, bool scrolling);
-
-    /// <summary>
-    /// This delegate handles the change in state of the scroller (jumping or not jumping)
-    /// </summary>
-    /// <param name="scroller">The scroller that changed state</param>
-    /// <param name="tweening">Whether or not the scroller is tweening</param>
-    public delegate void ScrollerTweeningChangedDelegate(BaseScroll scroller, bool tweening);
-
-    /// <summary>
-    /// This delegate is called when a cell view is created for the first time (not reused)
-    /// </summary>
-    /// <param name="scroller">The scroller that created the cell view</param>
-    /// <param name="cellView">The cell view that was created</param>
-    public delegate void CellViewInstantiated(BaseScroll scroller, BasePresenter cellView);
-
-    /// <summary>
-    /// This delegate is called when a cell view is reused from the recycled cell view list
-    /// </summary>
-    /// <param name="scroller">The scroller that reused the cell view</param>
-    /// <param name="cellView">The cell view that was resused</param>
-    public delegate void CellViewReused(BaseScroll scroller, BasePresenter cellView);
-    #endregion
-
     [RequireComponent(typeof(ScrollRect))]
     public class BaseScroll : Presenter<BaseScrollData>
     {
         #region inspector
-        [SerializeField]
-        TextAnchor Anchor = TextAnchor.UpperLeft;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         BasePresenter BasePrefab;
-        [SerializeField]
-        bool IsFixedScrollBar = false;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         Scrollbar Scrollbar;
+        #endregion
+
+        #region data
+        [FoldoutGroup("Data"), SerializeField]
+        bool IsFixedScrollBar = false;
+        [FoldoutGroup("Data"), SerializeField]
+        TextAnchor Anchor = TextAnchor.UpperLeft;
+        /// <summary>
+        /// The direction the scroller is handling
+        /// </summary>
+        [FoldoutGroup("Data"), SerializeField]
+        public ScrollDirectionEnum scrollDirection;
+
+        /// <summary>
+        /// The number of pixels between cell views, starting after the first cell view
+        /// </summary>
+        [FoldoutGroup("Data"), SerializeField]
+        public float spacing;
+
+        /// <summary>
+        /// The padding inside of the scroller: top, bottom, left, right.
+        /// </summary>
+        [FoldoutGroup("Data"), SerializeField]
+        public RectOffset padding;
+
+        /// <summary>
+        /// Whether the scroller should loop the cell views
+        /// </summary>
+        [FoldoutGroup("Data"), SerializeField]
+        private bool loop;
+
+        /// <summary>
+        /// Whether the scollbar should be shown
+        /// </summary>
+        [FoldoutGroup("Data"), SerializeField]
+        private ScrollbarVisibilityEnum scrollbarVisibility;
+
+        /// <summary>
+        /// Whether snapping is turned on
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public bool snapping;
+
+        /// <summary>
+        /// This is the speed that will initiate the snap. When the
+        /// scroller slows down to this speed it will snap to the location
+        /// specified.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public float snapVelocityThreshold;
+
+        /// <summary>
+        /// The snap offset to watch for. When the snap occurs, this
+        /// location in the scroller will be how which cell to snap to 
+        /// is determined.
+        /// Typically, the offset is in the range 0..1, with 0 being
+        /// the top / left of the scroller and 1 being the bottom / right.
+        /// In most situations the watch offset and the jump offset 
+        /// will be the same, they are just separated in case you need
+        /// that added functionality.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public float snapWatchOffset;
+
+        /// <summary>
+        /// The snap location to move the cell to. When the snap occurs,
+        /// this location in the scroller will be where the snapped cell
+        /// is moved to.
+        /// Typically, the offset is in the range 0..1, with 0 being
+        /// the top / left of the scroller and 1 being the bottom / right.
+        /// In most situations the watch offset and the jump offset 
+        /// will be the same, they are just separated in case you need
+        /// that added functionality.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public float snapJumpToOffset;
+
+        /// <summary>
+        /// Once the cell has been snapped to the scroller location, this
+        /// value will determine how the cell is centered on that scroller
+        /// location. 
+        /// Typically, the offset is in the range 0..1, with 0 being
+        /// the top / left of the cell and 1 being the bottom / right.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public float snapCellCenterOffset;
+
+        /// <summary>
+        /// Whether to include the spacing between cells when determining the
+        /// cell offset centering.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public bool snapUseCellSpacing;
+
+        /// <summary>
+        /// What function to use when interpolating between the current 
+        /// scroll position and the snap location. This is also known as easing. 
+        /// If you want to go immediately to the snap location you can either 
+        /// set the snapTweenType to immediate or set the snapTweenTime to zero.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public TweenType snapTweenType;
+
+        /// <summary>
+        /// The time it takes to interpolate between the current scroll 
+        /// position and the snap location.
+        /// If you want to go immediately to the snap location you can either 
+        /// set the snapTweenType to immediate or set the snapTweenTime to zero.
+        /// </summary>
+        [FoldoutGroup("Snap"), SerializeField]
+        public float snapTweenTime;
         #endregion
 
         #region prop val
@@ -96,7 +146,7 @@ namespace CYM.UI
         float BasePrefabSize = 100;
         RectTransform BasePrefabRect;
         bool SortReversedList = false;
-        public int SortBy = -1;
+        int SortBy = -1;
         float ScrollBarSize = 0.0f;
         bool IsDirtyReload = false;
         #endregion
@@ -126,6 +176,15 @@ namespace CYM.UI
             {
                 _UpdateSpacing(spacing);
                 _reloadData = false;
+            }
+
+            if (ScrollRectSize > _cellViewOffsetArray.Last())
+            {
+                ScrollRect.scrollSensitivity = 2;
+            }
+            else
+            {
+                ScrollRect.scrollSensitivity = 15;
             }
 
             if (_reloadData)
@@ -167,6 +226,9 @@ namespace CYM.UI
                 IsScrolling = false;
                 scrollerScrollingChanged?.Invoke(this, false);
             }
+
+            if (Scrollbar && IsFixedScrollBar)
+                Scrollbar.size = ScrollBarSize;
         }
         new void OnValidate()
         {
@@ -180,17 +242,19 @@ namespace CYM.UI
         new void OnEnable()
         {
             // when the scroller is enabled, add a listener to the onValueChanged handler
-            _scrollRect.onValueChanged.AddListener(_ScrollRect_OnValueChanged);
+            ScrollRect.onValueChanged.AddListener(_ScrollRect_OnValueChanged);
         }
 
         new void OnDisable()
         {
             // when the scroller is disabled, remove the listener
-            _scrollRect.onValueChanged.RemoveListener(_ScrollRect_OnValueChanged);
+            ScrollRect.onValueChanged.RemoveListener(_ScrollRect_OnValueChanged);
         }
         public override void Refresh()
         {
             base.Refresh();
+            if (_activeCellViews == null || _activeCellViews.data == null)
+                return;
             foreach (var item in _activeCellViews.data)
             {
                 if (item == null)
@@ -233,24 +297,37 @@ namespace CYM.UI
         }
         public override void OnViewShow(bool b)
         {
-            RefreshData();
+            if (b)
+            {
+                RefreshData();
+            }
             base.OnViewShow(b);
+        }
+        public override void OnShow(bool isShow)
+        {
+            if (isShow)
+            {
+                RefreshData();
+            }
+            base.OnShow(isShow);
         }
         void InitializesScroller()
         {
             GameObject go;
 
-            _scrollRect = this.GetComponent<ScrollRect>();
-            _scrollRectTransform = _scrollRect.GetComponent<RectTransform>();
+            ScrollRect = this.GetComponent<ScrollRect>();
+            _scrollRectTransform = ScrollRect.GetComponent<RectTransform>();
             if (Scrollbar != null)
                 ScrollBarSize = Scrollbar.size;
-            if (_scrollRect != null)
+            if (ScrollRect != null)
             {
-                _scrollRect.inertia = true;
-                _scrollRect.decelerationRate = 0.2f;
+                ScrollRect.inertia = true;
+                ScrollRect.decelerationRate = 0.2f;
+                ScrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+                ScrollRect.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
             }
 
-            go = _scrollRect.content.gameObject;
+            go = ScrollRect.content.gameObject;
             if (scrollDirection == ScrollDirectionEnum.Vertical)
                 _layoutGroup=go.AddComponent<VerticalLayoutGroup>();
             else
@@ -263,17 +340,17 @@ namespace CYM.UI
 
             if (scrollDirection == ScrollDirectionEnum.Vertical)
             {
-                _scrollRect.verticalScrollbar = Scrollbar;
-                _layoutGroup.childForceExpandHeight = true;
+                ScrollRect.verticalScrollbar = Scrollbar;
+                _layoutGroup.childForceExpandHeight = false;
                 _layoutGroup.childForceExpandWidth = false;
-                _scrollRect.vertical = true;
+                ScrollRect.vertical = true;
             }
             else
             {
-                _scrollRect.horizontalScrollbar = Scrollbar;
+                ScrollRect.horizontalScrollbar = Scrollbar;
                 _layoutGroup.childForceExpandHeight = false;
-                _layoutGroup.childForceExpandWidth = true;
-                _scrollRect.horizontal = true;
+                _layoutGroup.childForceExpandWidth = false;
+                ScrollRect.horizontal = true;
             }
 
             // create the padder objects
@@ -288,7 +365,7 @@ namespace CYM.UI
 
             // create the recycled cell view container
             go = new GameObject("Recycled Cells", typeof(RectTransform));
-            go.transform.SetParent(_scrollRect.transform, false);
+            go.transform.SetParent(ScrollRect.transform, false);
             _recycledCellViewContainer = go.GetComponent<RectTransform>();
             _recycledCellViewContainer.gameObject.SetActive(false);
 
@@ -303,6 +380,11 @@ namespace CYM.UI
         #endregion
 
         #region set
+        public void Init(Func<IList<object>> getData, Callback<object, object> onRefresh, List<Func<object, object>> sorter=null)
+        {
+            var temp = new BaseScrollData { GetCustomDatas = getData, OnRefresh = onRefresh, Sorter = sorter };
+            Init(temp);
+        }
         /// <summary>
         /// 初始化Scroll
         /// </summary>
@@ -441,138 +523,44 @@ namespace CYM.UI
         }
 
         /// <summary>
-        /// The direction the scroller is handling
-        /// </summary>
-        public ScrollDirectionEnum scrollDirection;
-
-        /// <summary>
-        /// The number of pixels between cell views, starting after the first cell view
-        /// </summary>
-        public float spacing;
-
-        /// <summary>
-        /// The padding inside of the scroller: top, bottom, left, right.
-        /// </summary>
-        public RectOffset padding;
-
-        /// <summary>
-        /// Whether the scroller should loop the cell views
-        /// </summary>
-        [SerializeField]
-        private bool loop;
-
-        /// <summary>
-        /// Whether the scollbar should be shown
-        /// </summary>
-        [SerializeField]
-        private ScrollbarVisibilityEnum scrollbarVisibility;
-
-        /// <summary>
-        /// Whether snapping is turned on
-        /// </summary>
-        public bool snapping;
-
-        /// <summary>
-        /// This is the speed that will initiate the snap. When the
-        /// scroller slows down to this speed it will snap to the location
-        /// specified.
-        /// </summary>
-        public float snapVelocityThreshold;
-
-        /// <summary>
-        /// The snap offset to watch for. When the snap occurs, this
-        /// location in the scroller will be how which cell to snap to 
-        /// is determined.
-        /// Typically, the offset is in the range 0..1, with 0 being
-        /// the top / left of the scroller and 1 being the bottom / right.
-        /// In most situations the watch offset and the jump offset 
-        /// will be the same, they are just separated in case you need
-        /// that added functionality.
-        /// </summary>
-        public float snapWatchOffset;
-
-        /// <summary>
-        /// The snap location to move the cell to. When the snap occurs,
-        /// this location in the scroller will be where the snapped cell
-        /// is moved to.
-        /// Typically, the offset is in the range 0..1, with 0 being
-        /// the top / left of the scroller and 1 being the bottom / right.
-        /// In most situations the watch offset and the jump offset 
-        /// will be the same, they are just separated in case you need
-        /// that added functionality.
-        /// </summary>
-        public float snapJumpToOffset;
-
-        /// <summary>
-        /// Once the cell has been snapped to the scroller location, this
-        /// value will determine how the cell is centered on that scroller
-        /// location. 
-        /// Typically, the offset is in the range 0..1, with 0 being
-        /// the top / left of the cell and 1 being the bottom / right.
-        /// </summary>
-        public float snapCellCenterOffset;
-
-        /// <summary>
-        /// Whether to include the spacing between cells when determining the
-        /// cell offset centering.
-        /// </summary>
-        public bool snapUseCellSpacing;
-
-        /// <summary>
-        /// What function to use when interpolating between the current 
-        /// scroll position and the snap location. This is also known as easing. 
-        /// If you want to go immediately to the snap location you can either 
-        /// set the snapTweenType to immediate or set the snapTweenTime to zero.
-        /// </summary>
-        public TweenType snapTweenType;
-
-        /// <summary>
-        /// The time it takes to interpolate between the current scroll 
-        /// position and the snap location.
-        /// If you want to go immediately to the snap location you can either 
-        /// set the snapTweenType to immediate or set the snapTweenTime to zero.
-        /// </summary>
-        public float snapTweenTime;
-
-        /// <summary>
         /// This delegate is called when a cell view is hidden or shown
         /// </summary>
-        public CellViewVisibilityChangedDelegate cellViewVisibilityChanged;
+        public Callback<BasePresenter> cellViewVisibilityChanged;
 
         /// <summary>
         /// This delegate is called just before a cell view is hidden by recycling
         /// </summary>
-        public CellViewWillRecycleDelegate cellViewWillRecycle;
+        public Callback<BasePresenter> cellViewWillRecycle;
 
         /// <summary>
         /// This delegate is called when the scroll rect scrolls
         /// </summary>
-        public ScrollerScrolledDelegate scrollerScrolled;
+        public Callback<BaseScroll, Vector2, float> scrollerScrolled;
 
         /// <summary>
         /// This delegate is called when the scroller has snapped to a position
         /// </summary>
-        public ScrollerSnappedDelegate scrollerSnapped;
+        public Callback<BaseScroll, int, int, BasePresenter> scrollerSnapped;
 
         /// <summary>
         /// This delegate is called when the scroller has started or stopped scrolling
         /// </summary>
-        public ScrollerScrollingChangedDelegate scrollerScrollingChanged;
+        public Callback<BaseScroll, bool> scrollerScrollingChanged;
 
         /// <summary>
         /// This delegate is called when the scroller has started or stopped tweening
         /// </summary>
-        public ScrollerTweeningChangedDelegate scrollerTweeningChanged;
+        public Callback<BaseScroll, bool> scrollerTweeningChanged;
 
         /// <summary>
         /// This delegate is called when the scroller creates a new cell view from scratch
         /// </summary>
-        public CellViewInstantiated cellViewInstantiated;
+        public Callback<BaseScroll, BasePresenter> cellViewInstantiated;
 
         /// <summary>
         /// This delegate is called when the scroller reuses a recycled cell view
         /// </summary>
-        public CellViewReused cellViewReused;
+        public Callback<BaseScroll, BasePresenter> cellViewReused;
 
         /// <summary>
         /// The absolute position in pixels from the start of the scroller
@@ -595,12 +583,12 @@ namespace CYM.UI
                     if (scrollDirection == ScrollDirectionEnum.Vertical)
                     {
                         // set the vertical position
-                        _scrollRect.verticalNormalizedPosition = 1f - (_scrollPosition / ScrollSize);
+                        ScrollRect.verticalNormalizedPosition = 1-(_scrollPosition / ScrollSize);
                     }
                     else
                     {
                         // set the horizontal position
-                        _scrollRect.horizontalNormalizedPosition = (_scrollPosition / ScrollSize);
+                        ScrollRect.horizontalNormalizedPosition = (_scrollPosition / ScrollSize);
                     }
 
                     // flag that we need to refresh
@@ -726,11 +714,11 @@ namespace CYM.UI
         {
             get
             {
-                return _scrollRect.velocity;
+                return ScrollRect.velocity;
             }
             set
             {
-                _scrollRect.velocity = value;
+                ScrollRect.velocity = value;
             }
         }
 
@@ -743,18 +731,18 @@ namespace CYM.UI
             get
             {
                 // return the velocity component depending on which direction this is scrolling
-                return (scrollDirection == ScrollDirectionEnum.Vertical ? _scrollRect.velocity.y : _scrollRect.velocity.x);
+                return (scrollDirection == ScrollDirectionEnum.Vertical ? ScrollRect.velocity.y : ScrollRect.velocity.x);
             }
             set
             {
                 // set the appropriate component of the velocity
                 if (scrollDirection == ScrollDirectionEnum.Vertical)
                 {
-                    _scrollRect.velocity = new Vector2(0, value);
+                    ScrollRect.velocity = new Vector2(0, value);
                 }
                 else
                 {
-                    _scrollRect.velocity = new Vector2(value, 0);
+                    ScrollRect.velocity = new Vector2(value, 0);
                 }
             }
         }
@@ -821,13 +809,7 @@ namespace CYM.UI
         /// <summary>
         /// This is a convenience link to the scroller's scroll rect
         /// </summary>
-        public ScrollRect ScrollRect
-        {
-            get
-            {
-                return _scrollRect;
-            }
-        }
+        public ScrollRect ScrollRect { get; private set; }
 
         /// <summary>
         /// The size of the visible portion of the scroller
@@ -892,7 +874,7 @@ namespace CYM.UI
             //if (_delegate != null)
             _Resize(false);
 
-            if (_scrollRect == null || _scrollRectTransform == null || _container == null)
+            if (ScrollRect == null || _scrollRectTransform == null || _container == null)
             {
                 _scrollPosition = 0f;
                 return;
@@ -902,29 +884,14 @@ namespace CYM.UI
             if (scrollDirection == ScrollDirectionEnum.Vertical)
             {
                 // set the vertical position
-                _scrollRect.verticalNormalizedPosition = 1f - scrollPositionFactor;
+                ScrollRect.verticalNormalizedPosition =  1-scrollPositionFactor;
             }
             else
             {
                 // set the horizontal position
-                _scrollRect.horizontalNormalizedPosition = scrollPositionFactor;
+                ScrollRect.horizontalNormalizedPosition = scrollPositionFactor;
             }
         }
-
-        /// <summary>
-        /// This calls the RefreshCellView method on each active cell.
-        /// If you override the RefreshCellView method in your cells
-        /// then you can update the UI without having to reload the data.
-        /// Note: this will not change the cell sizes, you will need
-        /// to call ReloadData for that to work.
-        /// </summary>
-        //public void RefreshActiveCellViews()
-        //{
-        //    for (var i = 0; i < _activeCellViews.Count; i++)
-        //    {
-        //        _activeCellViews[i].RefreshCellView();
-        //    }
-        //}
 
         /// <summary>
         /// Removes all cells, both active and recycled from the scroller.
@@ -1135,8 +1102,8 @@ namespace CYM.UI
             LinearVelocity = 0;
 
             // cache the current inertia state and turn off inertia
-            _snapInertia = _scrollRect.inertia;
-            _scrollRect.inertia = false;
+            _snapInertia = ScrollRect.inertia;
+            ScrollRect.inertia = false;
 
             // calculate the snap position
             var snapPosition = ScrollPosition + (ScrollRectSize * Mathf.Clamp01(snapWatchOffset));
@@ -1266,19 +1233,9 @@ namespace CYM.UI
         private bool _updateSpacing = false;
 
         /// <summary>
-        /// Cached reference to the scrollRect
-        /// </summary>
-        private ScrollRect _scrollRect;
-
-        /// <summary>
         /// Cached reference to the scrollRect's transform
         /// </summary>
         private RectTransform _scrollRectTransform;
-
-        /// <summary>
-        /// Cached reference to the scrollbar if it exists
-        /// </summary>
-        //private Scrollbar _scrollbar;
 
         /// <summary>
         /// Cached reference to the active cell view container
@@ -1289,12 +1246,6 @@ namespace CYM.UI
         /// Cached reference to the layout group that handles view positioning
         /// </summary>
         private HorizontalOrVerticalLayoutGroup _layoutGroup;
-
-        /// <summary>
-        /// Reference to the delegate that will tell this scroller information
-        /// about the underlying data
-        /// </summary>
-        //private IEnhancedScrollerDelegate _delegate;
 
         /// <summary>
         /// Flag to tell the scroller to reload the data
@@ -1472,10 +1423,27 @@ namespace CYM.UI
 
             // set the size of the active cell view container based on the number of cell views there are and each of their sizes
             if (scrollDirection == ScrollDirectionEnum.Vertical)
-                _container.sizeDelta = new Vector2(_container.sizeDelta.x, _cellViewOffsetArray.Last() + padding.top + padding.bottom);
+            {
+                if (ScrollRectSize > _cellViewOffsetArray.Last())
+                {
+                    _container.sizeDelta = new Vector2(_container.sizeDelta.x, ScrollRectSize + BasePrefabSize + padding.top + padding.bottom);
+                }
+                else
+                {
+                    _container.sizeDelta = new Vector2(_container.sizeDelta.x, _cellViewOffsetArray.Last() + BasePrefabSize + padding.top + padding.bottom);
+                }
+            }
             else
-                _container.sizeDelta = new Vector2(_cellViewOffsetArray.Last() + padding.left + padding.right, _container.sizeDelta.y);
-
+            {
+                if (ScrollRectSize > _cellViewOffsetArray.Last())
+                {
+                    _container.sizeDelta = new Vector2(ScrollRectSize  + padding.left + padding.right, _container.sizeDelta.y);
+                }
+                else
+                {
+                    _container.sizeDelta = new Vector2(_cellViewOffsetArray.Last() + padding.left + padding.right, _container.sizeDelta.y);
+                }
+            }
             // if looping, set up the loop positions and triggers
             if (loop)
             {
@@ -1807,15 +1775,15 @@ namespace CYM.UI
             {
                 if (_scrollPosition < _loopFirstJumpTrigger)
                 {
-                    velocity = _scrollRect.velocity;
+                    velocity = ScrollRect.velocity;
                     ScrollPosition = _loopLastScrollPosition - (_loopFirstJumpTrigger - _scrollPosition) + spacing;
-                    _scrollRect.velocity = velocity;
+                    ScrollRect.velocity = velocity;
                 }
                 else if (_scrollPosition > _loopLastJumpTrigger)
                 {
-                    velocity = _scrollRect.velocity;
+                    velocity = ScrollRect.velocity;
                     ScrollPosition = _loopFirstScrollPosition + (_scrollPosition - _loopLastJumpTrigger) - spacing;
-                    _scrollRect.velocity = velocity;
+                    ScrollRect.velocity = velocity;
                 }
             }
 
@@ -1918,7 +1886,7 @@ namespace CYM.UI
         {
             // reset the snap jump to false and restore the inertia state
             _snapJumping = false;
-            _scrollRect.inertia = _snapInertia;
+            ScrollRect.inertia = _snapInertia;
 
             BasePresenter cellView = null;
             for (var i = 0; i < _activeCellViews.Count; i++)
@@ -1934,13 +1902,6 @@ namespace CYM.UI
             scrollerSnapped?.Invoke(this, _snapCellViewIndex, _snapDataIndex, cellView);
         }
 
-        #endregion
-
-        #region editor
-        bool Inspector_IsSnapping()
-        {
-            return !snapping;
-        }
         #endregion
 
         #region Tweening
@@ -2007,7 +1968,7 @@ namespace CYM.UI
             else
             {
                 // zero out the velocity
-                _scrollRect.velocity = Vector2.zero;
+                ScrollRect.velocity = Vector2.zero;
 
                 // fire the delegate for the tween start
                 IsTweening = true;

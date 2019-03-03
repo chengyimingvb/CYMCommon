@@ -1,11 +1,21 @@
 
-
-
-      void SampleAlbedo(Config config, TriplanarConfig tc, inout RawSamples s, MIPFORMAT mipLevel)
+      void SampleAlbedo(inout Config config, TriplanarConfig tc, inout RawSamples s, MIPFORMAT mipLevel)
       {
-
          #if _TRIPLANAR
-
+            #if _USEGRADMIP
+               float4 d0 = mipLevel.d0;
+               float4 d1 = mipLevel.d1;
+               float4 d2 = mipLevel.d2;
+            #elif _USELODMIP
+               float d0 = mipLevel.x;
+               float d1 = mipLevel.y;
+               float d2 = mipLevel.z;
+            #else
+               MIPFORMAT d0 = mipLevel;
+               MIPFORMAT d1 = mipLevel;
+               MIPFORMAT d2 = mipLevel;
+            #endif
+         
             half4 contrasts = _Contrast.xxxx;
             #if _PERTEXTRIPLANARCONTRAST
                SAMPLE_PER_TEX(ptc, 5.5, config, half4(1,0.5,0,0));
@@ -13,9 +23,9 @@
             #endif
 
             {
-               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[0], config.cluster0, mipLevel);
-               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[1], config.cluster0, mipLevel);
-               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[2], config.cluster0, mipLevel);
+               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[0], config.cluster0, d0);
+               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[1], config.cluster0, d1);
+               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[2], config.cluster0, d2);
                half3 bf = tc.pN0;
                #if _TRIPLANARHEIGHTBLEND
                bf = TriplanarHBlend(a0.a, a1.a, a2.a, tc.pN0, contrasts.x);
@@ -25,9 +35,9 @@
                s.albedo0 = a0 * bf.x + a1 * bf.y + a2 * bf.z;
             }
             {
-               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[0], config.cluster1, mipLevel);
-               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[1], config.cluster1, mipLevel);
-               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[2], config.cluster1, mipLevel);
+               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[0], config.cluster1, d0);
+               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[1], config.cluster1, d1);
+               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[2], config.cluster1, d2);
                half3 bf = tc.pN1;
                #if _TRIPLANARHEIGHTBLEND
                bf = TriplanarHBlend(a0.a, a1.a, a2.a, tc.pN1, contrasts.x);
@@ -37,9 +47,9 @@
             }
             #if !_MAX2LAYER
             {
-               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv2[0], config.cluster2, mipLevel);
-               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv2[1], config.cluster2, mipLevel);
-               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv2[2], config.cluster2, mipLevel);
+               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv2[0], config.cluster2, d0);
+               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv2[1], config.cluster2, d1);
+               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv2[2], config.cluster2, d2);
                half3 bf = tc.pN2;
                #if _TRIPLANARHEIGHTBLEND
                bf = TriplanarHBlend(a0.a, a1.a, a2.a, tc.pN2, contrasts.x);
@@ -50,9 +60,9 @@
             #endif
             #if !_MAX3LAYER || !_MAX2LAYER
             {
-               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv3[0], config.cluster3, mipLevel);
-               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv3[1], config.cluster3, mipLevel);
-               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv3[2], config.cluster3, mipLevel);
+               half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv3[0], config.cluster3, d0);
+               half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv3[1], config.cluster3, d1);
+               half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv3[2], config.cluster3, d2);
                half3 bf = tc.pN3;
                #if _TRIPLANARHEIGHTBLEND
                bf = TriplanarHBlend(a0.a, a1.a, a2.a, tc.pN3, contrasts.x);
@@ -93,36 +103,50 @@
 
       void SampleNormal(Config config, TriplanarConfig tc, inout RawSamples s, MIPFORMAT mipLevel)
       {
+      
          #if _TRIPLANAR
-
+            #if _USEGRADMIP
+               float4 d0 = mipLevel.d0;
+               float4 d1 = mipLevel.d1;
+               float4 d2 = mipLevel.d2;
+            #elif _USELODMIP
+               float d0 = mipLevel.x;
+               float d1 = mipLevel.y;
+               float d2 = mipLevel.z;
+            #else
+               MIPFORMAT d0 = mipLevel;
+               MIPFORMAT d1 = mipLevel;
+               MIPFORMAT d2 = mipLevel;
+            #endif
+            
             {
-               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[0], config.cluster0, mipLevel).garb;
-               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[1], config.cluster0, mipLevel).garb;
-               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[2], config.cluster0, mipLevel).garb;
+               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[0], config.cluster0, d0).garb;
+               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[1], config.cluster0, d1).garb;
+               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[2], config.cluster0, d2).garb;
                s.normSAO0 = a0 * tc.pN0.x + a1 * tc.pN0.y + a2 * tc.pN0.z;
                s.normSAO0.xy = s.normSAO0.xy * 2 - 1;
             }
             {
-               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[0], config.cluster1, mipLevel).garb;
-               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[1], config.cluster1, mipLevel).garb;
-               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[2], config.cluster1, mipLevel).garb;
+               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[0], config.cluster1, d0).garb;
+               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[1], config.cluster1, d1).garb;
+               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[2], config.cluster1, d2).garb;
                s.normSAO1 = a0 * tc.pN1.x + a1 * tc.pN1.y + a2 * tc.pN1.z;
                s.normSAO1.xy = s.normSAO1.xy * 2 - 1;
             }
             #if !_MAX2LAYER
             {
-               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv2[0], config.cluster2, mipLevel).garb;
-               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv2[1], config.cluster2, mipLevel).garb;
-               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv2[2], config.cluster2, mipLevel).garb;
+               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv2[0], config.cluster2, d0).garb;
+               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv2[1], config.cluster2, d1).garb;
+               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv2[2], config.cluster2, d2).garb;
                s.normSAO2 = a0 * tc.pN2.x + a1 * tc.pN2.y + a2 * tc.pN2.z;
                s.normSAO2.xy = s.normSAO2.xy * 2 - 1;
             }
             #endif
             #if !_MAX3LAYER || !_MAX2LAYER
             {
-               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv3[0], config.cluster3, mipLevel).garb;
-               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv3[1], config.cluster3, mipLevel).garb;
-               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv3[2], config.cluster3, mipLevel).garb;
+               half4 a0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv3[0], config.cluster3, d0).garb;
+               half4 a1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv3[1], config.cluster3, d1).garb;
+               half4 a2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv3[2], config.cluster3, d2).garb;
                s.normSAO3 = a0 * tc.pN3.x + a1 * tc.pN3.y + a2 * tc.pN3.z;
                s.normSAO3.xy = s.normSAO3.xy * 2 - 1;
             }
@@ -148,32 +172,44 @@
       {
          #if _USEEMISSIVEMETAL
             #if _TRIPLANAR
-
+               #if _USEGRADMIP
+                  float4 d0 = mipLevel.d0;
+                  float4 d1 = mipLevel.d1;
+                  float4 d2 = mipLevel.d2;
+               #elif _USELODMIP
+                  float d0 = mipLevel.x;
+                  float d1 = mipLevel.y;
+                  float d2 = mipLevel.z;
+               #else
+                  MIPFORMAT d0 = mipLevel;
+                  MIPFORMAT d1 = mipLevel;
+                  MIPFORMAT d2 = mipLevel;
+               #endif
                {
-                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv0[0], config.cluster0, mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv0[1], config.cluster0, mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv0[2], config.cluster0, mipLevel);
+                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv0[0], config.cluster0, d0);
+                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv0[1], config.cluster0, d1);
+                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv0[2], config.cluster0, d2);
                   s.emisMetal0 = a0 * tc.pN0.x + a1 * tc.pN0.y + a2 * tc.pN0.z;
                }
                {
-                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv1[0], config.cluster1, mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv1[1], config.cluster1, mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv1[2], config.cluster1, mipLevel);
+                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv1[0], config.cluster1, d0);
+                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv1[1], config.cluster1, d1);
+                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv1[2], config.cluster1, d2);
                   s.emisMetal1 = a0 * tc.pN1.x + a1 * tc.pN1.y + a2 * tc.pN1.z;
                }
                #if !_MAX2LAYER
                {
-                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv2[0], config.cluster2, mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv2[1], config.cluster2, mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv2[2], config.cluster2, mipLevel);
+                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv2[0], config.cluster2, d0);
+                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv2[1], config.cluster2, d1);
+                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv2[2], config.cluster2, d2);
                   s.emisMetal2 = a0 * tc.pN2.x + a1 * tc.pN2.y + a2 * tc.pN2.z;
                }
                #endif
                #if !_MAX3LAYER || !_MAX2LAYER
                {
-                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv3[0], config.cluster3, mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv3[1], config.cluster3, mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv3[2], config.cluster3, mipLevel);
+                  half4 a0 = MICROSPLAT_SAMPLE_EMIS(tc.uv3[0], config.cluster3, d0);
+                  half4 a1 = MICROSPLAT_SAMPLE_EMIS(tc.uv3[1], config.cluster3, d1);
+                  half4 a2 = MICROSPLAT_SAMPLE_EMIS(tc.uv3[2], config.cluster3, d2);
                   s.emisMetal3 = a0 * tc.pN3.x + a1 * tc.pN3.y + a2 * tc.pN3.z;
                }
                #endif
@@ -204,50 +240,34 @@
 
          TriplanarConfig tc = (TriplanarConfig)0;
          UNITY_INITIALIZE_OUTPUT(TriplanarConfig,tc);
+         
+
+         MIPFORMAT albedoLOD = INITMIPFORMAT
+         MIPFORMAT normalLOD = INITMIPFORMAT
+         MIPFORMAT emisLOD = INITMIPFORMAT
+         
          #if _TRIPLANAR
-         PrepTriplanar(worldNormalVertex, i.worldPos, config, tc, weights);
+         PrepTriplanar(worldNormalVertex, i.worldPos, config, tc, weights, albedoLOD, normalLOD, emisLOD);
          #endif
-
-         MIPFORMAT albedoLOD = 0;
-         MIPFORMAT normalLOD = 0;
-         MIPFORMAT emisLOD = 0;
-
-         #if _USELODMIP
-            #if _TRIPLANAR
-               float2 cuv0 = tc.uv0[0].xy;
-            #else
-               float2 cuv0 = config.uv0.xy;
-            #endif
-            albedoLOD = ComputeMipLevel(cuv0, _Diffuse_TexelSize.zw);
-            normalLOD = ComputeMipLevel(cuv0, _NormalSAO_TexelSize.zw);
-            #if _USEEMISSIVEMETAL
-            emisLOD   = ComputeMipLevel(cuv0, _EmissiveMetal_TexelSize.zw);
-            #endif
-         #endif
-
-         #if _USEGRADMIP
-            #if _TRIPLANAR
-               float2 cuv0 = tc.uv0[0].xy;
-            #else
-               float2 cuv0 = config.uv0.xy;
-            #endif
-            albedoLOD = float4(ddx(cuv0.xy), ddy(cuv0.xy));
-            normalLOD = albedoLOD;
-            #if _USEEMISSIVEMETAL
-               emisLOD = albedoLOD;
+         
+         
+         #if !_TRIPLANAR
+            #if _USELODMIP
+               albedoLOD = ComputeMipLevel(config.uv0.xy, _Diffuse_TexelSize.zw);
+               normalLOD = ComputeMipLevel(config.uv0.xy, _NormalSAO_TexelSize.zw);
+               #if _USEEMISSIVEMETAL
+                  emisLOD   = ComputeMipLevel(config.uv0.xy, _EmissiveMetal_TexelSize.zw);
+               #endif
+            #elif _USEGRADMIP
+               albedoLOD = float4(ddx(config.uv0.xy), ddy(config.uv0.xy));
+               normalLOD = albedoLOD;
+               #if _USEEMISSIVEMETAL
+                  emisLOD = albedoLOD;
+               #endif
             #endif
          #endif
-
-         #if _DISTANCERESAMPLE
-            #if _TRIPLANAR
-               float2 tuv0 = tc.uv0[0].xy;
-            #else
-               float2 tuv0 = config.uv0.xy;
-            #endif
-            float resampleLOD = ComputeMipLevel(tuv0 * _ResampleDistanceParams.xx, _Diffuse_TexelSize.zw);
-         #endif
-
-
+         
+        
          // uvScale before anything
          #if _PERTEXUVSCALEOFFSET && !_TRIPLANAR
             SAMPLE_PER_TEX(ptUVScale, 0.5, config, half4(1,1,0,0));
@@ -328,7 +348,7 @@
          #endif
 
          #if _DISTANCERESAMPLE
-         DistanceResample(samples, config, tc, camDist, i.viewDir, fxLevels, resampleLOD, i.worldPos);
+         DistanceResample(samples, config, tc, camDist, i.viewDir, fxLevels, albedoLOD, i.worldPos);
          #endif
 
          // PerTexture sampling goes here, passing the samples structure
@@ -438,17 +458,21 @@
          #if _GEOMAP && _PERTEXGEO
          GeoTexturePerTex(samples, i.worldPos, config);
          #endif
+
+         #if _GLOBAL && _PERTEXGLOBALNORMALSTRENGTH
+         GlobalNormalTexturePerTex(samples, config, camDist);
+         #endif
          
-         #if _PLANETALBEDO || _PLANETNORMAL || _PLANETALBEDO2 || _PLANETNORMAL2
-         ApplyPlanet(albedo.rgb, normSAO, config, camDist, i.worldPos, worldNormalVertex);
-         #endif
-
-         #if _GLOBALTINT && _PERTEXGLOBALTINTSTRENGTH
-         GlobalTintTexturePerTex(samples, config, camDist);
-         #endif
-
          #if _GLOBALNORMALS && _PERTEXGLOBALNORMALSTRENGTH
          GlobalNormalTexturePerTex(samples, config, camDist);
+         #endif
+         
+         #if _GLOBALSMOOTHAOMETAL && _PERTEXGLOBALSAOMSTRENGTH
+         GlobalSAOMTexturePerTex(samples, config, camDist);
+         #endif
+
+         #if _GLOBALEMIS && _PERTEXGLOBALEMISSTRENGTH
+         GlobalEmisTexturePerTex(samples, config, camDist);
          #endif
 
          #if _PERTEXMETALLIC
@@ -462,13 +486,14 @@
          // Blend em..
          half4 albedo = BlendWeights(samples.albedo0, samples.albedo1, samples.albedo2, samples.albedo3, heightWeights);
          half4 normSAO = BlendWeights(samples.normSAO0, samples.normSAO1, samples.normSAO2, samples.normSAO3, heightWeights);
-
+         
+         half4 emisMetal = 0;
          #if _USEEMISSIVEMETAL
-         half4 emisMetal = BlendWeights(samples.emisMetal0, samples.emisMetal1, samples.emisMetal2, samples.emisMetal3, heightWeights);
+            emisMetal = BlendWeights(samples.emisMetal0, samples.emisMetal1, samples.emisMetal2, samples.emisMetal3, heightWeights);
          #endif
 
 
-	// ADVANCEDTERRAIN_ENTRYPOINT	
+   // ADVANCEDTERRAIN_ENTRYPOINT 
 
          #if _MESHOVERLAYSPLATS || _MESHCOMBINED
             o.Alpha = 1.0;
@@ -495,6 +520,11 @@
          #if _GEOMAP && !_PERTEXGEO
          GeoTexture(albedo.rgb, i.worldPos, config);
          #endif
+         
+         #if _PLANETALBEDO || _PLANETNORMAL || _PLANETALBEDO2 || _PLANETNORMAL2
+         ApplyPlanet(albedo.rgb, normSAO, config, camDist, i.worldPos, worldNormalVertex);
+         #endif
+
 
          #if _GLOBALTINT && !_PERTEXTINTSTRENGTH
          GlobalTintTexture(albedo.rgb, config, camDist);
@@ -504,8 +534,16 @@
          VSGrassTexture(albedo.rgb, config, camDist);
          #endif
 
-         #if _GLOBALNORMALS && !_PERTEXGLOBALNORMAL
+         #if _GLOBALNORMALS && !_PERTEXGLOBALNORMALSTRENGTH
          GlobalNormalTexture(normSAO, config, camDist);
+         #endif
+         
+         #if _GLOBALSMOOTHAOMETAL && !_PERTEXGLOBALSAOMSTRENGTH
+         GlobalSAOMTexture(normSAO, emisMetal, config, camDist);
+         #endif
+         
+         #if _GLOBALEMIS && !_PERTEXGLOBALEMISSTRENGTH
+         GlobalEmisTexture(emisMetal, config, camDist);
          #endif
 
          o.Albedo = albedo.rgb;
@@ -514,7 +552,7 @@
          o.Smoothness = normSAO.b;
          o.Occlusion = normSAO.a;
 
-         #if _USEEMISSIVEMETAL
+         #if _USEEMISSIVEMETAL || _GLOBALSMOOTHAOMETAL || _GLOBALEMIS
          o.Emission = emisMetal.rgb;
          o.Metallic = emisMetal.a;
          #endif
@@ -562,9 +600,9 @@
 
       MicroSplatLayer SurfImpl(Input i, float3 worldNormalVertex)
       {
-      	 #if _TERRAINBLENDABLESHADER && _TRIPLANAR
-      	 worldNormalVertex = WorldNormalVector(i, float3(0,0,1));
-      	 #endif
+          #if _TERRAINBLENDABLESHADER && _TRIPLANAR
+          worldNormalVertex = WorldNormalVector(i, float3(0,0,1));
+          #endif
 
          #if _ALPHABELOWHEIGHT
          ClipWaterLevel(i.worldPos);

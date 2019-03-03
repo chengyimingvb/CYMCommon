@@ -8,6 +8,7 @@
 
 using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -21,9 +22,9 @@ namespace CYM.UI
     public class BaseTable : Presenter<BaseTableData>
     {
         #region inspector
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         BaseDupplicate DP;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         BaseScroll Scroll;
         #endregion
 
@@ -56,8 +57,6 @@ namespace CYM.UI
                 item.Data.OnClick += OnBntClick;           
         }
         #endregion
-
-
 
         #region Callback
         void OnBntClick(BasePresenter presenter, PointerEventData data)

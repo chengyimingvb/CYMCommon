@@ -10,6 +10,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using CYM.UI;
 using DG.Tweening;
 using KinematicCharacterController;
 using UnityEngine;
@@ -28,6 +29,13 @@ namespace CYM
         #region need New :这里的对象必须在基类里面手动赋值
         public static BaseGlobal Ins { get; protected set; }
         public IBaseSettingsMgr SettingsMgr { get; protected set; }
+        public IBaseBattleMgr BattleMgr { get; protected set; }
+        public IBasePlotMgr PlotMgr { get; protected set; }
+        public IBaseDBMgr DBMgr { get; protected set; }
+        public IBaseDifficultMgr DiffMgr { get; protected set; }
+        public IBaseScreenMgr ScreenMgr { get; protected set; }
+        public IBaseTalkMgr TalkMgr { get; protected set; }
+        public IBaseNarrationMgr NarrationMgr { get; protected set; }
         public BaseConstMgr ConstMgr { get; protected set; }
         public BaseVersionMgr VersionMgr { get; protected set; }
         public BaseDLCMgr DLCMgr { get; protected set; }
@@ -48,13 +56,6 @@ namespace CYM
         public BaseFPSMgr FPSMgr { get; protected set; }
         public BasePlatSDKMgr PlatSDKMgr { get; protected set; }
         public BaseProfilterMgr ProfilterMgr { get; protected set; }
-        public IBaseBattleMgr BattleMgr { get; protected set; }
-        public IBasePlotMgr PlotMgr { get; protected set; }
-        public IBaseDBMgr DBMgr { get; protected set; }
-        public IBaseDifficultMgr DiffMgr { get; protected set; }
-        public IBaseScreenMgr ScreenMgr { get; protected set; }
-        public IBaseTalkMgr TalkMgr { get; protected set; }
-        public IBaseNarrationMgr NarrationMgr { get; protected set; }
         public BaseAnalyticsMgr AnalyticsMgr { get; protected set; }
         public BaseFeedbackMgr FeedbackMgr { get; protected set; }
         public BasePrefsMgr PrefsMgr { get; protected set; }
@@ -63,11 +64,19 @@ namespace CYM
         public BaseLogicTurnMgr LogicTurnMgr { get; protected set; }
         public BaseLogoMgr LogoMgr { get; protected set; }
         public BaseExcelMgr ExcelMgr { get; protected set; }
+        //UI
+        public BaseUIMgr WorldUIMgr { get; protected set; }
+        public BaseUIMgr MainUIMgr { get; protected set; }
+        public BaseUIMgr BattleUIMgr { get; protected set; }
+        public BaseUIMgr HUDUIMgr { get; protected set; }
+        public BaseUIMgr CommonUIMgr { get; protected set; }
         #endregion
 
         #region 非必要组件
         public BaseFOWMgr FOWMgr { get; protected set; }
         public BaseTerrainGridMgr TerrainGridMgr { get; protected set; }
+        public BaseSeasonMgr SeasonMgr { get; protected set; }
+        public BaseVolumetricFogMgr VolumetricFogMgr { get; protected set; }
         #endregion
 
         #region prop
@@ -82,9 +91,16 @@ namespace CYM
         public override LayerData LayerData =>BaseConstMgr.Layer_System;
         public override void Awake()
         {
+            //创建Prefab
             if (InstantiateObjs != null)
+            {
                 foreach (var item in InstantiateObjs)
-                    GameObject.Instantiate(item);
+                {
+                    GameObject temp = Instantiate(item);
+                    temp.transform.SetParent(transform);
+                }
+            }
+            //创建临时对象
             if (TempGO == null)
             {
                 TempGO = new GameObject("TempGO");

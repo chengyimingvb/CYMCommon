@@ -3,14 +3,21 @@
       sampler2D_half _GeoCurve;
       UNITY_DECLARE_TEX2D_NOSAMPLER(_GlobalTintTex);
       UNITY_DECLARE_TEX2D_NOSAMPLER(_GlobalNormalTex);
-      half2 _GlobalTextureParams;
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_GlobalSAOMTex);
+      UNITY_DECLARE_TEX2D_NOSAMPLER(_GlobalEmisTex);
+      
+      half4 _GlobalTextureParams;
       float4 _GlobalTintFade;
       float4 _GlobalNormalFade;
+      float4 _GlobalSAOMFade;
+      float4 _GlobalEmisFade;
       float3 _GeoParams;
       float4 _GeoRange;
       float4 _GeoCurveParams;
       float4 _GlobalTintUVScale;
       float4 _GlobalNormalUVScale;
+      float4 _GlobalSAOMUVScale;
+      float4 _GlobalEmisUVScale;
 
 
 
@@ -37,7 +44,7 @@
             geoStr *= saturate((worldPos.y - _GeoRange.x) / max(_GeoRange.y - _GeoRange.x, 0.0001));
             geoStr *= 1.0 - saturate((worldPos.y - _GeoRange.z) / max(_GeoRange.w - _GeoRange.z, 0.0001));
          #endif
-         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 0.0));
+         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 1.0));
          s.albedo0.rgb = lerp(s.albedo0.rgb, BlendMult2X(s.albedo0.rgb, geoTex.rgb), geoStr * perTexGeoStr0.x);
          s.albedo1.rgb = lerp(s.albedo1.rgb, BlendMult2X(s.albedo1.rgb, geoTex.rgb), geoStr * perTexGeoStr1.x);
          #if !_MAX2LAYER
@@ -84,7 +91,7 @@
          float fade = saturate((camDist - _GlobalTintFade.x) / max(_GlobalTintFade.y, 0.01));
          str *= lerp(_GlobalTintFade.z, _GlobalTintFade.w, fade);
 
-         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 0.0));
+         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 1.0));
          #if _GLOBALTINTMULT2X
             s.albedo0.rgb = lerp(s.albedo0.rgb, BlendMult2X(s.albedo0.rgb, tex.rgb), str * perTexGeoStr0.y);
             s.albedo1.rgb = lerp(s.albedo1.rgb, BlendMult2X(s.albedo1.rgb, tex.rgb), str * perTexGeoStr1.y);
@@ -145,7 +152,7 @@
             float fade = saturate((camDist - _GlobalTintFade.x) / max(_GlobalTintFade.y, 0.01));
             str *= lerp(_GlobalNormalFade.z, _GlobalNormalFade.w, fade);
 
-            SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 0.5, 0.0));
+            SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 1.0));
 
             #if _GLOBALNORMALCROSSFADE
                s.normSAO0.xy = lerp(s.normSAO0.xy, tex.xy, str * perTexGeoStr0.z);
@@ -188,3 +195,85 @@
          #endif
          #endif
       }
+      
+      // pertex needs to be applied individually
+      #if _GLOBALSMOOTHAOMETAL
+      void GlobalSAOMTexturePerTex(inout RawSamples s, Config config, float camDist)
+      {
+         float2 uv = (config.uv + _GlobalSAOMUVScale.zw) * _GlobalSAOMUVScale.xy;
+         half4 tex = UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalSAOMTex, _Diffuse, uv);
+         float str = _GlobalTextureParams.z * tex.a;
+         float fade = saturate((camDist - _GlobalSAOMFade.x) / max(_GlobalSAOMFade.y, 0.01));
+         str *= lerp(_GlobalSAOMFade.z, _GlobalSAOMFade.w, fade);
+
+         SAMPLE_PER_TEX(perTexGeoStr, 5.5, config, half4(1.0, 1.0, 1.0, 1.0));
+
+         s.normSAO0.zw = lerp(s.normSAO0.zw, tex.rg, str * perTexGeoStr0.a);
+         s.normSAO1.zw = lerp(s.normSAO1.zw, tex.rg, str * perTexGeoStr1.a);
+         s.emisMetal0.a = lerp(s.emisMetal0.a, tex.b, str * perTexGeoStr0.a);
+         s.emisMetal1.a = lerp(s.emisMetal1.a, tex.b, str * perTexGeoStr1.a);
+         #if !_MAX2LAYER
+            s.normSAO2.zw = lerp(s.normSAO2.rgb, tex.rg, str * perTexGeoStr2.a);
+            s.emisMetal2.a = lerp(s.emisMetal2.a, tex.b, str * perTexGeoStr2.a);
+         #endif
+         #if !_MAX2LAYER && !_MAX3LAYER
+            s.normSAO3.zw = lerp(s.normSAO3.rgb, tex.rg, str * perTexGeoStr3.a);
+            s.emisMetal3.a = lerp(s.emisMetal3.a, tex.b, str * perTexGeoStr3.a);
+         #endif
+         
+      }
+      
+
+      // no per tex is faster, just final value.
+      void GlobalSAOMTexture(inout half4 nsao, inout half4 emisMetal, Config config, float camDist)
+      {
+         #if !_PERTEXGLOBALSAOMSTRENGTH
+            float2 uv = (config.uv + _GlobalSAOMUVScale.zw) * _GlobalSAOMUVScale.xy;
+            half4 tex = UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalSAOMTex, _Diffuse, uv);
+            float str = _GlobalTextureParams.z * tex.a;
+            float fade = saturate((camDist - _GlobalSAOMFade.x) / max(_GlobalSAOMFade.y, 0.01));
+            str *= lerp(_GlobalSAOMFade.z, _GlobalSAOMFade.w, fade);
+        
+            nsao.zw = lerp(nsao.zw, tex.rg, str);
+            emisMetal.a = lerp(emisMetal.a, tex.b, str);
+         #endif
+      }
+      #endif
+      
+      #if _GLOBALEMIS
+      // pertex needs to be applied individually
+      void GlobalEmisTexturePerTex(inout RawSamples s, Config config, float camDist)
+      {
+         float2 uv = (config.uv + _GlobalEmisUVScale.zw) * _GlobalEmisUVScale.xy;
+         half4 tex = UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalEmisTex, _Diffuse, uv);
+         float str = _GlobalTextureParams.w;
+         float fade = saturate((camDist - _GlobalEmisFade.x) / max(_GlobalEmisFade.y, 0.01));
+         str *= lerp(_GlobalEmisFade.z, _GlobalEmisFade.w, fade);
+
+         SAMPLE_PER_TEX(perTexGeoStr, 6.5, config, half4(1.0, 1.0, 1.0, 1.0));
+         
+         s.emisMetal0.rgb = lerp(s.emisMetal0.rgb, tex.rgb, str * perTexGeoStr0.a);
+         s.emisMetal1.rgb = lerp(s.emisMetal1.rgb, tex.rgb, str * perTexGeoStr1.a);
+         #if !_MAX2LAYER
+            s.emisMetal2.rgb = lerp(s.emisMetal2.rgb, tex.rgb, str * perTexGeoStr2.a);
+         #endif
+         #if !_MAX2LAYER && !_MAX3LAYER
+            s.emisMetal3.rgb = lerp(s.emisMetal3.rgb, tex.rgb, str * perTexGeoStr3.a);
+         #endif
+         
+      }
+
+      // no per tex is faster, just final value.
+      void GlobalEmisTexture(inout half4 emisMetal, Config config, float camDist)
+      {
+         #if !_PERTEXGLOBALEMISSTRENGTH
+            float2 uv = (config.uv + _GlobalEmisUVScale.zw) * _GlobalEmisUVScale.xy;
+            half4 tex = UNITY_SAMPLE_TEX2D_SAMPLER(_GlobalEmisTex, _Diffuse, uv);
+            float str = _GlobalTextureParams.w;
+            float fade = saturate((camDist - _GlobalEmisFade.x) / max(_GlobalEmisFade.y, 0.01));
+            str *= lerp(_GlobalEmisFade.z, _GlobalEmisFade.w, fade);
+        
+            emisMetal.rgb = lerp(emisMetal.rgb, tex.rgb, str);
+         #endif
+      }
+      #endif

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfDirective xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Directive>
+    <name>VR_GEARVR</name>
+    <targets>Android</targets>
+    <enabled>false</enabled>
+    <sortOrder>0</sortOrder>
+  </Directive>
+  <Directive>
+    <name>VR_GOOGLEVR</name>
+    <targets>Android</targets>
+    <enabled>true</enabled>
+    <sortOrder>1</sortOrder>
+  </Directive>
+</ArrayOfDirective>

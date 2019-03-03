@@ -12,13 +12,10 @@ namespace CYM.UI
     public class BaseUIView : BaseView
     {
         #region Inspector
-        [FoldoutGroup("Base"),SerializeField]
+        [FoldoutGroup("Inspector"),SerializeField]
         protected BaseButton BntClose;
-        [FoldoutGroup("Base"), SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         protected BaseText Title;
-        #endregion
-
-        #region 公共属性
         #endregion
 
         #region 内部
@@ -32,6 +29,8 @@ namespace CYM.UI
         protected Vector2 sourceAnchoredPosition;
         protected Vector2 sourceSizeData;
         protected CanvasGroup canvasGroup { get; private set; }
+        protected BaseScroll[] Scrolls;
+        protected IBaseScreenMgr BaseScreenMgr => SelfBaseGlobal.ScreenMgr;
         #endregion
 
         #region panel
@@ -74,7 +73,7 @@ namespace CYM.UI
         #region life
         public override void Awake()
         {
-            base.Awake(); 
+            base.Awake();
             graphics = GetComponentsInChildren<Graphic>();
             canvasGroup = GetComponent<CanvasGroup>();
             if (canvasGroup == null && RectTrans != null)
@@ -99,6 +98,12 @@ namespace CYM.UI
             {
                 Title.Init(new BaseTextData() { Name = GetTitle, IsTrans = false });
             }
+            BaseScreenMgr.Callback_OnSetPlayerBase += OnSetPlayerBase;
+        }
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+            BaseScreenMgr.Callback_OnSetPlayerBase -= OnSetPlayerBase;
         }
         /// <summary>
         /// 将界面挂到其他界面下
@@ -179,10 +184,25 @@ namespace CYM.UI
                     }
                 }
             }
+            Scrolls = GetComponentsInChildren<BaseScroll>();
         }
         #endregion
 
         #region set
+        public override void SetDirty()
+        {
+            base.SetDirty();
+        }
+        public void SetDirtyRelaodData()
+        {
+            if (Scrolls != null)
+            {
+                foreach (var item in Scrolls)
+                {
+                    item.SetDirtyReloadData();
+                }
+            }
+        }
         public void ActivePresenterUpdate(BasePresenter presenter)
         {
             updatePresenters.Add(presenter);
@@ -366,6 +386,11 @@ namespace CYM.UI
         protected virtual void OnClickClose(BasePresenter presenter, PointerEventData data)
         {
             Show(false);
+        }
+        protected virtual void OnSetPlayerBase(BaseUnit arg1, BaseUnit arg2)
+        {
+            SetDirty();
+            SetDirtyRelaodData();
         }
         #endregion
 

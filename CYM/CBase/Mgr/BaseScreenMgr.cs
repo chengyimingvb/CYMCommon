@@ -20,6 +20,7 @@ namespace CYM
         /// T2:newPlayer
         /// </summary>
         public event Callback<TUnit, TUnit> Callback_OnSetPlayer;
+        public event Callback<BaseUnit, BaseUnit> Callback_OnSetPlayerBase;
         /// <summary>
         /// 本地玩家死亡
         /// </summary>
@@ -113,6 +114,7 @@ namespace CYM
             LocalPlayer = unit as TUnit;
             BaseLocalPlayer = unit;
             Callback_OnSetPlayer?.Invoke(PrePlayer, LocalPlayer);
+            Callback_OnSetPlayerBase?.Invoke(PrePlayer, LocalPlayer);
 
             if (PrePlayer != null)
                 PrePlayer.Callback_OnRealDeath -= OnPlayerRealDeath;

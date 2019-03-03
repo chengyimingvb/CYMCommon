@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using CYM;
 using System;
+using Sirenix.OdinInspector;
 //using static UnityEngine.UI.InputField;
 
 namespace CYM.UI
@@ -15,11 +16,11 @@ namespace CYM.UI
     public class BaseInputField : Presenter<BaseInputFieldData>
     {
         #region inspector
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         InputField InputField;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         GameObject Placeholder;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         BaseImage Focus;
         #endregion
 

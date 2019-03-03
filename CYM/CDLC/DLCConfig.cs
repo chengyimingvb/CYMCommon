@@ -24,8 +24,6 @@ namespace CYM.DLC
         [SerializeField]
         List<BuildRuleData> Data = new List<BuildRuleData>();
         [SerializeField]
-        List<string> CopyDirectory = new List<string>();
-        [SerializeField]
         List<DLCItem> DLC = new List<DLCItem>();
         #endregion
 
@@ -34,6 +32,7 @@ namespace CYM.DLC
         public DLCItem Native { get; private set; } = new DLCItem();
         //扩展DLC 不包含 Native
         public Dictionary<string, DLCItem> DLCItems { get; private set; } = new Dictionary<string, DLCItem>();
+        List<string> CopyDirectory { get; set; } = new List<string>();
         #endregion
 
         #region life
@@ -46,6 +45,11 @@ namespace CYM.DLC
         {
             if (Application.isEditor)
             {
+                //复制路径
+                CopyDirectory.Clear();
+                CopyDirectory.Add("Language");
+                CopyDirectory.Add("Lua");
+                CopyDirectory.Add("Config");
                 //初始化默认DLC
                 string internalRootPath = BaseConstMgr.Path_InternalBundle;
                 Native = new DLCItem();
@@ -57,7 +61,6 @@ namespace CYM.DLC
                 Native.AddBuildData("System", BuildRuleType.Directroy, internalRootPath);
                 Native.AddBuildData("UI",BuildRuleType.Directroy, internalRootPath);
                 Native.LoadConfig(Data, CopyDirectory);
-
                 //初始化扩展DLC
                 DLCItems = new Dictionary<string, DLCItem>();
                 foreach (var item in DLC)
@@ -88,23 +91,17 @@ namespace CYM.DLC
             AddBuildData("Video");
             AddBuildData("System");
             AddBuildData("Texture");
-            AddCopyDirectory("Language");
-            AddCopyDirectory("Lua");
-            AddCopyDirectory("Config");
+
+            void AddBuildData(string name, BuildRuleType type = BuildRuleType.Directroy)
+            {
+                var data = new BuildRuleData();
+                data.BuildRuleType = type;
+                data.SearchPath = name;
+                data.CustomRootPath = null;
+                Data.Add(data);
+            }
         }
 
-        public void AddBuildData(string name, BuildRuleType type = BuildRuleType.Directroy)
-        {
-            var data = new BuildRuleData();
-            data.BuildRuleType = type;
-            data.SearchPath = name;
-            data.CustomRootPath = null;
-            Data.Add(data);
-        }
-        public void AddCopyDirectory(string path)
-        {
-            CopyDirectory.Add(path);
-        }
         #endregion
 
         #region is

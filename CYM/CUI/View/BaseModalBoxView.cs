@@ -75,9 +75,13 @@ namespace CYM.UI
         /// <param name="BntOK"></param>
         /// <param name="BntCancle"></param>
         /// <param name="paras"></param>
-        public new void ShowOKCancle(string key, string descKey, Callback BntOK, Callback BntCancle, params object[] paras)
+        public new void ShowOKCancle(string key, string descKey, Callback BntOK, Callback BntCancle=null, params object[] paras)
         {
             Show(GetStr(key), GetStr(descKey, paras), GetStr("Bnt_确认"), BntOK, GetStr("Bnt_取消"), BntCancle, null, null, true);
+        }
+        public void ShowOKCancle(string descKey, Callback BntOK, Callback BntCancle=null, params object[] paras)
+        {
+            Show("Information", GetStr(descKey, paras), GetStr("Bnt_确认"), BntOK, GetStr("Bnt_取消"), BntCancle, null, null, true);
         }
         /// <summary>
         /// 原始的模式对话框调用函数

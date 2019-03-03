@@ -7,6 +7,7 @@
 //**********************************************
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace CYM
 {
@@ -27,10 +28,12 @@ namespace CYM
     {
 
         #region member variable
-        protected List<BaseCoreMgr> subComponets = new List<BaseCoreMgr>();
+        public int ID { get; set; }
+        public string TDID { get; set; }
+        public BaseGlobal SelfBaseGlobal { get; set; }
         public bool IsSubComponent { get; private set; }
-        protected BaseCoreMgr parentComponet { get; set; }
         public bool IsEnable { protected set; get; }
+        public bool Finished => throw new NotImplementedException();
         public bool NeedUpdate { protected set; get; }
         public bool NeedGUI { protected set; get; }
         public bool NeedFixedUpdate { protected set; get; }
@@ -39,13 +42,14 @@ namespace CYM
         #endregion
 
         #region property
-        public int ID { get; set; }
-        public string TDID { get; set; }
-        public BaseCoreMono Mono { get; private set; }
-        public BaseGlobal SelfBaseGlobal { get; protected set; }
-        public BaseUnit SelfBaseUnit { get; protected set; }
-        public BaseSceneObject BaseSceneObject => BaseSceneObject.Ins;
-        public bool Finished=> throw new NotImplementedException();
+        protected BaseCoreMgr parentComponet { get; set; }
+        protected List<BaseCoreMgr> subComponets = new List<BaseCoreMgr>();
+        protected BaseCoreMono Mono { get; private set; }
+        protected BaseUnit SelfBaseUnit { get; set; }
+        protected BaseSceneObject BaseSceneObject => BaseSceneObject.Ins;
+        protected Terrain ActiveTerrain => BaseSceneObject.ActiveTerrain;
+        protected TerrainData ActiveTerrainData => BaseSceneObject.ActiveTerrain.terrainData;
+        protected Material ActiveTerrainMat => ActiveTerrain.materialTemplate;
         private bool isDirty = false;
         #endregion
 

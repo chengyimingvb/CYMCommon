@@ -414,12 +414,10 @@ public partial class MicroSplatShaderGUI : ShaderGUI
             }
 
             renderLoop.WriteSharedCode(features, sb, this, pass, blendable);
-            renderLoop.WriteVertexFunction(features, sb, this, pass, blendable);
-
             passType = renderLoop.GetPassType(pass);
             WriteExtensions(features, sb);
 
-
+            renderLoop.WriteVertexFunction(features, sb, this, pass, blendable);
 
             renderLoop.WriteTerrainBody(features, sb, this, pass, blendable);
 
@@ -444,6 +442,8 @@ public partial class MicroSplatShaderGUI : ShaderGUI
          output = System.Text.RegularExpressions.Regex.Replace(output, "\r\n?|\n", System.Environment.NewLine);
          return output;
       }
+
+
 
       public void Compile(Material m, string shaderName = null)
       {
@@ -509,6 +509,7 @@ public partial class MicroSplatShaderGUI : ShaderGUI
             meshBlendShader = Compile(blendKeywords.ToArray(), nm, null, true);
          }
 
+         MicroSplatUtilities.Checkout(path);
          System.IO.File.WriteAllText(path, terrainShader);
 
          if (!m.IsKeywordEnabled("_MICROMESH"))
@@ -524,6 +525,7 @@ public partial class MicroSplatShaderGUI : ShaderGUI
             string fallback = Compile(m.shaderKeywords, baseName);
             m.shaderKeywords = oldKeywords;
             string fallbackPath = path.Replace(".shader", "_Base.shader");
+            MicroSplatUtilities.Checkout(fallbackPath);
             System.IO.File.WriteAllText(fallbackPath, fallback);
          }
 
@@ -533,10 +535,12 @@ public partial class MicroSplatShaderGUI : ShaderGUI
 
          if (blendShader != null)
          {
+            MicroSplatUtilities.Checkout(terrainBlendPath);
             System.IO.File.WriteAllText(terrainBlendPath, blendShader);
          }
          if (meshBlendShader != null)
          {
+            MicroSplatUtilities.Checkout(meshBlendPath);
             System.IO.File.WriteAllText(meshBlendPath, meshBlendShader);
          }
 

@@ -18,6 +18,10 @@ namespace CYM
     {
         #region inspector
         [SerializeField]
+        public Light Sun;
+        [SerializeField]
+        public WindZone Wind;
+        [SerializeField]
         protected Transform RootPoints;
         [SerializeField]
         protected GameObject[] EnableOnPlay;

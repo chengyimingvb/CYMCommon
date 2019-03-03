@@ -153,7 +153,7 @@ namespace JBooth.MicroSplat
 
       public override string GetVersion()
       {
-         return "2.3";
+         return "2.4";
       }
 
       public override void DrawFeatureGUI(Material mat)
@@ -173,15 +173,13 @@ namespace JBooth.MicroSplat
             EditorGUI.indentLevel--;
          }
          streams = EditorGUILayout.Toggle(CStreams, streams);
-         lava = EditorGUILayout.Toggle(CLava, lava);
-
          if (streams)
          {
             EditorGUI.indentLevel++;
             heightDampStreams = EditorGUILayout.Toggle(CHeightDampStreams, heightDampStreams);
             EditorGUI.indentLevel--;
          }
-
+         lava = EditorGUILayout.Toggle(CLava, lava);
          if (lava)
          {
             EditorGUI.indentLevel++;

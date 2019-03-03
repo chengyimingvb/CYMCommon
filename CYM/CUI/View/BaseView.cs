@@ -31,6 +31,7 @@ namespace CYM.UI
         #region Callback Value
         public Callback Callback_OnClose { get; set; }
         public Callback<BaseView, bool> Callback_OnOpen { get; set; }
+        public Callback<bool> Callback_OnShow { get; set; }
         #endregion
 
         #region Inspector
@@ -40,6 +41,8 @@ namespace CYM.UI
         public bool DefaultShow = false;
         [FoldoutGroup("Prop")]// GO 是否根据界面IsShow变量 自动Active
         public bool IsActiveByShow = true;
+        [FoldoutGroup("Prop")]// UI界面是否为全屏
+        public bool IsFullScreen = false;
         [FoldoutGroup("Prop")]
         public bool IsSameTime = true;
         [FoldoutGroup("Prop")]
@@ -59,6 +62,7 @@ namespace CYM.UI
         #endregion
 
         #region 公共属性
+        public static BoolState IsFullScreenState { get; private set; } = new BoolState();
         public bool IsShow { get; protected set; }
         public bool IsCompleteClose { get; protected set; }
         public Canvas Canvas { get; protected set; }
@@ -167,6 +171,7 @@ namespace CYM.UI
         #endregion
 
         #region set
+        [Button("AutoSetup")]
         public virtual void AutoSetup()
         {
         }
@@ -339,7 +344,20 @@ namespace CYM.UI
         /// </summary>
         protected virtual void OnShow()
         {
+            Callback_OnShow?.Invoke(IsShow);
 
+            if (IsFullScreen)
+            {
+                IsFullScreenState.Push(IsShow);
+            }
+        }
+        public override void OnDestroy()
+        {
+            if (IsShow && IsFullScreen)
+            {
+                IsFullScreenState.Push(false);
+            }
+            base.OnDestroy();
         }
         #endregion
 

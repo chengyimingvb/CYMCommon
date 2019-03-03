@@ -87,22 +87,8 @@
 
             config.uv0.xy *= _ResampleDistanceParams.xx;
             config.uv1.xy *= _ResampleDistanceParams.xx;
-
-            float2 mipUV = config.uv0.xy;
-
-            #if _TRIPLANAR
-               mipUV = tc.uv0[0].xy * _ResampleDistanceParams.xx;
-            #endif
-
-            #if _USEGRADMIP
-               mipLevel.xy = ddx(mipUV);
-               mipLevel.zw = ddy(mipUV);
-            #elif _USELODMIP
-               mipLevel = ComputeMipLevel(mipUV, _Diffuse_TexelSize.zw);
-            #endif
-
-
-
+            
+            
             #if _TRIPLANAR
                tc.uv0[0].xy *= _ResampleDistanceParams.xx;
                tc.uv1[0].xy *= _ResampleDistanceParams.xx;
@@ -112,6 +98,26 @@
                tc.uv1[2].xy *= _ResampleDistanceParams.xx;
             #endif
 
+            #if _TRIPLANAR
+               #if _USEGRADMIP
+                  mipLevel.d0 *= _ResampleDistanceParams.xxxx;
+                  mipLevel.d1 *= _ResampleDistanceParams.xxxx;
+                  mipLevel.d2 *= _ResampleDistanceParams.xxxx;
+               #elif _USELODMIP
+                  mipLevel.x = ComputeMipLevel(tc.uv0[0], _Diffuse_TexelSize.zw);
+                  mipLevel.y = ComputeMipLevel(tc.uv0[1], _Diffuse_TexelSize.zw);
+                  mipLevel.z = ComputeMipLevel(tc.uv0[2], _Diffuse_TexelSize.zw);
+               #endif
+            #else
+               #if _USEGRADMIP
+                  mipLevel.xy = ddx(config.uv0.xy);
+                  mipLevel.zw = ddy(config.uv0.xy);
+               #elif _USELODMIP
+                  mipLevel = ComputeMipLevel(config.uv0.xy, _Diffuse_TexelSize.zw);
+               #endif
+            #endif
+            
+
             half4 albedo0, albedo1;
 
             #if _DISTANCERESAMPLENORMAL
@@ -119,53 +125,63 @@
             #endif
 
             #if _TRIPLANAR
-            {
-               #if _RESAMPLECLUSTERS && (_TEXTURECLUSTER2 || _TEXTURECLUSTER3)
-                  half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[0], config.cluster0, mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[1], config.cluster0, mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[2], config.cluster0, mipLevel);
+               #if _USEGRADMIP
+                  float4 d0 = mipLevel.d0;
+                  float4 d1 = mipLevel.d1;
+                  float4 d2 = mipLevel.d2;
                #else
-                  half4 a0 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv0[0], mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv0[1], mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv0[2], mipLevel);
+                  MIPFORMAT d0 = mipLevel;
+                  MIPFORMAT d1 = mipLevel;
+                  MIPFORMAT d2 = mipLevel;
+               #endif
+            {
+              
+               #if _RESAMPLECLUSTERS && (_TEXTURECLUSTER2 || _TEXTURECLUSTER3)
+                  half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[0], config.cluster0, d0);
+                  half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[1], config.cluster0, d1);
+                  half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv0[2], config.cluster0, d2);
+               #else
+                  half4 a0 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv0[0], d0);
+                  half4 a1 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv0[1], d1);
+                  half4 a2 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv0[2], d2);
                #endif
 
                albedo0 = a0 * tc.pN0.x + a1 * tc.pN0.y + a2 * tc.pN0.z;
 
                #if _DISTANCERESAMPLENORMAL
                   #if _RESAMPLECLUSTERS && (_TEXTURECLUSTER2 || _TEXTURECLUSTER3)
-                     half4 n0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[0], config.cluster0, mipLevel).garb;
-                     half4 n1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[1], config.cluster0, mipLevel).garb;
-                     half4 n2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[2], config.cluster0, mipLevel).garb;
+                     half4 n0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[0], config.cluster0, d0).garb;
+                     half4 n1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[1], config.cluster0, d1).garb;
+                     half4 n2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv0[2], config.cluster0, d2).garb;
                   #else
-                     half4 n0 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv0[0], mipLevel).garb;
-                     half4 n1 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv0[1], mipLevel).garb;
-                     half4 n2 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv0[2], mipLevel).garb;
+                     half4 n0 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv0[0], d0).garb;
+                     half4 n1 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv0[1], d1).garb;
+                     half4 n2 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv0[2], d2).garb;
                   #endif
                   nsao0 = n0 * tc.pN0.x + n1 * tc.pN0.y + n2 * tc.pN0.z;
                #endif
             }
             {
                #if _RESAMPLECLUSTERS && (_TEXTURECLUSTER2 || _TEXTURECLUSTER3)
-                  half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[0], config.cluster1, mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[1], config.cluster1, mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[2], config.cluster1, mipLevel);
+                  half4 a0 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[0], config.cluster1, d0);
+                  half4 a1 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[1], config.cluster1, d1);
+                  half4 a2 = MICROSPLAT_SAMPLE_DIFFUSE(tc.uv1[2], config.cluster1, d2);
                #else
-                  half4 a0 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv1[0], mipLevel);
-                  half4 a1 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv1[1], mipLevel);
-                  half4 a2 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv1[2], mipLevel);
+                  half4 a0 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv1[0], d0);
+                  half4 a1 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv1[1], d1);
+                  half4 a2 = MICROSPLAT_SAMPLE(_Diffuse, tc.uv1[2], d2);
                #endif
                albedo1 = a0 * tc.pN1.x + a1 * tc.pN1.y + a2 * tc.pN1.z;
 
                #if _DISTANCERESAMPLENORMAL
                   #if _RESAMPLECLUSTERS && (_TEXTURECLUSTER2 || _TEXTURECLUSTER3)
-                     half4 n0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[0], config.cluster1, mipLevel).garb;
-                     half4 n1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[1], config.cluster1, mipLevel).garb;
-                     half4 n2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[2], config.cluster1, mipLevel).garb;
+                     half4 n0 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[0], config.cluster1, d0).garb;
+                     half4 n1 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[1], config.cluster1, d1).garb;
+                     half4 n2 = MICROSPLAT_SAMPLE_NORMAL(tc.uv1[2], config.cluster1, d2).garb;
                   #else
-                     half4 n0 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv1[0], mipLevel).garb;
-                     half4 n1 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv1[1], mipLevel).garb;
-                     half4 n2 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv1[2], mipLevel).garb;
+                     half4 n0 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv1[0], d0).garb;
+                     half4 n1 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv1[1], d1).garb;
+                     half4 n2 = MICROSPLAT_SAMPLE(_NormalSAO, tc.uv1[2], d2).garb;
                   #endif
                   nsao1 = n0 * tc.pN0.x + n1 * tc.pN0.y + n2 * tc.pN0.z;
                #endif

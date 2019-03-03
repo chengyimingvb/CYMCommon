@@ -23,6 +23,7 @@ namespace CYM
     {
         #region prop
         readonly string DateStrFormat = "{0} {1}.{2}.{3}";
+        readonly string DateStrFormat_Year = "{0} {1}";
         public DateTimeAgeType CurDateTimeAgeType { get; protected set; }
         public DateTimeAgeType StartDateTimeAgeType { get; protected set; }
         public DateTime CurDateTime { get; protected set; }
@@ -61,7 +62,14 @@ namespace CYM
         #endregion
 
         #region get
-        public string GetCurDateString()
+        string GetTimeAgeType()
+        {
+            string dateTypeStr = "AD";
+            if (CurDateTimeAgeType == DateTimeAgeType.BC)
+                dateTypeStr = "BC";
+            return dateTypeStr;
+        }
+        public int GetYear()
         {
             int curYear = 0;
             if (CurDateTimeAgeType == DateTimeAgeType.BC)
@@ -74,10 +82,16 @@ namespace CYM
                     curYear = (CurDateTime.Year - StartDateTime.Year - 1);
             }
             curYear = Mathf.Clamp(curYear, 0, int.MaxValue);
-            string dateTypeStr = "AD";
-            if (CurDateTimeAgeType == DateTimeAgeType.BC)
-                dateTypeStr = "BC";
-            return string.Format(DateStrFormat, dateTypeStr, curYear, CurDateTime.Month, CurDateTime.Day);
+            return curYear;
+        }
+        public string GetCurDateString()
+        {
+
+            return string.Format(DateStrFormat, GetTimeAgeType(), GetYear(), CurDateTime.Month, CurDateTime.Day);
+        }
+        public string GetCurYear()
+        {
+            return string.Format(DateStrFormat_Year, GetTimeAgeType(), GetYear());
         }
         #endregion
 

@@ -16,7 +16,6 @@ namespace CYM.UI
 {
     public class BaseUIMgr : BaseGFlowMgr
     {
-
         #region prop
         public static int NextSortOrder = 0;
         protected int SortOrder = 0;
@@ -28,7 +27,9 @@ namespace CYM.UI
         /// 根界面:画布
         /// </summary>
         public BaseView RootView { get; private set; }
+        public Dictionary<int, BaseView> CurViews { get; private set; } = new Dictionary<int, BaseView>();
         protected virtual string RootViewPrefab => "BaseRootView";
+        protected virtual string ViewName => "RootView";
         #endregion
 
         #region Callback Val
@@ -47,10 +48,10 @@ namespace CYM.UI
             SortOrder = NextSortOrder;
             NextSortOrder++;
         }
-        protected virtual void OnCreateUIView(string viewName="RootView")
+        protected virtual void OnCreateUIView()
         {
             RootView = CreateView<BaseUIView>("BaseRootView");
-            RootView.GO.name = viewName;
+            RootView.GO.name = ViewName;
         }
         private void OnCreateInterUIView()
         {
@@ -135,12 +136,26 @@ namespace CYM.UI
         }
         #endregion
 
+        #region get
+        public BaseView GetCurView(int group=0)
+        {
+            if (CurViews.ContainsKey(group))
+                return CurViews[group];
+            return null;
+        }
+        #endregion
+
         #region Callback
         void OnOpen(BaseView view,bool useGroup)
         {
             //UI互斥,相同UI组只能有一个UI被打开
             if (useGroup && view.Group>0)
             {
+                if (!CurViews.ContainsKey(view.Group))
+                    CurViews.Add(view.Group, view);
+                else
+                    CurViews[view.Group] = view;
+
                 for (int i = 0; i < MainViewGroup.Count; ++i)
                 {
                     if (MainViewGroup[i] != view && MainViewGroup[i].Group == view.Group && MainViewGroup[i].ViewLevel== view.ViewLevel)

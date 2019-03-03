@@ -39,6 +39,8 @@ namespace JBooth.MicroSplat
          _PERTEXCLUSTERCONTRAST,
          _PERTEXCLUSTERBOOST,
          _TEXTURECLUSTERTRIPLANARNOISE,
+         _TEXTURECLUSTERNOISE2,
+         _STOCHASTIC,
          kNumFeatures,
       }
          
@@ -46,7 +48,8 @@ namespace JBooth.MicroSplat
       {
          None,
          TwoVariants,
-         ThreeVariants
+         ThreeVariants,
+         Stochastic
       }
 
       public enum ClusterNoiseUV
@@ -59,12 +62,16 @@ namespace JBooth.MicroSplat
       public ClusterNoiseUV clusterNoiseUV = ClusterNoiseUV.UV;
       public bool perTexClusterContrast;
       public bool perTexClusterBoost;
+      public bool secondNoise;
 
       public TextAsset properties;
       public TextAsset functions;
+      public TextAsset stochasticFunctions;
+      public TextAsset stochasticProperties;
 
-      GUIContent CShaderClusters = new GUIContent("Texture Cluster Mode", "Number of parallel arrays to sample for clustering");
+      GUIContent CShaderClusters = new GUIContent("Texture Cluster Mode", "Number of parallel arrays to sample for clustering, or use Stochastic sampler");
       GUIContent CClusterNoiseUVs = new GUIContent("Cluster Noise UV Mode", "The noise for clusetrs can be triplanar, which can be useful when UVs are not continuous");
+      GUIContent CClusterNoise2 = new GUIContent("Use secondary cluster noise", "On very large worlds, cluster noise tile may be visible. You can use a second noise, combined with the first, to prevent this");
       // Can we template these somehow?
       static Dictionary<DefineFeature, string> sFeatureNames = new Dictionary<DefineFeature, string>();
       public static string GetFeatureName(DefineFeature feature)
@@ -93,16 +100,17 @@ namespace JBooth.MicroSplat
 
       public override string GetVersion()
       {
-         return "2.3";
+         return "2.4";
       }
 
       public override void DrawFeatureGUI(Material mat)
       {
          clusterMode = (ClusterMode)EditorGUILayout.EnumPopup(CShaderClusters, clusterMode);
-         if (clusterMode != ClusterMode.None)
+         if (clusterMode != ClusterMode.None && clusterMode != ClusterMode.Stochastic)
          {
             EditorGUI.indentLevel++;
             clusterNoiseUV = (ClusterNoiseUV)EditorGUILayout.EnumPopup(CClusterNoiseUVs, clusterNoiseUV);
+            secondNoise = EditorGUILayout.Toggle(CClusterNoise2, secondNoise);
             EditorGUI.indentLevel--;
          }
       }
@@ -132,99 +140,142 @@ namespace JBooth.MicroSplat
          {
             if (MicroSplatUtilities.DrawRollup("Texture Clustering"))
             {
-               if (mat.HasProperty("_ClusterNoise"))
+               if (clusterMode == ClusterMode.Stochastic)
                {
-                  var noiseMap = shaderGUI.FindProp("_ClusterNoise", props);
-                  var albedoMap = shaderGUI.FindProp("_ClusterDiffuse2", props);
-                  var normalMap = shaderGUI.FindProp("_ClusterNormal2", props);
-                  var noiseParams = shaderGUI.FindProp("_ClusterParams", props);
-
-
-                  materialEditor.TexturePropertySingleLine(CAlbedoTex2, albedoMap);
-                  materialEditor.TexturePropertySingleLine(CNormalTex2, normalMap);
-
-                  if (mat.HasProperty("_ClusterSmoothAO2"))
+                  if (mat.HasProperty("_StochasticContrast"))
                   {
-                     var smoothAO = shaderGUI.FindProp("_ClusterSmoothAO2", props);
-                     materialEditor.TexturePropertySingleLine(CSmoothAO2, smoothAO);
+                     materialEditor.RangeProperty(shaderGUI.FindProp("_StochasticContrast", props), "Blend Contrast");
                   }
-
-                  if (mat.HasProperty("_ClusterEmissiveMetal2"))
+                  if (mat.HasProperty("_StochasticScale"))
                   {
-                     var emis2 = shaderGUI.FindProp("_ClusterEmissiveMetal2", props);
-                     materialEditor.TexturePropertySingleLine(CEmis2, emis2);
+                     materialEditor.RangeProperty(shaderGUI.FindProp("_StochasticScale", props), "Noise Scale");
                   }
-
-
-
-                  if (clusterMode == ClusterMode.ThreeVariants)
+               }
+               else
+               {
+                  if (mat.HasProperty("_ClusterNoise"))
                   {
-                     var albedoMap3 = shaderGUI.FindProp("_ClusterDiffuse3", props);
-                     var normalMap3 = shaderGUI.FindProp("_ClusterNormal3", props);
+                     var noiseMap = shaderGUI.FindProp("_ClusterNoise", props);
+                     var albedoMap = shaderGUI.FindProp("_ClusterDiffuse2", props);
+                     var normalMap = shaderGUI.FindProp("_ClusterNormal2", props);
+                     var noiseParams = shaderGUI.FindProp("_ClusterParams", props);
 
-                     materialEditor.TexturePropertySingleLine(CAlbedoTex3, albedoMap3);
-                     materialEditor.TexturePropertySingleLine(CNormalTex3, normalMap3);
 
-                     if (mat.HasProperty("_ClusterSmoothAO3"))
+                     materialEditor.TexturePropertySingleLine(CAlbedoTex2, albedoMap);
+                     materialEditor.TexturePropertySingleLine(CNormalTex2, normalMap);
+
+                     if (mat.HasProperty("_ClusterSmoothAO2"))
                      {
-                        var smoothAO = shaderGUI.FindProp("_ClusterSmoothAO3", props);
-                        materialEditor.TexturePropertySingleLine(CSmoothAO3, smoothAO);
+                        var smoothAO = shaderGUI.FindProp("_ClusterSmoothAO2", props);
+                        materialEditor.TexturePropertySingleLine(CSmoothAO2, smoothAO);
+                     }
+
+                     if (mat.HasProperty("_ClusterEmissiveMetal2"))
+                     {
+                        var emis2 = shaderGUI.FindProp("_ClusterEmissiveMetal2", props);
+                        materialEditor.TexturePropertySingleLine(CEmis2, emis2);
                      }
 
 
-                     if (mat.HasProperty("_ClusterEmissiveMetal3"))
+
+                     if (clusterMode == ClusterMode.ThreeVariants)
                      {
-                        var emis3 = shaderGUI.FindProp("_ClusterEmissiveMetal3", props);
-                        materialEditor.TexturePropertySingleLine(CEmis3, emis3);
+                        var albedoMap3 = shaderGUI.FindProp("_ClusterDiffuse3", props);
+                        var normalMap3 = shaderGUI.FindProp("_ClusterNormal3", props);
+
+                        materialEditor.TexturePropertySingleLine(CAlbedoTex3, albedoMap3);
+                        materialEditor.TexturePropertySingleLine(CNormalTex3, normalMap3);
+
+                        if (mat.HasProperty("_ClusterSmoothAO3"))
+                        {
+                           var smoothAO = shaderGUI.FindProp("_ClusterSmoothAO3", props);
+                           materialEditor.TexturePropertySingleLine(CSmoothAO3, smoothAO);
+                        }
+
+
+                        if (mat.HasProperty("_ClusterEmissiveMetal3"))
+                        {
+                           var emis3 = shaderGUI.FindProp("_ClusterEmissiveMetal3", props);
+                           materialEditor.TexturePropertySingleLine(CEmis3, emis3);
+                        }
                      }
-                  }
 
-                  materialEditor.TexturePropertySingleLine(CNoiseTex, noiseMap);
-                  MicroSplatUtilities.EnforceDefaultTexture(noiseMap, "microsplat_def_clusternoise");
+                     materialEditor.TexturePropertySingleLine(CNoiseTex, noiseMap);
+                     MicroSplatUtilities.EnforceDefaultTexture(noiseMap, "microsplat_def_clusternoise");
+                     if (secondNoise && mat.HasProperty("_ClusterNoise2"))
+                     {
+                        var noiseMap2 = shaderGUI.FindProp("_ClusterNoise2", props);
+                        materialEditor.TexturePropertySingleLine(CNoiseTex, noiseMap2);
+                        MicroSplatUtilities.EnforceDefaultTexture(noiseMap, "microsplat_def_clusternoise");
+                     }
 
-                  bool enabled = GUI.enabled;
-                  if (perTexClusterContrast)
-                  {
-                     GUI.enabled = false;
-                  }
-                  var contrastProp = shaderGUI.FindProp("_ClusterContrast", props);
-                  contrastProp.floatValue = EditorGUILayout.Slider(CInterpContrast, contrastProp.floatValue, 1.0f, 0.0001f);
-                  if (perTexClusterContrast)
-                  {
-                     GUI.enabled = enabled;
-                  }
+                     bool enabled = GUI.enabled;
+                     if (perTexClusterContrast)
+                     {
+                        GUI.enabled = false;
+                     }
+                     var contrastProp = shaderGUI.FindProp("_ClusterContrast", props);
+                     contrastProp.floatValue = EditorGUILayout.Slider(CInterpContrast, contrastProp.floatValue, 1.0f, 0.0001f);
+                     if (perTexClusterContrast)
+                     {
+                        GUI.enabled = enabled;
+                     }
 
-                  if (perTexClusterBoost)
-                  {
-                     GUI.enabled = false;
-                  }
-                  var boostProp = shaderGUI.FindProp("_ClusterBoost", props);
-                  boostProp.floatValue = EditorGUILayout.Slider(CClusterBoost, boostProp.floatValue, 0.5f, 4.0f);
-                  if (perTexClusterBoost)
-                  {
-                     GUI.enabled = enabled;
-                  }
-
-
-                  var skew = shaderGUI.FindProp("_ClusterScaleVar", props);
-                  skew.floatValue = EditorGUILayout.Slider(CClusterScale, skew.floatValue, 0.0f, 0.2f);
+                     if (perTexClusterBoost)
+                     {
+                        GUI.enabled = false;
+                     }
+                     var boostProp = shaderGUI.FindProp("_ClusterBoost", props);
+                     boostProp.floatValue = EditorGUILayout.Slider(CClusterBoost, boostProp.floatValue, 0.5f, 4.0f);
+                     if (perTexClusterBoost)
+                     {
+                        GUI.enabled = enabled;
+                     }
 
 
-                  Vector4 vec = noiseParams.vectorValue;
-                  EditorGUI.BeginChangeCheck();
-                  Vector2 scale = new Vector2(vec.x, vec.y);
-                  Vector2 offset = new Vector2(vec.z, vec.w);
+                     var skew = shaderGUI.FindProp("_ClusterScaleVar", props);
+                     skew.floatValue = EditorGUILayout.Slider(CClusterScale, skew.floatValue, 0.0f, 0.2f);
 
-                  scale = EditorGUILayout.Vector2Field("Scale", scale);
-                  offset = EditorGUILayout.Vector2Field("Offset", offset);
 
-                  if (EditorGUI.EndChangeCheck())
-                  {
-                     vec.x = scale.x;
-                     vec.y = scale.y;
-                     vec.z = offset.x;
-                     vec.w = offset.y;
-                     noiseParams.vectorValue = vec;
+                     {
+                        Vector4 vec = noiseParams.vectorValue;
+                        EditorGUI.BeginChangeCheck();
+                        Vector2 scale = new Vector2(vec.x, vec.y);
+                        Vector2 offset = new Vector2(vec.z, vec.w);
+
+                        scale = EditorGUILayout.Vector2Field("Scale", scale);
+                        offset = EditorGUILayout.Vector2Field("Offset", offset);
+
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                           vec.x = scale.x;
+                           vec.y = scale.y;
+                           vec.z = offset.x;
+                           vec.w = offset.y;
+                           noiseParams.vectorValue = vec;
+                        }
+                     }
+                     if (mat.HasProperty("_ClusterParams2"))
+                     {
+                        EditorGUILayout.LabelField("Second Octave Noise");
+                        var noiseParams2 = shaderGUI.FindProp("_ClusterParams2", props);
+                        Vector4 vec = noiseParams2.vectorValue;
+                        EditorGUI.BeginChangeCheck();
+                        Vector2 scale = new Vector2(vec.x, vec.y);
+                        Vector2 offset = new Vector2(vec.z, vec.w);
+
+                        scale = EditorGUILayout.Vector2Field("Scale", scale);
+                        offset = EditorGUILayout.Vector2Field("Offset", offset);
+
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                           vec.x = scale.x;
+                           vec.y = scale.y;
+                           vec.z = offset.x;
+                           vec.w = offset.y;
+                           noiseParams2.vectorValue = vec;
+                        }
+                     }
                   }
                }
             }
@@ -244,6 +295,14 @@ namespace JBooth.MicroSplat
             {
                functions = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
             }
+            if (p.EndsWith("microsplat_func_stochastic.txt"))
+            {
+               stochasticFunctions = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
+            }
+            if (p.EndsWith("microsplat_properties_stochastic.txt"))
+            {
+               stochasticProperties = AssetDatabase.LoadAssetAtPath<TextAsset>(p);
+            }
          }
       } 
 
@@ -251,26 +310,47 @@ namespace JBooth.MicroSplat
       {
          if (clusterMode != ClusterMode.None)
          {
-            sb.AppendLine(properties.text);
-            if (clusterMode == ClusterMode.ThreeVariants)
+            if (clusterMode != ClusterMode.Stochastic)
             {
-               sb.AppendLine("[NoScaleOffset]_ClusterDiffuse3 (\"Diffuse Array\", 2DArray) = \"white\" {}");
-               sb.AppendLine("[NoScaleOffset]_ClusterNormal3 (\"Normal Array\", 2DArray) = \"bump\" {}");
-            }
-            if (features.Contains("_USEEMISSIVEMETAL"))
-            {
-               sb.AppendLine("[NoScaleOffset]_ClusterEmissiveMetal2 (\"Emissive Array\", 2DArray) = \"black\" {}");
+
+               sb.AppendLine(properties.text);
                if (clusterMode == ClusterMode.ThreeVariants)
                {
-                  sb.AppendLine("[NoScaleOffset]_ClusterEmissiveMetal3 (\"Emissive Array\", 2DArray) = \"black\" {}");
+                  sb.AppendLine("[NoScaleOffset]_ClusterDiffuse3 (\"Diffuse Array\", 2DArray) = \"white\" {}");
+                  sb.AppendLine("[NoScaleOffset]_ClusterNormal3 (\"Normal Array\", 2DArray) = \"bump\" {}");
+               }
+               if (features.Contains("_USEEMISSIVEMETAL"))
+               {
+                  sb.AppendLine("[NoScaleOffset]_ClusterEmissiveMetal2 (\"Emissive Array\", 2DArray) = \"black\" {}");
+                  if (clusterMode == ClusterMode.ThreeVariants)
+                  {
+                     sb.AppendLine("[NoScaleOffset]_ClusterEmissiveMetal3 (\"Emissive Array\", 2DArray) = \"black\" {}");
+                  }
+               }
+               if (features.Contains("_PACKINGHQ"))
+               {
+                  sb.AppendLine("      [NoScaleOffset]_ClusterSmoothAO2 (\"Smooth AO Array\", 2DArray) = \"black\" {}");
+                  if (clusterMode == ClusterMode.ThreeVariants)
+                  {
+                     sb.AppendLine("      [NoScaleOffset]_ClusterSmoothAO3 (\"Smooth AO Array\", 2DArray) = \"black\" {}");
+                  }
+               }
+               if (secondNoise)
+               {
+                  sb.AppendLine("_ClusterNoise2(\"Cluster Noise2\", 2D) = \"white\" { }");
+                  sb.AppendLine("_ClusterParams2(\"Cluster Params\", Vector) = (3, 3, 0, 0)");
                }
             }
-            if (features.Contains("_PACKINGHQ"))
+            else
             {
-               sb.AppendLine("      [NoScaleOffset]_ClusterSmoothAO2 (\"Smooth AO Array\", 2DArray) = \"black\" {}");
-               if (clusterMode == ClusterMode.ThreeVariants)
+               sb.AppendLine(stochasticProperties.text);
+               if (features.Contains("_USEEMISSIVEMETAL"))
                {
-                  sb.AppendLine("      [NoScaleOffset]_ClusterSmoothAO3 (\"Smooth AO Array\", 2DArray) = \"black\" {}");
+                  sb.AppendLine("[NoScaleOffset]_EmissiveMetalInv (\"Emissive Array\", 2DArray) = \"black\" {}");
+               }
+               if (features.Contains("_PACKINGHQ"))
+               {
+                  sb.AppendLine("      [NoScaleOffset]_ClusterSmoothAOInv (\"Smooth AO Array\", 2DArray) = \"black\" {}");
                }
             }
          }
@@ -286,12 +366,22 @@ namespace JBooth.MicroSplat
          {
             arraySampleCount *= 3;
          }
+         else if (clusterMode == ClusterMode.Stochastic)
+         {
+            arraySampleCount *= 3;
+         }
          if (clusterMode != ClusterMode.None)
          {
             textureSampleCount++;
+            if (secondNoise)
+            {
+               textureSampleCount++;
+            }
             if (clusterNoiseUV == ClusterNoiseUV.Triplanar)
             {
                textureSampleCount += 2;
+               if (secondNoise)
+                  textureSampleCount += 2;
             }
          }
       }
@@ -307,6 +397,10 @@ namespace JBooth.MicroSplat
          {
             features.Add(GetFeatureName(DefineFeature._TEXTURECLUSTER3));
          }
+         else if (clusterMode == ClusterMode.Stochastic)
+         {
+            features.Add(GetFeatureName(DefineFeature._STOCHASTIC));
+         }
 
          if (clusterNoiseUV == ClusterNoiseUV.Triplanar)
          {
@@ -321,6 +415,10 @@ namespace JBooth.MicroSplat
          {
             features.Add(GetFeatureName(DefineFeature._PERTEXCLUSTERBOOST));
          }
+         if (secondNoise)
+         {
+            features.Add(GetFeatureName(DefineFeature._TEXTURECLUSTERNOISE2));
+         }
          return features.ToArray();
       }
 
@@ -328,7 +426,14 @@ namespace JBooth.MicroSplat
       {
          if (clusterMode != ClusterMode.None)
          {
-            sb.AppendLine(functions.text);
+            if (clusterMode == ClusterMode.Stochastic)
+            {
+               sb.AppendLine(stochasticFunctions.text);
+            }
+            else
+            {
+               sb.AppendLine(functions.text);
+            }
          }
       }
 
@@ -343,13 +448,19 @@ namespace JBooth.MicroSplat
          {
             clusterMode = ClusterMode.ThreeVariants;
          }
+         else if (HasFeature(keywords, DefineFeature._STOCHASTIC))
+         {
+            clusterMode = ClusterMode.Stochastic;
+         }
 
          if (clusterMode != ClusterMode.None)
          {
             clusterNoiseUV = HasFeature(keywords, DefineFeature._TEXTURECLUSTERTRIPLANARNOISE) ? ClusterNoiseUV.Triplanar : ClusterNoiseUV.UV;
             perTexClusterContrast = HasFeature(keywords, DefineFeature._PERTEXCLUSTERCONTRAST);
             perTexClusterBoost = HasFeature(keywords, DefineFeature._PERTEXCLUSTERBOOST);
+            secondNoise = HasFeature(keywords, DefineFeature._TEXTURECLUSTERNOISE2);
          }
+         
 
       }
 
@@ -358,7 +469,7 @@ namespace JBooth.MicroSplat
 
       public override void DrawPerTextureGUI(int index, Material mat, MicroSplatPropData propData)
       {
-         if (clusterMode != ClusterMode.None)
+         if (clusterMode != ClusterMode.None && clusterMode != ClusterMode.Stochastic)
          {
             perTexClusterContrast = DrawPerTexFloatSlider(index, 10, GetFeatureName(DefineFeature._PERTEXCLUSTERCONTRAST), 
                mat, propData, Channel.R, CPerTexClusterContrast, 1.0f, 0.01f);

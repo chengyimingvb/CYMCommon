@@ -51,6 +51,7 @@ MonoBehaviour:
   Group: 0
   DefaultShow: 1
   IsActiveByShow: 1
+  IsFullScreen: 0
   IsSameTime: 1
   IsScale: 0
   IsMove: 0

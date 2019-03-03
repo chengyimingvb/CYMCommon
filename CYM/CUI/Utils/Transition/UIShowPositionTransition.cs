@@ -8,15 +8,28 @@ using DG.Tweening.Core;
 namespace CYM.UI
 {
     public class UIShowPositionTransition : UIShowTransition
-    {
+    {       
         #region prop
         public Vector2 From = Vector2.one * 0.5f;
-        public Vector2 To = Vector2.one;
+        Vector2 To = Vector2.one;
         #endregion
+
+        protected override void Awake()
+        {
+            base.Awake(); 
+        }
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+        }
 
         public override void OnShow(bool b, bool isActiveByShow)
         {
             base.OnShow(b, isActiveByShow);
+            if (ShowCount == 0)
+            {
+                To = Presenter.SourceAnchoredPosition;
+            }
             if (RectTrans != null)
             {
                 if (IsReset)

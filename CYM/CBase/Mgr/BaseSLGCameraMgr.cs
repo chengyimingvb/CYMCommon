@@ -17,7 +17,6 @@ namespace CYM
     {
         #region prop
         RTSCamera RTSCamera;
-        IBaseBattleMgr BattleMgr => SelfBaseGlobal.BattleMgr;
         BaseDBSettingsData SettingsData => SelfBaseGlobal.SettingsMgr.GetBaseSettings();
         #endregion
 
@@ -25,7 +24,7 @@ namespace CYM
         public override void OnEnable()
         {
             base.OnEnable();
-            RTSCamera = Mono.GetComponentInChildren<RTSCamera>();
+            RTSCamera = MainCamera.GetComponentInChildren<RTSCamera>();
         }
         public override void OnUpdate()
         {
@@ -35,14 +34,23 @@ namespace CYM
             if (BattleMgr.IsInBattle)
             {
                 var data = SettingsData;
-                RTSCamera.DesktopMoveDragSpeed =  (ZoomPercent* RTSCamera.desktopMoveDragSpeed) * data.CameraMoveSpeed;
-                RTSCamera.DesktopMoveSpeed = (ZoomPercent * RTSCamera.desktopMoveSpeed) * data.CameraMoveSpeed;
+                float speedFaction = 1;
+                if (IsLowHight)
+                    speedFaction = 0.9f;
+                else if (IsNearHight)
+                    speedFaction = 0.8f;
+                RTSCamera.DesktopMoveDragSpeed = (ZoomPercent* RTSCamera.desktopMoveDragSpeed) * data.CameraMoveSpeed* speedFaction;
+                RTSCamera.DesktopMoveSpeed = (ZoomPercent * RTSCamera.desktopMoveSpeed) * data.CameraMoveSpeed* speedFaction;
                 RTSCamera.DesktopScrollSpeed = (RTSCamera.desktopScrollSpeed)* data.CameraScrollSpeed;
                 if (Input.GetMouseButtonDown(2))
                 {
                     Vector3 pos = SelfBaseGlobal.ScreenMgr.GetMouseHitPoint();
                     RTSCamera.JumpToTargetForMain(SelfBaseGlobal.GetTransform(pos));
                 }
+                bool isOnUI = BaseUIUtils.CheckGuiObjects();
+                RTSCamera.MouseScrollControl(!isOnUI);
+                RTSCamera.MouseDragControl(!isOnUI);
+                RTSCamera.ControlDisabled.Set(BaseView.IsFullScreenState.IsIn());
             }
         }
         #endregion
@@ -50,6 +58,8 @@ namespace CYM
         #region set
         public void Move(Vector3 dir)
         {
+            if(RTSCamera==null)
+                return;
             RTSCamera.Move(dir);
         }
         public void Jump(Transform target,float heightPercent=0.05f)

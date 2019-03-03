@@ -184,7 +184,7 @@ namespace CYM.DLC
             BuildManifest(dlcItem);
             BuildPipeline.BuildAssetBundles(dlcItem.TargetPath, 
                 AssetBundleBuildsCache.ToArray(), 
-                BuildAssetBundleOptions.ChunkBasedCompression,
+                BuildAssetBundleOptions.ChunkBasedCompression | BuildAssetBundleOptions.ForceRebuildAssetBundle,
                 EditorUserBuildSettings.activeBuildTarget);
             dlcItem.CopyAllFiles();
             AssetDatabase.Refresh();

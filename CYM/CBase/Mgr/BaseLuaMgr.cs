@@ -13,6 +13,8 @@ using System;
 using System.Text;
 using MoonSharp.Interpreter;
 using CYM.DLC;
+using System.Collections.Generic;
+
 namespace CYM
 {
     public class BaseLuaMgr : BaseGFlowMgr, ILoader
@@ -143,12 +145,10 @@ namespace CYM
         {
             Callback_OnLuaParseStart?.Invoke();
 
+            //加载DLC Lua
             foreach (var dlc in DLCAssetMgr.DLCItems.Values)
             {
-                string[] fileNames = BaseFileUtils.GetFiles(dlc.LuaPath, "*.txt", SearchOption.AllDirectories);
-                if (fileNames == null)
-                    continue;
-                LoadLuaData(fileNames);
+                LoadLuaData(dlc.GetAllLuas());
                 yield return new WaitForEndOfFrame();
             }
             Callback_OnLuaParseEnd?.Invoke();

@@ -124,7 +124,13 @@ namespace CYM
         }
         protected override void OnAllLoadEnd()
         {
-            //StartMain();
+            base.OnAllLoadEnd();
+            StartMain();
+        }
+        protected override void OnGameStartOver()
+        {
+            base.OnGameStartOver();
+            StartBattle();
         }
         #endregion
 

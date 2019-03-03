@@ -1,2 +1,2 @@
 
-      _GlobalTextureParams("Tint Blend/Normal Blend", Vector) = (0.5, 0.5, 0.0, 0.0)
+      _GlobalTextureParams("Tint Blend/Normal Blend", Vector) = (0.5, 0.5, 0.5, 0.5)

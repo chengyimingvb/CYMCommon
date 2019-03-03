@@ -27,6 +27,7 @@ namespace CYM.UI
         public Ease OutEase = Ease.InBack;
         #endregion
 
+        protected int ShowCount { get; set; } = 0;
         protected Tweener tweener;
 
         #region set

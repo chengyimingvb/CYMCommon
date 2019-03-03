@@ -42,6 +42,7 @@ namespace JBooth.MicroSplat
 
       public void WriteShaderHeader(string[] features, StringBuilder sb, MicroSplatShaderGUI.MicroSplatCompiler compiler, bool blend)
       {
+
          sb.AppendLine();
          sb.AppendLine("   CGINCLUDE");
 
@@ -72,6 +73,10 @@ namespace JBooth.MicroSplat
          {
             sb.AppendLine("      BLEND ONE ONE");
          }
+#if UNITY_2018_3_OR_NEWER
+         sb.AppendLine("      UsePass \"Hidden/Nature/Terrain/Utilities/PICKING\"");
+         sb.AppendLine("      UsePass \"Hidden/Nature/Terrain/Utilities/SELECTION\"");
+#endif
          sb.AppendLine("      CGPROGRAM");
       }
 
@@ -141,6 +146,12 @@ namespace JBooth.MicroSplat
             {
                sb.Append(" exclude_path:deferred");
             }
+         }
+
+         // allow for custom functions in lighting when this keyword is enabled
+         if (!blend && features.Contains("_MSCUSTOMLIGHTING"))
+         {
+            sb.Replace("surf Standard", "customLightingSurf CustomLighting");
          }
 
          // don't remove

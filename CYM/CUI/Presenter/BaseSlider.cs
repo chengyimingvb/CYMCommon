@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using CYM;
 using System;
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 
 namespace CYM.UI
 {
@@ -17,11 +18,11 @@ namespace CYM.UI
     public class BaseSlider : Presenter<BaseSliderData>
     {
         #region presenter
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         Slider Slider;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         Text Name;
-        [SerializeField]
+        [FoldoutGroup("Inspector"), SerializeField]
         Text Value;
         #endregion
 

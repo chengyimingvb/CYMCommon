@@ -29,7 +29,7 @@ namespace CYM
     {
         protected BaseGlobal SelfBaseGlobal => BaseGlobal.Ins;
         protected BaseGRMgr GRMgr => SelfBaseGlobal.GRMgr;
-        protected BaseUnit SelfBaseUnit { get; set; }
+        public BaseUnit SelfBaseUnit { get; set; }
         protected object[] AddedObjs { get; private set; }
 
         #region prop
@@ -282,22 +282,31 @@ namespace CYM
                 CLog.Error(baseTable.ToString() + "已经存在这个key:" + key);
                 return;
             }
-            TempClassData.OnBeAddedToData();
-            Add(key, TempClassData);
-            Keys.Add(key);
+            //TempClassData.OnBeAddedToData();
+            //Add(key, TempClassData);
+            //Keys.Add(key);
+            TempClassData.TDID = key;
+            Register(TempClassData);
         }
 
-        public void Add<TSubClass>(string key) where TSubClass:T,new()
+        public void Register(T data)
         {
-            TSubClass tempclass = new TSubClass();
-            tempclass.OnBeAddedToData();
-            Add(key, tempclass);
-            Keys.Add(key);
+            data.OnBeAddedToData();
+            Add(data.TDID, data);
+            Keys.Add(data.TDID);
         }
-        public void Add<TSubClass>() where TSubClass : T, new()
-        {
-            Add<TSubClass>(typeof(TSubClass).Name);
-        }
+
+        //public void Add<TSubClass>(string key) where TSubClass:T,new()
+        //{
+        //    TSubClass tempclass = new TSubClass();
+        //    tempclass.OnBeAddedToData();
+        //    Add(key, tempclass);
+        //    Keys.Add(key);
+        //}
+        //public void Add<TSubClass>() where TSubClass : T, new()
+        //{
+        //    Add<TSubClass>(typeof(TSubClass).Name);
+        //}
 
         protected Table GetTable(string name)
         {

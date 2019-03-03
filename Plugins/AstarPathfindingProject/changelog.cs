@@ -2,6 +2,12 @@
 /// \page changelog Changelog
 /// \order{-10}
 ///
+/// - 4.2.2 (2018-10-25)
+/// 	- Fixed upgrading from an earlier 4.x version to 4.2 could cause compiler errors in some newer versions of Unity because the UnityPackage doesn't import the new directory structure correctly.
+///
+/// - 4.2.1 (2018-10-23)
+/// 	- Fixed a bug which caused scanning navmesh graphs to throw an exception when using the free version of the package. Thanks Hunted for reporting the bug.
+///
 /// - 4.2 (2018-10-17)
 /// 	- 4.1.17 through 4.1.26 were beta versions, all their changelogs have been merged into this one.
 /// 	- Upgrade notes

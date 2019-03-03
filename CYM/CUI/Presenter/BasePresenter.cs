@@ -5,11 +5,16 @@ using UnityEngine.EventSystems;
 using static UnityEngine.EventSystems.PointerEventData;
 using System;
 using UnityEngine.UI;
+using Sirenix.OdinInspector;
 
 namespace CYM.UI
 {
     public class BasePresenter: UIBehaviour
     {
+        #region Callback
+        public Callback<bool> Callback_OnShow { get; set; }
+        #endregion
+
         public virtual void SetDirty() { }
         public virtual void SetActive(bool b) { }
         public virtual void Show(bool b,bool isForce=false) { }
@@ -63,24 +68,37 @@ namespace CYM.UI
         /// </summary>
         public virtual bool NeedUpdate { get; } = false;
 
-        [Tooltip("字体类型")]
+        [FoldoutGroup("Base"), Tooltip("字体类型")]
         public FontType FontType = FontType.Normal;
-        [Tooltip("是否可以点击,优先级低")]
+        [FoldoutGroup("Base"), Tooltip("是否可以点击,优先级低")]
         public bool IsCanClick = false;
-        [Tooltip("是否默认为显示状态")]
+        [FoldoutGroup("Base"), Tooltip("是否默认为显示状态")]
         public bool IsShowDefault = true;
-        [Tooltip("是否Active通过打开/关闭")]
+        [FoldoutGroup("Base"), Tooltip("是否Active通过打开/关闭")]
         public bool IsActiveByShow=true;
 
         public PresenterGroup OwnerdPresenterGroup { get; set; }
         public RectTransform RectTrans { get; protected set; }
         public GameObject GO { get;protected set; }
         public BaseUIView BaseUIView { get; set; }
+        public BaseDupplicate BaseDupplicate { get; set; }
         public virtual string GOName { get; }
+
+        public Vector3 SourceAnchoredPosition3D { get; protected set; }
+        public Vector3 SourceLocalScale { get; protected set; }
+        public Vector2 SourceAnchorMax { get; protected set; }
+        public Vector2 SourceAnchorMin { get; protected set; }
+        public Vector2 SourceAnchoredPosition { get; protected set; }
+        public Vector2 SourceSizeData { get; protected set; }
     }
 
     public class PresenterData
     {
+        #region prop
+        protected BaseGlobal BaseGlobal => BaseGlobal.Ins;
+        protected BaseGRMgr BaseGRMgr => BaseGlobal.GRMgr;
+        #endregion
+
         public UIBehaviour Presenter;
         //触发
         public Callback<BasePresenter> OnEnter;
@@ -90,7 +108,7 @@ namespace CYM.UI
         public Callback<BasePresenter, PointerEventData> OnUp;
         public Callback<BasePresenter, bool> OnInteractable;
         public Callback<BasePresenter, bool> OnSelected;
-        public Callback<bool> OnShow;
+        public Callback<BasePresenter, bool> OnShow;
 
         public Callback<BasePresenter, PointerEventData> OnBeginDrag;
         public Callback<BasePresenter, PointerEventData> OnEndDrag;
@@ -173,7 +191,15 @@ namespace CYM.UI
         {
             SelfBaseGlobal = BaseGlobal.Ins;
             base.Awake();
+
             RectTrans = transform as RectTransform;
+            SourceAnchorMax = RectTrans.anchorMax;
+            SourceAnchorMin = RectTrans.anchorMin;
+            SourceLocalScale = RectTrans.localScale;
+            SourceSizeData = RectTrans.sizeDelta;
+            SourceAnchoredPosition = RectTrans.anchoredPosition;
+            SourceAnchoredPosition3D = RectTrans.anchoredPosition3D;
+
             Trans = transform;
             GO = gameObject;
             if (RectTrans.localScale == Vector3.zero)
@@ -280,6 +306,8 @@ namespace CYM.UI
                 if (IsActiveByShow)
                     SetActive(b);
             }
+            //触发回调
+            Callback_OnShow?.Invoke(IsShow);
         }
         public override void Toggle()
         {
@@ -624,7 +652,7 @@ namespace CYM.UI
             {
                 PlayClip(Data?.CloseClip);
             }
-            Data?.OnShow?.Invoke(isShow);
+            Data?.OnShow?.Invoke(this,isShow);
         }
         #endregion
 
@@ -633,6 +661,7 @@ namespace CYM.UI
         /// <summary>
         /// 自动设置
         /// </summary>
+        [Button("AutoSetup")]
         public virtual void AutoSetup()
         {
         }

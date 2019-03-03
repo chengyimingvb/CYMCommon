@@ -216,7 +216,10 @@
                UNITY_INITIALIZE_OUTPUT(TriplanarConfig,tc);
 
                #if _TRIPLANAR
-                  PrepTriplanar(worldNormal, worldPos, config, tc, weights);
+                  MIPFORMAT a = INITMIPFORMAT
+                  MIPFORMAT b = INITMIPFORMAT
+                  MIPFORMAT c = INITMIPFORMAT
+                  PrepTriplanar(worldNormal, worldPos, config, tc, weights, a, b, c);
                #endif
 
                #if _TEXTURECLUSTER2 || _TEXTURECLUSTER3

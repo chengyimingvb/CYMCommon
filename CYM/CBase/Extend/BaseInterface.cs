@@ -252,6 +252,7 @@ namespace CYM
         BaseUnit BaseLocalPlayer { get; set; }
         BaseUnit BasePrePlayer { get; set; }
         Vector3 GetMouseHitPoint();
+        event Callback<BaseUnit, BaseUnit> Callback_OnSetPlayerBase;
     }
 
     public interface IBaseTalkMgr

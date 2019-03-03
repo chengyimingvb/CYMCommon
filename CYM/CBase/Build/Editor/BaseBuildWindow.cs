@@ -14,6 +14,8 @@ using System.Reflection;
 using Sirenix.OdinInspector.Editor;
 using CYM.DLC;
 using CYM.UI;
+using CustomDefineManagement;
+
 namespace CYM 
 {
 
@@ -81,7 +83,7 @@ namespace CYM
             Present_DLC();
             Present_Setting();
             Present_Explorer();
-            Present_ExpressSetup();
+            //Present_ExpressSetup();
             Present_SubWindow();
             Present_LevelList();
             Present_ScriptTemplate();
@@ -468,6 +470,10 @@ namespace CYM
                 else if (GUILayout.Button("PackingTag"))
                 {
                     GetWindow<UIPackingTagWindow>("PackingTag").Show();
+                }
+                else if (GUILayout.Button("Define"))
+                {
+                    EditorWindow.GetWindow<CustomDefineManager>("Custom Define Manager", true, typeof(SceneView));
                 }
             }
             EditorGUILayout.EndVertical();

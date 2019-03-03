@@ -232,12 +232,11 @@ namespace CYM
         List<LanguageType> LangTypes = new List<LanguageType>();
         public IEnumerator Load()
         {
+            //加载DLC 的 Language
             foreach (var dlc in DLCAssetMgr.DLCItems.Values)
             {
-                string[] fileNames = BaseFileUtils.GetFiles(dlc.LanguagePath, "*.xls", SearchOption.AllDirectories);
-                if (fileNames == null)
-                    continue;
-                foreach (var item in fileNames)
+                string[] fileList = dlc.GetAllLanguages();
+                foreach (var item in fileList)
                 {
                     LoadLanguageData(item);
                     yield return new WaitForEndOfFrame();

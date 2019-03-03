@@ -1,4 +1,5 @@
 ﻿using System;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.UI;
 namespace CYM.UI
@@ -12,6 +13,7 @@ namespace CYM.UI
     public class BaseImage : Presenter<BaseImageData>
     {
         #region 组建
+        [FoldoutGroup("Inspector")]
         public Image Image;
         #endregion
 

@@ -1,0 +1,3 @@
+
+      _StochasticContrast("Contrast", Range(0.001, 0.999)) = 0.01
+      _StochasticScale("Scale", Range(0.25, 2)) = 1

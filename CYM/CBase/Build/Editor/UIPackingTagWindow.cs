@@ -8,14 +8,33 @@ using CYM;
 public class UIPackingTagWindow : EditorWindow
 {
 
-    Vector2 scrollPos = Vector2.zero;
+    static Vector2 scrollPos = Vector2.zero;
 
-    private List<string> IconList = new List<string>();
-    private List<string> UIList = new List<string>();
+    static private List<string> IconList = new List<string>();
+    static private List<string> UIList = new List<string>();
 
-    int FoldoutIndex = 0;
+    static int FoldoutIndex = 0;
 
-    private void StartCheck(ref List<string> list,string path)
+    public static void CheckUI()
+    {
+        StartCheck(ref IconList, BaseConstMgr.Path_Bundles);
+        StartCheck(ref UIList, BaseConstMgr.Path_AtrUI);
+
+        List<string> newTemp = new List<string>();
+        newTemp.AddRange(IconList);
+        newTemp.AddRange(UIList);
+
+        foreach (string path in newTemp)
+        {
+            TextureImporter ti = AssetImporter.GetAtPath(path) as TextureImporter;
+            ti.filterMode = FilterMode.Bilinear;
+            ti.crunchedCompression = false;
+            ti.textureCompression = TextureImporterCompression.Uncompressed;
+            ti.SaveAndReimport();
+        }
+    }
+
+    static private void StartCheck(ref List<string> list,string path)
     {
         list.Clear();
         List<string> withoutExtensions = new List<string>() { ".png", ".jpg" };
@@ -29,7 +48,7 @@ public class UIPackingTagWindow : EditorWindow
         }
     }
 
-    private void ShowList(int foldOut,string name,List<string> list)
+    static private void ShowList(int foldOut,string name,List<string> list)
     {
         bool b = EditorGUILayout.Foldout(foldOut==FoldoutIndex, name);
         if (b)
@@ -45,6 +64,8 @@ public class UIPackingTagWindow : EditorWindow
                 TextureImporter ti = AssetImporter.GetAtPath(path) as TextureImporter;
                 EditorGUILayout.Space();
                 ti.spritePackingTag = EditorGUILayout.TextField(ti.spritePackingTag);
+                EditorGUILayout.LabelField("Filter : " + ti.filterMode);
+                EditorGUILayout.LabelField("Crunch : " + ti.crunchedCompression);
                 EditorGUILayout.EndHorizontal();
                 EditorGUILayout.Space();
             }
@@ -60,6 +81,12 @@ public class UIPackingTagWindow : EditorWindow
 
     void OnGUI()
     {
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("检查UI"))
+        {
+            UIPackingTagWindow.CheckUI();
+        }
+        EditorGUILayout.EndHorizontal();
         ShowList(0,"Icon", IconList);
         ShowList(1,"UI", UIList);
     }

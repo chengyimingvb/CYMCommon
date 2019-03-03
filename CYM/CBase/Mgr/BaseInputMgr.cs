@@ -106,12 +106,14 @@ namespace CYM
         #endregion
 
         #region set
-        protected InputAction RegisterGameplay(string id, Action<CallbackContext> action)
+        protected InputAction RegisterGameplay(string id, Action<CallbackContext> perform, Action<CallbackContext> start = null, Action<CallbackContext> cancel=null)
         {
             var item = GetGamePlayAction(id);
             if (item == null)
                 return null;
-            item.performed += action;
+            item.performed += perform;
+            if (start != null) item.started += start;
+            if (cancel!= null) item.cancelled += cancel;
             return item;
         }
         public virtual void EnablePlayerInput(bool b)

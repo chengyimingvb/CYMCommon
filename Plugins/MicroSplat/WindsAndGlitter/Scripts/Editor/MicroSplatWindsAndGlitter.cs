@@ -44,6 +44,8 @@ namespace JBooth.MicroSplat
          _GLOBALSNOWPARTICULATESTRENGTH,
          _GLOBALWINDPARTICULATESTRENGTH,
          _GLOBALPARTICULATEROTATION,
+         _WINDPARTICULATEUPFILTER,
+         _SNOWPARTICULATEUPFILTER,
          kNumFeatures,
       }
 
@@ -70,13 +72,15 @@ namespace JBooth.MicroSplat
       public bool globalWindRotation;
       public bool globalWindStrength;
       public bool globalSnowStrength;
+      public bool windUpFilter;
+      public bool snowUpFilter;
 
 
       GUIContent CWindParticulate = new GUIContent("Wind Particulate", "Turn on wind particulate, with or without shadows");
       GUIContent CSnowParticulate = new GUIContent("Snow Particulate", "Turn on show particulate, with or without shadows");
       GUIContent CGlitter = new GUIContent("Glitter Specular", "Glittery specular effect with shifting grains");
       GUIContent CSnowGlitter = new GUIContent("Snow Glitter Specular", "Glittery specular effect with shifting grains");
-
+      GUIContent CUpFilter = new GUIContent("Slope Filter", "Filter particulate based on going up or down");
       // Can we template these somehow?
       static Dictionary<DefineFeature, string> sFeatureNames = new Dictionary<DefineFeature, string>();
       public static string GetFeatureName(DefineFeature feature)
@@ -105,17 +109,28 @@ namespace JBooth.MicroSplat
 
       public override string GetVersion()
       {
-         return "2.3";
+         return "2.4";
       }
 
       public override void DrawFeatureGUI(Material mat)
       {
          windParticulate = (ParticulateMode)EditorGUILayout.EnumPopup(CWindParticulate, windParticulate);
-
+         if (windParticulate != ParticulateMode.None)
+         {
+            EditorGUI.indentLevel++;
+            windUpFilter = EditorGUILayout.Toggle(CUpFilter, windUpFilter);
+            EditorGUI.indentLevel--;
+         }
          glitter = EditorGUILayout.Toggle(CGlitter, glitter);
          if (mat.IsKeywordEnabled("_SNOW"))
          {
             snowParticulate = (ParticulateMode)EditorGUILayout.EnumPopup(CSnowParticulate, snowParticulate);
+            if (snowParticulate != ParticulateMode.None)
+            {
+               EditorGUI.indentLevel++;
+               snowUpFilter = EditorGUILayout.Toggle(CUpFilter, windUpFilter);
+               EditorGUI.indentLevel--;
+            }
             snowGlitter = EditorGUILayout.Toggle(CSnowGlitter, snowGlitter);
          }
          else
@@ -138,6 +153,7 @@ namespace JBooth.MicroSplat
       static GUIContent CWindHeightMask = new GUIContent("Height Mask", "X=Begin Height, Y=Height at full strength, Z=End Full Strength, W=Fully Faded");
       static GUIContent CWindAngleMask = new GUIContent("Angle Mask", "X=Begin Angle, Y=Angle at full strength, Z=End Full Strength, W=Fully Faded");
       static GUIContent CWindEmissive = new GUIContent("Emissive Strength", "Apply color to emissive channel");
+      static GUIContent CUpFilterRange = new GUIContent("Slope Range", "-1 = down, 1 = up; X = Begin, Y = end fade in, Z = begin fade out, W = faded out. Example: -1, -1, -0.9, 0.1 = only on downhill");
 
       static GUIContent CGlitterWind = new GUIContent("Effect Texture", "Glitter Texture in RGB, Wind in A");
       static GUIContent CGlitterGraininess = new GUIContent("Graininess", "How subtle are the grains");
@@ -217,6 +233,10 @@ namespace JBooth.MicroSplat
                      {
                         materialEditor.ShaderProperty(shaderGUI.FindProp("_WindParticulateHeightMask", props), CWindHeightMask);
                         materialEditor.ShaderProperty(shaderGUI.FindProp("_WindParticulateAngleMask", props), CWindAngleMask);
+                        if (mat.HasProperty("_WindParticulateUpMask"))
+                        {
+                           materialEditor.ShaderProperty(shaderGUI.FindProp("_WindParticulateUpMask", props), CUpFilterRange);
+                        }
                      }
 
                      if (mat.HasProperty("_WindEmissive"))
@@ -280,6 +300,10 @@ namespace JBooth.MicroSplat
                      {
                         materialEditor.ShaderProperty(shaderGUI.FindProp("_SnowParticulateHeightMask", props), CWindHeightMask);
                         materialEditor.ShaderProperty(shaderGUI.FindProp("_SnowParticulateAngleMask", props), CWindAngleMask);
+                        if (mat.HasProperty("_SnowParticulateUpMask"))
+                        {
+                           materialEditor.ShaderProperty(shaderGUI.FindProp("_SnowParticulateUpMask", props), CUpFilterRange);
+                        }
                      }
 
                      if (mat.HasProperty("_WindEmissive"))
@@ -389,6 +413,10 @@ namespace JBooth.MicroSplat
             {
                features.Add(GetFeatureName(DefineFeature._WINDSHADOWS));
             }
+            if (windParticulate != ParticulateMode.None && windUpFilter)
+            {
+               features.Add(GetFeatureName(DefineFeature._WINDPARTICULATEUPFILTER));
+            }
             if (perTexParticulate)
             {
                features.Add(GetFeatureName(DefineFeature._PERTEXWINDPARTICULATE));
@@ -407,6 +435,10 @@ namespace JBooth.MicroSplat
             if (snowParticulate == ParticulateMode.ParticulateWithShadows)
             {
                features.Add(GetFeatureName(DefineFeature._SNOWSHADOWS));
+            }
+            if (snowParticulate != ParticulateMode.None && snowUpFilter)
+            {
+               features.Add(GetFeatureName(DefineFeature._SNOWPARTICULATEUPFILTER));
             }
          }
          if (snowGlitter)
@@ -442,6 +474,9 @@ namespace JBooth.MicroSplat
          {
             snowParticulate = HasFeature(keywords, DefineFeature._SNOWSHADOWS) ? ParticulateMode.ParticulateWithShadows : ParticulateMode.Particulate;
          }
+
+         snowUpFilter = snowParticulate != ParticulateMode.None && HasFeature(keywords, DefineFeature._SNOWPARTICULATEUPFILTER);
+         windUpFilter = windParticulate != ParticulateMode.None && HasFeature(keywords, DefineFeature._WINDPARTICULATEUPFILTER);
 
          perTexParticulate = HasFeature(keywords, DefineFeature._PERTEXWINDPARTICULATE);
          glitter = HasFeature(keywords, DefineFeature._GLITTER);
@@ -496,6 +531,16 @@ namespace JBooth.MicroSplat
          {
             sb.AppendLine(part_properties.text);
          }
+
+         if (windParticulate != ParticulateMode.None && windUpFilter)
+         {
+            sb.AppendLine("      _WindParticulateUpMask(\"Up Mask\", Vector) = (-1, -1, 1, 1)");
+         }
+         if (snowParticulate != ParticulateMode.None && snowUpFilter)
+         {
+            sb.AppendLine("      _SnowParticulateUpMask(\"Up Mask\", Vector) = (-1, -1, 1, 1)");
+         }
+
          if (glitter || snowGlitter)
          {
 

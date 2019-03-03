@@ -42,10 +42,7 @@ namespace CYM.DLC
 
         public object Clone()
         {
-            //任选一个  
-            //return this as object;      //引用同一个对象  
-            return this.MemberwiseClone(); //浅复制  
-            //return new BuildRuleData() as object;//深复制  
+            return MemberwiseClone();  
         }
     }
 
@@ -103,9 +100,56 @@ namespace CYM.DLC
             if(DLCConfig.IsEditorMode) LuaPath = Path.Combine(RootPath,BaseConstMgr.Dir_Lua);
             else LuaPath = Path.Combine(TargetPath, BaseConstMgr.Dir_Lua);
 
+            #region func
             EnsureDirectories();
             GenerateCopyPath();
             GeneralPath();
+            //确保DLC相关路径存在
+            void EnsureDirectories()
+            {
+                if (DLCConfig.IsEditorMode)
+                {
+                    BaseFileUtils.EnsureDirectory(AbsRootPath);
+                    foreach (var item in Data)
+                        BaseFileUtils.EnsureDirectory(Path.Combine(AbsRootPath, item.SearchPath));
+                    foreach (var item in CopyDirectory)
+                        BaseFileUtils.EnsureDirectory(Path.Combine(AbsRootPath, item));
+                }
+            }
+            //建立拷贝路径
+            void GenerateCopyPath()
+            {
+                AbsCopyDirectory.Clear();
+                if (CopyDirectory != null)
+                {
+                    for (int i = 0; i < CopyDirectory.Count; ++i)
+                    {
+                        AbsCopyDirectory.Add(Path.Combine(AbsRootPath, CopyDirectory[i]));
+                    }
+                }
+            }
+            //建立打包路径
+            void GeneralPath()
+            {
+                foreach (var item in Data)
+                {
+                    var vals = item.SearchPath.Replace('\\', '/');
+                    var temps = vals.Split('/');
+                    if (temps == null || temps.Length == 0)
+                    {
+                        CLog.Error("路径错误:{0}", item.SearchPath);
+                    }
+                    item.FinalDirectory = temps[temps.Length - 1];
+                    if (item.FinalDirectory == null)
+                        CLog.Error("错误");
+
+                    string tempRootPath = RootPath;
+                    if (!item.CustomRootPath.IsInvStr())
+                        tempRootPath = item.CustomRootPath;
+                    item.FullSearchPath = tempRootPath + "/" + item.SearchPath;
+                }
+            }
+            #endregion
         }
         /// <summary>
         /// 加载配置
@@ -139,11 +183,6 @@ namespace CYM.DLC
             data.CustomRootPath = customRootPath;
             Data.Add(data);
         }
-        //添加需要拷贝的路径
-        public void AddCopyDirectory(string path)
-        {
-            CopyDirectory.Add(path);
-        }
         //拷贝非打包资源到指定目录
         public void CopyAllFiles()
         {
@@ -153,6 +192,12 @@ namespace CYM.DLC
                 string dir = CopyDirectory[i];
                 string finalTargetPath = Path.Combine(TargetPath, dir);
                 BaseFileUtils.CopyDir(absPath, finalTargetPath, false, true);
+            }
+            //如果是默认DLC,拷贝指定的内部资源
+            if (IsNative)
+            {
+                BaseFileUtils.CopyDir(BaseConstMgr.Path_InternalLanguage, Path.Combine(TargetPath, "Language"), false, false);
+                BaseFileUtils.CopyDir(BaseConstMgr.Path_InternalLua, Path.Combine(TargetPath, "Lua"), false, false);
             }
         }
         #endregion
@@ -167,59 +212,44 @@ namespace CYM.DLC
             }
             return ABManifest.GetAllDependencies(assetBundleName);
         }
+        public string[] GetAllLanguages()
+        {
+            List<string> fileList = new List<string>();
+            //编辑器模式下获得内部语言包,非编辑器模式下直接从StreamingAssets里面获取
+            if (DLCConfig.IsEditorMode && IsNative)
+            {
+                var temp = BaseFileUtils.GetFiles(BaseConstMgr.Path_InternalLanguage, "*.xls", SearchOption.AllDirectories);
+                if (temp != null)
+                    fileList.AddRange(temp);
+            }
+            {
+                var temp = BaseFileUtils.GetFiles(LanguagePath, "*.xls", SearchOption.AllDirectories);
+                if (temp != null)
+                    fileList.AddRange(temp);
+            }
+            return fileList.ToArray();
+        }
+        public string[] GetAllLuas()
+        {
+            List<string> fileList = new List<string>();
+            //编辑器模式下获得内部Lua脚本,非编辑器模式下直接从StreamingAssets里面获取
+            if (DLCConfig.IsEditorMode && IsNative)
+            {
+                var temp = BaseFileUtils.GetFiles(BaseConstMgr.Path_InternalLua, "*.txt", SearchOption.AllDirectories);
+                if(temp!=null)
+                    fileList.AddRange(temp);
+            }
+            {
+                var temp = BaseFileUtils.GetFiles(LuaPath, "*.txt", SearchOption.AllDirectories);
+                if (temp != null)
+                    fileList.AddRange(temp);
+            }
+            return fileList.ToArray();
+        }
         #endregion
 
         #region is
         public bool IsNative => Name == BaseConstMgr.STR_NativeDLC;
-        #endregion
-
-        #region utile
-        //确保DLC相关路径存在
-        void EnsureDirectories()
-        {
-            if (DLCConfig.IsEditorMode)
-            {
-                BaseFileUtils.EnsureDirectory(AbsRootPath);
-                foreach (var item in Data)
-                    BaseFileUtils.EnsureDirectory(Path.Combine(AbsRootPath, item.SearchPath));
-                foreach (var item in CopyDirectory)
-                    BaseFileUtils.EnsureDirectory(Path.Combine(AbsRootPath, item));
-            }
-        }
-        //建立拷贝路径
-        void GenerateCopyPath()
-        {
-            AbsCopyDirectory.Clear();
-            if (CopyDirectory != null)
-            {
-                for (int i = 0; i < CopyDirectory.Count; ++i)
-                {
-                    AbsCopyDirectory.Add(Path.Combine(AbsRootPath, CopyDirectory[i]));
-                }
-            }
-        }
-        //建立打包路径
-        private void GeneralPath()
-        {
-            foreach (var item in Data)
-            {
-                var vals = item.SearchPath.Replace('\\', '/');
-                var temps = vals.Split('/');
-                if (temps == null || temps.Length == 0)
-                {
-                    CLog.Error("路径错误:{0}", item.SearchPath);
-                }
-                item.FinalDirectory = temps[temps.Length - 1];
-                if (item.FinalDirectory == null)
-                    CLog.Error("错误");
-
-                string tempRootPath = RootPath;
-                if (!item.CustomRootPath.IsInvStr())
-                    tempRootPath = item.CustomRootPath;
-                item.FullSearchPath = tempRootPath + "/" + item.SearchPath;
-            }
-        }
-
         #endregion
     }
 

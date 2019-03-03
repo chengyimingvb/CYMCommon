@@ -12,6 +12,32 @@ namespace JBooth.MicroSplat
 {
    public class MicroSplatUtilities 
    {
+      public static void Checkout(string path)
+      {
+         if (UnityEditor.VersionControl.Provider.enabled && UnityEditor.VersionControl.Provider.isActive)
+         {
+            var asset = UnityEditor.VersionControl.Provider.GetAssetByPath(path);
+            if (asset == null)
+               return;
+
+            UnityEditor.VersionControl.AssetList lst = new UnityEditor.VersionControl.AssetList();
+            lst.Add(asset);
+            if (UnityEditor.VersionControl.Provider.AddIsValid(lst))
+            {
+               UnityEditor.VersionControl.Provider.Add(lst, false);
+            }
+            if (UnityEditor.VersionControl.Provider.hasCheckoutSupport)
+            {
+               UnityEditor.VersionControl.Provider.Checkout(asset, UnityEditor.VersionControl.CheckoutMode.Both);
+            }
+         }
+         if (System.IO.File.Exists(path))
+         {
+            System.IO.FileInfo fileInfo = new System.IO.FileInfo(path);
+            fileInfo.IsReadOnly = false;
+         }
+      }
+
       public static string MakeRelativePath(string path)
       {
          path = path.Replace(Application.dataPath, "Assets/");

@@ -1,0 +1,4 @@
+
+      _GlobalSAOMTex("Global Normal", 2D) = "black" {}
+      _GlobalSAOMFade("Global Normmal Fade", Vector) = (50, 150, 1, 1)
+      _GlobalSAOMUVScale("UV Scale", Vector) = (1, 1, 0, 0)
